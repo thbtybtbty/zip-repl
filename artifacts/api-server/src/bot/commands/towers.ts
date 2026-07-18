@@ -234,7 +234,7 @@ export function buildTowersComponents(
 // ─── Command ──────────────────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
   .setName("towers")
-  .setDescription("Climb the tower — pick safe tiles to multiply your bet!")
+  .setDescription("Play the Towers game")
   .addStringOption((opt) =>
     opt.setName("amount").setDescription("Bet amount (e.g. 1m, 2.5b)").setRequired(true),
   )

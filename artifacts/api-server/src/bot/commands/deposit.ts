@@ -195,6 +195,15 @@ export async function handleApprove(interaction: ButtonInteraction, reqId: strin
     components: [],
   });
 
+  // Announce in deposit channel
+  const cfg2 = getServerConfig();
+  if (cfg2) {
+    const depCh = interaction.client.channels.cache.get(cfg2.depositChannelId) as TextChannel | undefined;
+    if (depCh) {
+      await depCh.send(`<@${req.userId}> has deposited **${formatAmount(req.amount)} 💎**`);
+    }
+  }
+
   // DM the player
   try {
     const user = await interaction.client.users.fetch(req.userId);

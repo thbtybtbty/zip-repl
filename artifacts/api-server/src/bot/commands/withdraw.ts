@@ -235,6 +235,15 @@ export async function handleApproveModal(interaction: ModalSubmitInteraction, re
     components: [],
   });
 
+  // Announce in withdraw channel
+  const cfg2 = getServerConfig();
+  if (cfg2) {
+    const withCh = interaction.client.channels.cache.get(cfg2.withdrawChannelId) as TextChannel | undefined;
+    if (withCh) {
+      await withCh.send(`<@${req.userId}> has withdrawn **${formatAmount(req.amount)} 💎**`);
+    }
+  }
+
   // DM the player
   try {
     const user = await interaction.client.users.fetch(req.userId);

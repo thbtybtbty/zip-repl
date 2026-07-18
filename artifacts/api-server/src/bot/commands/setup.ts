@@ -9,7 +9,7 @@ import { isAdmin, saveServerConfig } from "../botConfig.js";
 
 export const data = new SlashCommandBuilder()
   .setName("setup")
-  .setDescription("Configure the deposit/withdraw system (admin only)")
+  .setDescription("(Admin) Configure the deposit/withdraw system")
   .addChannelOption((opt) =>
     opt
       .setName("deposit_channel")

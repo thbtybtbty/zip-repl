@@ -19,6 +19,7 @@ import {
   addBalance,
   errorEmbed,
 } from "../utils.js";
+import { gamesTable } from "@workspace/db";
 
 // ─── Game state ───────────────────────────────────────────────────────────────
 export interface MinesGame {
@@ -129,12 +130,12 @@ function buildCashoutRow(enabled: boolean): ActionRowBuilder<MessageActionRowCom
 // ─── Command ──────────────────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
   .setName("mines")
-  .setDescription("Reveal gems, avoid the bombs — cash out anytime!")
+  .setDescription("Play the Mines game")
   .addStringOption((opt) =>
     opt.setName("amount").setDescription("Bet amount (e.g. 1m, 2.5b)").setRequired(true),
   )
   .addIntegerOption((opt) =>
-    opt.setName("mines").setDescription("Number of mines (1–20)").setRequired(true).setMinValue(1).setMaxValue(20),
+    opt.setName("mines").setDescription("Number of mines (1–24)").setRequired(true).setMinValue(1).setMaxValue(24),
   );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
