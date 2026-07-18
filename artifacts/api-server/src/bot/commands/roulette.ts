@@ -59,11 +59,7 @@ function pocketLabels(p: Pocket): string {
 function buildStrip(centreIdx: number, highlight: boolean): string {
   return Array.from({ length: 7 }, (_, i) => {
     const p = WHEEL[(centreIdx - 3 + i + WHEEL.length) % WHEEL.length]!;
-    if (i === 3) {
-      return highlight
-        ? `▶ **${pocketEmoji(p)} ${p}** ◀`
-        : `▶ ${pocketEmoji(p)} ${p} ◀`;
-    }
+    if (i === 3 && highlight) return `▶ **${pocketEmoji(p)} ${p}** ◀`;
     return `${pocketEmoji(p)} ${p}`;
   }).join("  ·  ");
 }

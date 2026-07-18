@@ -165,6 +165,13 @@ export async function startBot() {
   client.once(Events.ClientReady, async (c) => {
     logger.info({ tag: c.user.tag }, "Discord bot ready");
 
+    // Clear global commands (no duplicates)
+    try {
+      await rest.put(Routes.applicationCommands(clientId), { body: [] });
+    } catch (err) {
+      logger.error({ err }, "Failed to clear global commands");
+    }
+
     // Register guild commands (instant propagation)
     const guilds = [...c.guilds.cache.values()];
     await Promise.all(
