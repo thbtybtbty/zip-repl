@@ -17,8 +17,11 @@ import * as towers    from "./commands/towers.js";
 import * as rps       from "./commands/rps.js";
 import * as coinflip  from "./commands/coinflip.js";
 import * as blackjack from "./commands/blackjack.js";
+import * as setup     from "./commands/setup.js";
+import * as deposit   from "./commands/deposit.js";
+import * as withdraw  from "./commands/withdraw.js";
 
-const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack];
+const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -37,6 +40,9 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "rps")       return await rps.execute(interaction);
       if (name === "coinflip")  return await coinflip.execute(interaction);
       if (name === "blackjack") return await blackjack.execute(interaction);
+      if (name === "setup")     return await setup.execute(interaction);
+      if (name === "deposit")   return await deposit.execute(interaction);
+      if (name === "withdraw")  return await withdraw.execute(interaction);
     } catch (err) {
       logger.error({ err, command: name }, "Error executing command");
       const payload = { content: "❌ Something went wrong. Please try again.", ephemeral: true };
@@ -66,6 +72,14 @@ async function handleInteraction(interaction: Interaction) {
       if (id === "bj_hit")    return await blackjack.handleHit(bi);
       if (id === "bj_stand")  return await blackjack.handleStand(bi);
       if (id === "bj_double") return await blackjack.handleDouble(bi);
+
+      // Deposit
+      if (id.startsWith("dep_accept_")) return await deposit.handleAccept(bi, id.slice("dep_accept_".length));
+      if (id.startsWith("dep_deny_"))   return await deposit.handleDeny(bi, id.slice("dep_deny_".length));
+
+      // Withdraw
+      if (id.startsWith("with_accept_")) return await withdraw.handleAccept(bi, id.slice("with_accept_".length));
+      if (id.startsWith("with_deny_"))   return await withdraw.handleDeny(bi, id.slice("with_deny_".length));
     } catch (err) {
       logger.error({ err, buttonId: id }, "Error handling button");
       if (!bi.replied && !bi.deferred) {
@@ -90,22 +104,19 @@ export async function startBot() {
   client.once(Events.ClientReady, async (c) => {
     logger.info({ tag: c.user.tag }, "Discord bot ready");
 
-    // Clear global commands (removes duplicates caused by old global registration).
+    // Clear global commands (no duplicates)
     try {
       await rest.put(Routes.applicationCommands(clientId), { body: [] });
-      logger.info("Global commands cleared");
     } catch (err) {
       logger.error({ err }, "Failed to clear global commands");
     }
 
-    // Register as guild commands (instant) for every server the bot is in.
+    // Register guild commands (instant propagation)
     const guilds = [...c.guilds.cache.values()];
     await Promise.all(
       guilds.map(async (guild) => {
         try {
-          await rest.put(Routes.applicationGuildCommands(clientId, guild.id), {
-            body: commandData,
-          });
+          await rest.put(Routes.applicationGuildCommands(clientId, guild.id), { body: commandData });
           logger.info({ guildId: guild.id, guildName: guild.name, count: commandData.length }, "Guild commands registered");
         } catch (err) {
           logger.error({ err, guildId: guild.id }, "Failed to register guild commands");
