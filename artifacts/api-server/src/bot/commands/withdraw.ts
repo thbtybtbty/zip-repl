@@ -22,8 +22,7 @@ interface PendingWithdraw {
   userId: string;
   username: string;
   amount: number;
-  sendToUserId: string;
-  sendToUsername: string;
+  robloxUser: string;
 }
 
 export const pendingWithdraws = new Map<string, PendingWithdraw>();
@@ -39,8 +38,8 @@ export const data = new SlashCommandBuilder()
   .addStringOption((opt) =>
     opt.setName("amount").setDescription("Amount of gems to withdraw (e.g. 1m, 2.5b)").setRequired(true),
   )
-  .addUserOption((opt) =>
-    opt.setName("send_to").setDescription("The Discord user the gems should be sent to").setRequired(true),
+  .addStringOption((opt) =>
+    opt.setName("send_to").setDescription("Your Roblox username — gems will be sent to this account").setRequired(true),
   );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -54,7 +53,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
 
   const amountStr = interaction.options.getString("amount", true);
-  const sendToUser = interaction.options.getUser("send_to", true);
+  const robloxUser = interaction.options.getString("send_to", true);
   const amount = parseAmount(amountStr);
 
   if (!amount || amount <= 0) {
@@ -73,15 +72,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     userId: interaction.user.id,
     username: interaction.user.username,
     amount,
-    sendToUserId: sendToUser.id,
-    sendToUsername: sendToUser.username,
+    robloxUser,
   });
 
   const embed = new EmbedBuilder()
     .setColor(COLORS.warning)
     .setTitle("📤 Withdraw Request")
     .setDescription(
-      `You requested to withdraw **${formatAmount(amount)} 💎 gems** to <@${sendToUser.id}>.\n\n` +
+      `You requested to withdraw **${formatAmount(amount)} 💎 gems** to Roblox account: **${robloxUser}**.\n\n` +
       `Click **Accept** to confirm your withdrawal request, or **Cancel** to abort.`,
     )
     .setTimestamp();
@@ -124,7 +122,7 @@ export async function handleConfirm(interaction: ButtonInteraction, reqId: strin
         .setColor(COLORS.success)
         .setTitle("📤 Withdrawal Recorded")
         .setDescription(
-          `Your withdrawal of **${formatAmount(req.amount)} 💎 gems** to <@${req.sendToUserId}> has been recorded.\n\n` +
+          `Your withdrawal of **${formatAmount(req.amount)} 💎 gems** to Roblox account **${req.robloxUser}** has been recorded.\n\n` +
           `The moderators will send the gems and you will receive a DM by this bot when the gems have been sent to your account.\n\n` +
           `Thank you!`,
         )
@@ -145,7 +143,7 @@ export async function handleConfirm(interaction: ButtonInteraction, reqId: strin
     .addFields(
       { name: "👤 From", value: `<@${req.userId}>`, inline: true },
       { name: "💎 Amount", value: `${formatAmount(req.amount)} gems`, inline: true },
-      { name: "📨 Send Gems To", value: `<@${req.sendToUserId}>`, inline: true },
+      { name: "🎮 Send Gems To (Roblox)", value: `\`${req.robloxUser}\``, inline: true },
     )
     .setTimestamp();
 
@@ -228,7 +226,7 @@ export async function handleApproveModal(interaction: ModalSubmitInteraction, re
         .addFields(
           { name: "👤 From", value: `<@${req.userId}>`, inline: true },
           { name: "💎 Amount", value: `${formatAmount(req.amount)} gems`, inline: true },
-          { name: "📨 Sent To", value: `<@${req.sendToUserId}>`, inline: true },
+          { name: "🎮 Sent To (Roblox)", value: `\`${req.robloxUser}\``, inline: true },
           { name: "🛡️ By", value: `<@${interaction.user.id}>`, inline: true },
           { name: "📝 Note", value: reason, inline: false },
         )
@@ -246,7 +244,7 @@ export async function handleApproveModal(interaction: ModalSubmitInteraction, re
           .setColor(COLORS.success)
           .setTitle("💎 Withdrawal Approved!")
           .setDescription(
-            `Your withdrawal of **${formatAmount(req.amount)} 💎 gems** to <@${req.sendToUserId}> has been processed.\n\n**Note:** ${reason}`,
+            `Your withdrawal of **${formatAmount(req.amount)} 💎 gems** to Roblox account **${req.robloxUser}** has been processed.\n\n**Note:** ${reason}`,
           )
           .setTimestamp(),
       ],

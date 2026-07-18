@@ -78,18 +78,19 @@ function generateRow(difficulty: Difficulty): TileType[] {
 //   🟦  = current level slot (unknown, clickable via buttons)
 //   ⬛  = locked future level slot
 
-function tileEmoji(type: TileType, picked: boolean): string {
+function tileEmoji(type: TileType, picked: boolean, exploded = false): string {
+  if (exploded && type === "bomb") return "💥"; // the exact bomb the player hit
   if (type === "diamond") return picked ? "💎" : "🔹";
-  return "💣"; // bomb always shows as bomb after reveal
+  return "💣"; // other bombs revealed after the level
 }
 
-function buildTowerVisual(game: TowersGame): string {
+function buildTowerVisual(game: TowersGame, status: "active" | "won" | "lost" | "cashed"): string {
   const isMedium = game.difficulty === "medium";
   const colCount = isMedium ? 2 : 3;
   const lines: string[] = [];
 
   for (let lvl = game.maxLevels; lvl >= 1; lvl--) {
-    const idx      = lvl - 1;
+    const idx       = lvl - 1;
     const isCurrent = idx === game.level;
     const isFuture  = idx > game.level;
 
@@ -97,19 +98,25 @@ function buildTowerVisual(game: TowersGame): string {
 
     if (isFuture) {
       tileStr = Array(colCount).fill("⬛").join("  ");
-    } else if (isCurrent) {
+    } else if (isCurrent && status !== "lost") {
+      // Active level — show clickable placeholders
       tileStr = Array(colCount).fill("🟦").join("  ");
     } else {
-      // Completed — reveal full tile layout
+      // Completed level, or the level we just lost on — reveal tiles from history
       const record = game.history[idx];
       if (!record) { tileStr = Array(colCount).fill("▫️").join("  "); }
       else {
-        const cells = record.row.map((tile, c) => tileEmoji(tile, c === record.picked));
+        const isLostLevel = status === "lost" && isCurrent;
+        const cells = record.row.map((tile, c) => {
+          const picked   = c === record.picked;
+          const exploded = isLostLevel && picked && tile === "bomb";
+          return tileEmoji(tile, picked, exploded);
+        });
         tileStr = cells.join("  ");
       }
     }
 
-    const prefix = isCurrent ? "▶ " : "   ";
+    const prefix = (isCurrent && status !== "lost") ? "▶ " : "   ";
     const label  = `Lv ${String(lvl).padStart(2, " ")}`;
     lines.push(`${prefix}\`${label}\`  ${tileStr}`);
   }
@@ -149,7 +156,7 @@ export function buildTowersEmbed(
   const embed = new EmbedBuilder()
     .setColor(colors[status] ?? COLORS.primary)
     .setTitle(titles[status] ?? "Towers")
-    .setDescription(buildTowerVisual(game))
+    .setDescription(buildTowerVisual(game, status))
     .addFields(
       { name: "💰 Bet",        value: `${formatAmount(game.bet)} gems`,  inline: true },
       { name: "🎯 Difficulty", value: diffName[game.difficulty],          inline: true },
