@@ -50,6 +50,8 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "withdraw")      return await withdraw.execute(interaction);
       if (name === "addbalance")    return await addbalance.execute(interaction);
       if (name === "removebalance") return await removebalance.execute(interaction);
+      if (name === "wheel")         return await wheel.execute(interaction);
+      if (name === "roulette")      return await roulette.execute(interaction);
     } catch (err) {
       logger.error({ err, command: name }, "Error executing command");
       const payload = { content: "❌ Something went wrong. Please try again.", ephemeral: true };
