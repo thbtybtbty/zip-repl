@@ -23,8 +23,10 @@ import * as deposit       from "./commands/deposit.js";
 import * as withdraw      from "./commands/withdraw.js";
 import * as addbalance    from "./commands/addbalance.js";
 import * as removebalance from "./commands/removebalance.js";
+import * as wheel         from "./commands/wheel.js";
+import * as roulette      from "./commands/roulette.js";
 
-const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance];
+const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, roulette];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
