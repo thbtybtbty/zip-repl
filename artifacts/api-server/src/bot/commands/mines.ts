@@ -68,7 +68,7 @@ export function buildMinesPanelEmbed(
     .addFields(
       { name: "💰 Bet",        value: `${formatAmount(game.bet)} gems`,  inline: true },
       { name: `${BOMB} Mines`, value: `${game.minesCount}`,               inline: true },
-      { name: `${GEM} Found`,  value: `${game.gemsFound} / ${totalGems}`, inline: true },
+      { name: "\u200b",        value: "\u200b",                           inline: true },
       { name: "✨ Multiplier", value: formatMult(game.multiplier),         inline: true },
       { name: "💎 Current",   value: `${formatAmount(currentWin)} gems`, inline: true },
       ...(status === "active"
@@ -223,7 +223,7 @@ export async function handleReveal(interaction: ButtonInteraction, cellIndex: nu
         components: buildMinesGrid(game, false),
       });
       const cashoutMsg = await channel.messages.fetch(game.cashoutMessageId);
-      await cashoutMsg.edit({ components: [] });
+      await cashoutMsg.delete();
     } else {
       // Update panel + grid, enable cashout
       await interaction.editReply({
@@ -241,7 +241,7 @@ export async function handleReveal(interaction: ButtonInteraction, cellIndex: nu
       components: buildMinesGrid(game, true),
     });
     const cashoutMsg = await channel.messages.fetch(game.cashoutMessageId);
-    await cashoutMsg.edit({ components: [] });
+    await cashoutMsg.delete();
   }
 }
 
@@ -264,14 +264,14 @@ export async function handleCashout(interaction: ButtonInteraction) {
   const winnings = Math.floor(game.bet * game.multiplier);
   await addBalance(interaction.user.id, winnings);
 
-  // Remove cashout button (this message)
-  await interaction.editReply({ components: [] });
-
-  // Update panel+grid message to won state with grid disabled
-  const channel        = interaction.channel!;
-  const panelGridMsg   = await channel.messages.fetch(game.panelGridMessageId);
-  await panelGridMsg.edit({
-    embeds:     [buildMinesPanelEmbed(game, "won")],
-    components: buildMinesGrid(game, false),
-  });
+  // Delete the cashout message and update panel+grid in parallel
+  const channel      = interaction.channel!;
+  const panelGridMsg = await channel.messages.fetch(game.panelGridMessageId);
+  await Promise.all([
+    interaction.message.delete(),
+    panelGridMsg.edit({
+      embeds:     [buildMinesPanelEmbed(game, "won")],
+      components: buildMinesGrid(game, false),
+    }),
+  ]);
 }

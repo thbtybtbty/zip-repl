@@ -22,11 +22,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const embed = new EmbedBuilder()
     .setColor(COLORS.gold)
     .setAuthor({
-      name: interaction.user.displayName,
+      name: `${interaction.user.displayName}'s Wallet`,
       iconURL: interaction.user.displayAvatarURL(),
     })
     .setTitle("💎  PS99 Gems")
-    .setDescription(`### ${formatted} gems`)
+    .setDescription(`\`\`\`\n  💰  ${formatted}\n\`\`\``)
     .setTimestamp();
 
   await interaction.editReply({ embeds: [embed] });
