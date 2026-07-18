@@ -141,11 +141,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         value: `${payout >= 0 ? "+" : ""}${formatAmount(Math.abs(payout))} ${GEM}`,
         inline: true,
       },
-      {
-        name: "New balance",
-        value: `${formatAmount(newBalance)} ${GEM}`,
-        inline: true,
-      },
+      { name: "\u200b", value: "\u200b", inline: true },
     )
     .setTimestamp();
 

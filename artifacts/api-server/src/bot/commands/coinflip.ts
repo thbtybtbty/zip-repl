@@ -75,8 +75,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         value:  `${won ? "+" : "-"}${formatAmount(amount)} gems`,
         inline: true,
       },
-      { name: "New balance", value: `${formatAmount(newBal)} gems`, inline: true },
-      { name: "\u200b",      value: "\u200b",                       inline: true },
+      { name: "\u200b", value: "\u200b", inline: true },
+      { name: "\u200b", value: "\u200b", inline: true },
     )
     .setFooter({ text: won ? "Lucky flip! 🍀" : "Better luck next time." })
     .setTimestamp();
