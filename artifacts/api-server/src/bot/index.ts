@@ -6,27 +6,26 @@ import {
   Routes,
   type Interaction,
   type ButtonInteraction,
-  Collection,
 } from "discord.js";
 import { logger } from "../lib/logger.js";
 
 // ─── Commands ─────────────────────────────────────────────────────────────────
-import * as balance from "./commands/balance.js";
-import * as tip from "./commands/tip.js";
-import * as mines from "./commands/mines.js";
-import * as towers from "./commands/towers.js";
-import * as rps from "./commands/rps.js";
+import * as balance   from "./commands/balance.js";
+import * as tip       from "./commands/tip.js";
+import * as mines     from "./commands/mines.js";
+import * as towers    from "./commands/towers.js";
+import * as rps       from "./commands/rps.js";
+import * as coinflip  from "./commands/coinflip.js";
+import * as blackjack from "./commands/blackjack.js";
 
-const commands = [balance, tip, mines, towers, rps];
+const commands = [balance, tip, mines, towers, rps, coinflip, blackjack];
 
 // ─── Client ───────────────────────────────────────────────────────────────────
-const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
-});
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 // ─── Register slash commands ──────────────────────────────────────────────────
 async function registerCommands() {
-  const token = process.env["DISCORD_BOT_TOKEN"];
+  const token    = process.env["DISCORD_BOT_TOKEN"];
   const clientId = process.env["DISCORD_CLIENT_ID"];
 
   if (!token || !clientId) {
@@ -35,16 +34,12 @@ async function registerCommands() {
   }
 
   const rest = new REST().setToken(token);
-  const commandData = commands.map((cmd) => cmd.data.toJSON());
 
   try {
     await rest.put(Routes.applicationCommands(clientId), {
-      body: commandData,
+      body: commands.map((cmd) => cmd.data.toJSON()),
     });
-    logger.info(
-      { count: commandData.length },
-      "Discord slash commands registered",
-    );
+    logger.info({ count: commands.length }, "Discord slash commands registered");
   } catch (err) {
     logger.error({ err }, "Failed to register Discord slash commands");
   }
@@ -55,24 +50,19 @@ async function handleInteraction(interaction: Interaction) {
   // ── Slash commands ──
   if (interaction.isChatInputCommand()) {
     const name = interaction.commandName;
-
     try {
-      if (name === "balance") return await balance.execute(interaction);
-      if (name === "tip") return await tip.execute(interaction);
-      if (name === "mines") return await mines.execute(interaction);
-      if (name === "towers") return await towers.execute(interaction);
-      if (name === "rps") return await rps.execute(interaction);
+      if (name === "balance")   return await balance.execute(interaction);
+      if (name === "tip")       return await tip.execute(interaction);
+      if (name === "mines")     return await mines.execute(interaction);
+      if (name === "towers")    return await towers.execute(interaction);
+      if (name === "rps")       return await rps.execute(interaction);
+      if (name === "coinflip")  return await coinflip.execute(interaction);
+      if (name === "blackjack") return await blackjack.execute(interaction);
     } catch (err) {
       logger.error({ err, command: name }, "Error executing command");
-      const payload = {
-        content: "❌ Something went wrong. Please try again.",
-        ephemeral: true,
-      };
-      if (interaction.replied || interaction.deferred) {
-        await interaction.followUp(payload);
-      } else {
-        await interaction.reply(payload);
-      }
+      const payload = { content: "❌ Something went wrong. Please try again.", ephemeral: true };
+      if (interaction.replied || interaction.deferred) await interaction.followUp(payload);
+      else await interaction.reply(payload);
     }
     return;
   }
@@ -84,24 +74,23 @@ async function handleInteraction(interaction: Interaction) {
 
     try {
       // Mines
-      if (id.startsWith("mines_r_")) {
-        const idx = parseInt(id.slice("mines_r_".length), 10);
-        return await mines.handleReveal(bi, idx);
-      }
-      if (id === "mines_cash") return await mines.handleCashout(bi);
+      if (id.startsWith("mines_r_")) return await mines.handleReveal(bi, parseInt(id.slice(8), 10));
+      if (id === "mines_cash")       return await mines.handleCashout(bi);
 
       // Towers
-      if (id === "towers_l") return await towers.handleChoice(bi, "l");
-      if (id === "towers_m") return await towers.handleChoice(bi, "m");
-      if (id === "towers_r") return await towers.handleChoice(bi, "r");
+      if (id === "towers_l")    return await towers.handleChoice(bi, "l");
+      if (id === "towers_m")    return await towers.handleChoice(bi, "m");
+      if (id === "towers_r")    return await towers.handleChoice(bi, "r");
       if (id === "towers_cash") return await towers.handleCashout(bi);
+
+      // Blackjack
+      if (id === "bj_hit")    return await blackjack.handleHit(bi);
+      if (id === "bj_stand")  return await blackjack.handleStand(bi);
+      if (id === "bj_double") return await blackjack.handleDouble(bi);
     } catch (err) {
       logger.error({ err, buttonId: id }, "Error handling button");
       if (!bi.replied && !bi.deferred) {
-        await bi.reply({
-          content: "❌ Something went wrong.",
-          ephemeral: true,
-        });
+        await bi.reply({ content: "❌ Something went wrong.", ephemeral: true });
       }
     }
   }
