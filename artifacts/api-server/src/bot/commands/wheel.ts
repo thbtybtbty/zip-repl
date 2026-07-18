@@ -131,7 +131,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       { name: "📊 Odds",       value: oddsText,                         inline: true },
       { name: "💵 Return",     value: `${formatAmount(winnings)} gems`,  inline: true },
     )
-    .setFooter({ text: footerText })
     .setTimestamp();
 
   await interaction.editReply({ content: "", embeds: [embed] });

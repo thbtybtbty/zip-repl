@@ -230,13 +230,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         ? { name: "🎉 Won",  value: `+${formatAmount(winAmount)} gems`, inline: true }
         : { name: "💀 Lost", value: `-${formatAmount(amount)} gems`,    inline: true },
     )
-    .setFooter({
-      text: won
-        ? payout === 35 ? "🔥 STRAIGHT HIT! Incredible!" : "Winner! 🍀"
-        : pocketColor(result) === "green"
-          ? "🟩 House pocket — the wheel always has an edge."
-          : "Spin again — your number's coming.",
-    })
     .setTimestamp();
 
   await interaction.editReply({ content: "", embeds: [embed] });
