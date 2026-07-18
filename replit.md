@@ -1,52 +1,49 @@
-# Discord Gem Bot
+# PS99 GemSpin Bet — Discord Gambling Bot
 
-A Discord bot for gem-based casino games with a shared balance system.
-
-## Run & Operate
-
-- `pnpm --filter @workspace/api-server run dev` — run the API server + Discord bot (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env secrets: `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID`, `DATABASE_URL` (auto-provided)
+A Discord gambling bot with an Express HTTP API backend, built with TypeScript and Discord.js.
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- Bot: discord.js v14
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Build: esbuild (ESM bundle)
+- **Runtime**: Node.js (ESM)
+- **Bot**: Discord.js v14
+- **API**: Express v5
+- **DB**: Drizzle ORM + PostgreSQL
+- **Build**: esbuild (via `build.mjs`)
+- **Monorepo**: pnpm workspaces
 
-## Commands
+## Workspace layout
 
-| Command | Description |
+```
+artifacts/api-server/   — Express API + Discord bot (main runnable)
+lib/api-spec/           — OpenAPI spec + Orval codegen config
+lib/api-client-react/   — Generated React query hooks
+lib/api-zod/            — Generated Zod schemas
+lib/db/                 — Drizzle schema + DB client
+```
+
+## Slash commands
+
+`/balance`, `/tip`, `/mines`, `/towers`, `/rps`, `/coinflip`, `/blackjack`, `/setup`, `/deposit`, `/withdraw`
+
+## How to run
+
+The **API Server** workflow runs the bot:
+
+```
+pnpm --filter @workspace/api-server run dev
+```
+
+This builds with esbuild then starts `dist/index.mjs`. The HTTP server binds to `$PORT` and the Discord bot starts alongside it.
+
+## Required secrets
+
+| Secret | Description |
 |---|---|
-| `/balance` | View your gem balance (starts at 10M for new users) |
-| `/tip @user amount` | Send gems (min 1M). Supports `m` = million, `b` = billion |
-| `/mines amount mines` | Minesweeper — 5×5 grid, reveal gems, avoid bombs, cash out anytime |
-| `/towers amount difficulty` | Tower climb — pick safe tiles (easy/medium/hard) to multiply your bet |
-| `/rps amount choice` | Rock Paper Scissors — win 2× your bet |
+| `DISCORD_BOT_TOKEN` | Bot token from Discord Developer Portal |
+| `DISCORD_CLIENT_ID` | Application/client ID |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `SESSION_SECRET` | Secret for session signing |
 
-## Where things live
+## Config file
 
-- `artifacts/api-server/src/bot/` — all bot logic
-  - `index.ts` — Discord client, command registration, interaction routing
-  - `commands/balance.ts` — /balance
-  - `commands/tip.ts` — /tip
-  - `commands/mines.ts` — /mines game logic + grid/panel builders
-  - `commands/towers.ts` — /towers game logic + level builders
-  - `commands/rps.ts` — /rps
-  - `utils.ts` — shared helpers (parseAmount, formatAmount, DB wrappers)
-- `lib/db/src/schema/index.ts` — `users` and `games` tables
-
-## Architecture decisions
-
-- Bot starts in the same process as the Express HTTP server (keeps deployment simple)
-- Active game state (mines/towers) held in in-memory Maps keyed by Discord user ID — ephemeral by design, no DB round-trips on every button click
-- Mines grid uses all 25 Discord button slots (5×5). Stats + cashout button live in a separate follow-up message sent immediately after to appear joined
-- Medium towers difficulty shows Left/Right only (disabled mid spacer) to represent the "1 diamond 1 bomb" distribution cleanly
-- Balances stored as bigint in PostgreSQL; new users receive 10M starting gems
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
+`artifacts/api-server/server-config.json` holds channel IDs for deposit/withdraw/request notifications and the Roblox username.
