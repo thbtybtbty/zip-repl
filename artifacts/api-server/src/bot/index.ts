@@ -90,8 +90,15 @@ export async function startBot() {
   client.once(Events.ClientReady, async (c) => {
     logger.info({ tag: c.user.tag }, "Discord bot ready");
 
+    // Clear global commands (removes duplicates caused by old global registration).
+    try {
+      await rest.put(Routes.applicationCommands(clientId), { body: [] });
+      logger.info("Global commands cleared");
+    } catch (err) {
+      logger.error({ err }, "Failed to clear global commands");
+    }
+
     // Register as guild commands (instant) for every server the bot is in.
-    // Global commands take up to 1 hour to propagate, so we always prefer guild registration.
     const guilds = [...c.guilds.cache.values()];
     await Promise.all(
       guilds.map(async (guild) => {

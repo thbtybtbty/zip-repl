@@ -21,12 +21,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   const embed = new EmbedBuilder()
     .setColor(COLORS.gold)
-    .setAuthor({
-      name: `${interaction.user.displayName}'s Wallet`,
-      iconURL: interaction.user.displayAvatarURL(),
-    })
-    .setTitle("💎  PS99 Gems")
-    .setDescription(`\`\`\`\n  💰  ${formatted}\n\`\`\``)
+    .setThumbnail(interaction.user.displayAvatarURL({ size: 128 }))
+    .setDescription(
+      [
+        `### ${interaction.user.displayName}`,
+        `## 💎  ${formatted}`,
+        `-# PS99 Gems`,
+      ].join("\n"),
+    )
     .setTimestamp();
 
   await interaction.editReply({ embeds: [embed] });
