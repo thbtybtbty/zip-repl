@@ -32,7 +32,7 @@ interface CrashSession {
 // ─── Constants ────────────────────────────────────────────────────────────────
 const HOUSE_EDGE  = 0.04;   // 4% chance of instant crash at 1.00×
 const GROWTH      = 0.10;   // continuous growth rate (e^0.10 per second)
-const UPDATE_MS   = 2_000;  // refresh interval in ms
+const UPDATE_MS   = 1_000;  // refresh interval in ms
 
 // ─── Active sessions (sessionId → game) ──────────────────────────────────────
 export const activeSessions = new Map<string, CrashSession>();
