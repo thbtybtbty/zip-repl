@@ -26,6 +26,16 @@ export const QUESTION = "⬜";
 // ─── Amount parsing ──────────────────────────────────────────────────────────
 export function parseAmount(input: string): number | null {
   const str = input.toLowerCase().trim();
+
+  // Allow comma-formatted plain numbers: 1,000,000 / 1,090,000 etc.
+  const commaMatch = str.match(/^[\d,]+$/);
+  if (commaMatch) {
+    const num = parseInt(str.replace(/,/g, ""), 10);
+    if (!isFinite(num) || num <= 0) return null;
+    return num;
+  }
+
+  // Shorthand: 1m, 2.5b, 500k
   const match = str.match(/^(\d+(?:\.\d+)?)\s*([kmb]?)$/);
   if (!match) return null;
 
