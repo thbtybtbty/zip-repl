@@ -25,8 +25,9 @@ import * as addbalance    from "./commands/addbalance.js";
 import * as removebalance from "./commands/removebalance.js";
 import * as wheel         from "./commands/wheel.js";
 import * as roulette      from "./commands/roulette.js";
+import * as crash         from "./commands/crash.js";
 
-const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, roulette];
+const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, roulette, crash];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -52,6 +53,7 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "removebalance") return await removebalance.execute(interaction);
       if (name === "wheel")         return await wheel.execute(interaction);
       if (name === "roulette")      return await roulette.execute(interaction);
+      if (name === "crash")         return await crash.execute(interaction);
     } catch (err) {
       logger.error({ err, command: name }, "Error executing command");
       const payload = { content: "❌ Something went wrong. Please try again.", ephemeral: true };
@@ -97,6 +99,9 @@ async function handleInteraction(interaction: Interaction) {
       // Withdraw (mod side)
       if (id.startsWith("with_approve_"))    return await withdraw.handleApprove(bi, id.slice("with_approve_".length));
       if (id.startsWith("with_disapprove_")) return await withdraw.handleDisapprove(bi, id.slice("with_disapprove_".length));
+
+      // Crash
+      if (id.startsWith("crash_cashout_")) return await crash.handleCashout(bi, id.slice("crash_cashout_".length));
 
       // Add balance (admin)
       if (id.startsWith("addbalnc_enter_"))  return await addbalance.handleEnter(bi, id.slice("addbalnc_enter_".length));
