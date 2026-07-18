@@ -198,7 +198,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const spinners = ["⠋","⠙","⠹","⠸","⠼","⠴"];
 
   for (let f = 0; f < FRAMES; f++) {
-    const shift  = Math.floor((FRAMES - f) * 5);
+    const shift  = Math.floor((FRAMES - 1 - f) * 5);
     const centre = (resultIdx - shift + WHEEL.length * 10) % WHEEL.length;
     const strip  = buildStrip(centre, false);
     await interaction.editReply({

@@ -85,7 +85,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const FRAME_MS = 420;
 
   for (let f = 0; f < FRAMES; f++) {
-    const shift  = Math.floor((FRAMES - f) * 4.5);
+    const shift  = Math.floor((FRAMES - 1 - f) * 4.5);
     const centre = (poolIdx - shift + POOL.length * 10) % POOL.length;
     const strip  = buildStrip(centre, false);
     const dots   = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴"][f % 6];
