@@ -53,17 +53,17 @@ function pocketLabels(p: Pocket): string {
   return [col, par, rng, doz].join("  ·  ");
 }
 
-// Vertical 5-item reel; centre is always line 3 (index 2)
+// Horizontal 7-item strip; ▶ ◀ are always attached to the centre element (index 3)
 function buildStrip(centreIdx: number, highlight: boolean): string {
-  return Array.from({ length: 5 }, (_, i) => {
-    const p = WHEEL[(centreIdx - 2 + i + WHEEL.length) % WHEEL.length]!;
-    if (i === 2) {
+  return Array.from({ length: 7 }, (_, i) => {
+    const p = WHEEL[(centreIdx - 3 + i + WHEEL.length) % WHEEL.length]!;
+    if (i === 3) {
       return highlight
         ? `▶ **${pocketEmoji(p)} ${p}** ◀`
         : `▶ ${pocketEmoji(p)} ${p} ◀`;
     }
     return `${pocketEmoji(p)} ${p}`;
-  }).join("\n");
+  }).join("  ·  ");
 }
 
 // ─── Bet evaluation ───────────────────────────────────────────────────────────

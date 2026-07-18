@@ -38,17 +38,17 @@ function pickResult(): { result: Segment; poolIdx: number } {
   return { result: POOL[poolIdx]!, poolIdx };
 }
 
-// Vertical 5-item reel; centre is always line 3 (index 2)
+// Horizontal 7-item strip; ▶ ◀ are always attached to the centre element (index 3)
 function buildStrip(centreIdx: number, highlight: boolean): string {
-  return Array.from({ length: 5 }, (_, i) => {
-    const seg = POOL[(centreIdx - 2 + i + POOL.length) % POOL.length]!;
-    if (i === 2) {
+  return Array.from({ length: 7 }, (_, i) => {
+    const seg = POOL[(centreIdx - 3 + i + POOL.length) % POOL.length]!;
+    if (i === 3) {
       return highlight
         ? `▶ **${seg.emoji} ${seg.label}** ◀`
         : `▶ ${seg.emoji} ${seg.label} ◀`;
     }
     return `${seg.emoji} ${seg.label}`;
-  }).join("\n");
+  }).join("  ·  ");
 }
 
 // ─── Command ──────────────────────────────────────────────────────────────────
