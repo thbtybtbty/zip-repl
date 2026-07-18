@@ -212,7 +212,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     .setColor(color)
     .setTitle("🎰  American Roulette")
     .setDescription(
-      `${buildStrip(resultIdx, true)}\n\n` +
+      `${ARROW}\n${buildStrip(resultIdx, true)}\n\n` +
       `${pocketEmoji(result)}  **${result}**  —  ${pocketLabels(result)}`,
     )
     .addFields(

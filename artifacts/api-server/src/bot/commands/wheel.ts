@@ -124,7 +124,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     .setColor(embedColor)
     .setTitle("🎡  Wheel of Fortune")
     .setDescription(
-      `${buildStrip(poolIdx, true)}\n\n${outcomeText}`,
+      `${ARROW}\n${buildStrip(poolIdx, true)}\n\n${outcomeText}`,
     )
     .addFields(
       { name: "💰 Bet",         value: `${formatAmount(amount)} gems`,  inline: true },
