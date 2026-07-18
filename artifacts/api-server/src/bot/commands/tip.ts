@@ -1,15 +1,12 @@
 import {
   SlashCommandBuilder,
-  EmbedBuilder,
   type ChatInputCommandInteraction,
 } from "discord.js";
 import {
-  COLORS,
   GEM,
   parseAmount,
   formatAmount,
   getOrCreateUser,
-  getBalance,
   addBalance,
   errorEmbed,
 } from "../utils.js";
@@ -75,30 +72,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
 
   // Transfer
-  const [newSenderBal, newTargetBal] = await Promise.all([
+  await Promise.all([
     addBalance(interaction.user.id, -amount),
     addBalance(target.id, amount),
   ]);
 
-  const embed = new EmbedBuilder()
-    .setColor(COLORS.success)
-    .setTitle(`${GEM} Tip Sent!`)
-    .setDescription(
-      `<@${interaction.user.id}> tipped **${formatAmount(amount)} gems** ${GEM} to <@${target.id}>!`,
-    )
-    .addFields(
-      {
-        name: "Your new balance",
-        value: `${formatAmount(newSenderBal)} gems`,
-        inline: true,
-      },
-      {
-        name: `${target.displayName}'s balance`,
-        value: `${formatAmount(newTargetBal)} gems`,
-        inline: true,
-      },
-    )
-    .setTimestamp();
-
-  await interaction.editReply({ embeds: [embed] });
+  await interaction.editReply({
+    content: `<@${interaction.user.id}> tipped **${formatAmount(amount)} gems** ${GEM} to <@${target.id}>!`,
+  });
 }
