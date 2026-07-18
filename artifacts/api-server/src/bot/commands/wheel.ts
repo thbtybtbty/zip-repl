@@ -84,13 +84,17 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const FRAMES = 6;
   const FRAME_MS = 420;
 
+  const ARROW = "━━━━━━━━━━━━━━━━━━━━━ ▼ ━━━━━━━━━━━━━━━━━━━━━";
+
   for (let f = 0; f < FRAMES; f++) {
-    // Animate the centre drifting toward the final index
     const shift  = Math.floor((FRAMES - f) * 4.5);
     const centre = (poolIdx - shift + POOL.length * 10) % POOL.length;
     const strip  = buildStrip(centre, false);
     const dots   = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴"][f % 6];
-    await interaction.editReply({ content: `🎡  **Spinning…** ${dots}\n\n${strip}`, embeds: [] });
+    await interaction.editReply({
+      content: `🎡  **Spinning…** ${dots}\n\n${ARROW}\n${strip}`,
+      embeds: [],
+    });
     await sleep(FRAME_MS);
   }
 

@@ -189,12 +189,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const FRAME_MS = 420;
   const spinners = ["⠋","⠙","⠹","⠸","⠼","⠴"];
 
+  const ARROW = "━━━━━━━━━━━━━━━━━━━━━ ▼ ━━━━━━━━━━━━━━━━━━━━━";
+
   for (let f = 0; f < FRAMES; f++) {
     const shift  = Math.floor((FRAMES - f) * 5);
     const centre = (resultIdx - shift + WHEEL.length * 10) % WHEEL.length;
     const strip  = buildStrip(centre, false);
     await interaction.editReply({
-      content: `🎰  **The ball is rolling…** ${spinners[f % 6]}\n\n${strip}`,
+      content: `🎰  **The ball is rolling…** ${spinners[f % 6]}\n\n${ARROW}\n${strip}`,
       embeds:  [],
     });
     await sleep(FRAME_MS);
