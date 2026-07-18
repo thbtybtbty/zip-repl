@@ -8,7 +8,6 @@ import {
   parseAmount,
   formatAmount,
   getOrCreateUser,
-  getBalance,
   addBalance,
   errorEmbed,
 } from "../utils.js";
@@ -77,7 +76,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await addBalance(interaction.user.id, -amount);
   const winnings = Math.floor(amount * result.mult);
   if (winnings > 0) await addBalance(interaction.user.id, winnings);
-  const newBal = await getBalance(interaction.user.id);
+  const oddsText = `${((result.weight / POOL.length) * 100).toFixed(1)}%`;
 
   // ── Animation frames ───────────────────────────────────────────────────────
   // Move the centre index through the pool so the strip visibly scrolls
@@ -127,10 +126,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       `${ARROW}\n${buildStrip(poolIdx, true)}\n\n${outcomeText}`,
     )
     .addFields(
-      { name: "💰 Bet",         value: `${formatAmount(amount)} gems`,  inline: true },
-      { name: "🎯 Multiplier",  value: result.label,                    inline: true },
-      { name: "💵 Return",      value: `${formatAmount(winnings)} gems`, inline: true },
-      { name: "💎 New Balance", value: `${formatAmount(newBal)} gems`,  inline: true },
+      { name: "💰 Bet",        value: `${formatAmount(amount)} gems`,   inline: true },
+      { name: "🎯 Multiplier", value: result.label,                     inline: true },
+      { name: "📊 Odds",       value: oddsText,                         inline: true },
+      { name: "💵 Return",     value: `${formatAmount(winnings)} gems`,  inline: true },
     )
     .setFooter({ text: footerText })
     .setTimestamp();

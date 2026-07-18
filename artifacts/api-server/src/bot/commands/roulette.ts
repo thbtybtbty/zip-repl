@@ -8,7 +8,6 @@ import {
   parseAmount,
   formatAmount,
   getOrCreateUser,
-  getBalance,
   addBalance,
   errorEmbed,
 } from "../utils.js";
@@ -182,7 +181,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await addBalance(interaction.user.id, -amount);
   const { won, payout } = evaluateBet(bet, numOpt, result);
   if (won) await addBalance(interaction.user.id, amount + amount * payout);
-  const newBal = await getBalance(interaction.user.id);
+
+  // Correct odds for American roulette (38 pockets)
+  const winningPockets: Record<BetType, number> = {
+    red: 18, black: 18, odd: 18, even: 18, low: 18, high: 18,
+    dozen1: 12, dozen2: 12, dozen3: 12,
+    col1: 12, col2: 12, col3: 12,
+    straight: 1,
+  };
+  const oddsText = `${((winningPockets[bet]! / 38) * 100).toFixed(1)}%`;
 
   // ── Animation ──────────────────────────────────────────────────────────────
   const FRAMES   = 6;
@@ -216,14 +223,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       `${pocketEmoji(result)}  **${result}**  —  ${pocketLabels(result)}`,
     )
     .addFields(
-      { name: "🎲 Bet",        value: betName,                          inline: true },
-      { name: "💰 Wagered",    value: `${formatAmount(amount)} gems`,   inline: true },
-      { name: "📋 Odds",       value: PAYOUT_DISPLAY[bet],              inline: true },
+      { name: "🎲 Bet",    value: betName,                           inline: true },
+      { name: "💸 Stake",  value: `-${formatAmount(amount)} gems`,   inline: true },
+      { name: "📊 Odds",   value: oddsText,                          inline: true },
       won
-        ? { name: "🎉 Won",    value: `+${formatAmount(winAmount)} gems`, inline: true }
-        : { name: "💀 Lost",   value: `-${formatAmount(amount)} gems`,    inline: true },
-      { name: "💎 Balance",    value: `${formatAmount(newBal)} gems`,   inline: true },
-      { name: "\u200b",        value: "\u200b",                         inline: true },
+        ? { name: "🎉 Won",  value: `+${formatAmount(winAmount)} gems`, inline: true }
+        : { name: "💀 Lost", value: `-${formatAmount(amount)} gems`,    inline: true },
     )
     .setFooter({
       text: won
