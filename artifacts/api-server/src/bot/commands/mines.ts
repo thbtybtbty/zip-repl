@@ -12,7 +12,6 @@ import {
   COLORS,
   GEM,
   BOMB,
-  QUESTION,
   parseAmount,
   formatAmount,
   formatMult,
@@ -30,18 +29,16 @@ export interface MinesGame {
   revealed: boolean[];
   gemsFound: number;
   multiplier: number;
-  gridMessageId: string;
-  panelMessageId: string;
+  panelMessageId: string;   // 1st — stats embed
+  gridMessageId: string;    // 2nd — 25 buttons
+  cashoutMessageId: string; // 3rd — cashout button only
   channelId: string;
 }
 
 export const activeMinesGames = new Map<string, MinesGame>();
 
 // ─── Math ────────────────────────────────────────────────────────────────────
-export function calcMinesMultiplier(
-  minesCount: number,
-  gemsFound: number,
-): number {
+export function calcMinesMultiplier(minesCount: number, gemsFound: number): number {
   if (gemsFound === 0) return 1.0;
   const total = 25;
   let mult = 1.0;
@@ -56,62 +53,6 @@ export function calcMinesMultiplier(
 }
 
 // ─── UI builders ─────────────────────────────────────────────────────────────
-export function buildMinesGrid(
-  game: MinesGame,
-  showAll: boolean,
-): ActionRowBuilder<MessageActionRowComponentBuilder>[] {
-  const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
-
-  for (let row = 0; row < 5; row++) {
-    const actionRow =
-      new ActionRowBuilder<MessageActionRowComponentBuilder>();
-
-    for (let col = 0; col < 5; col++) {
-      const idx = row * 5 + col;
-      const isRevealed = game.revealed[idx];
-      const cell = game.board[idx];
-
-      let btn: ButtonBuilder;
-
-      if (isRevealed) {
-        if (cell === "gem") {
-          btn = new ButtonBuilder()
-            .setCustomId(`mines_r_${idx}`)
-            .setLabel(GEM)
-            .setStyle(ButtonStyle.Success)
-            .setDisabled(true);
-        } else {
-          btn = new ButtonBuilder()
-            .setCustomId(`mines_r_${idx}`)
-            .setLabel(BOMB)
-            .setStyle(ButtonStyle.Danger)
-            .setDisabled(true);
-        }
-      } else if (showAll) {
-        // Reveal all unrevealed cells
-        btn = new ButtonBuilder()
-          .setCustomId(`mines_r_${idx}`)
-          .setLabel(cell === "gem" ? GEM : BOMB)
-          .setStyle(
-            cell === "gem" ? ButtonStyle.Secondary : ButtonStyle.Danger,
-          )
-          .setDisabled(true);
-      } else {
-        btn = new ButtonBuilder()
-          .setCustomId(`mines_r_${idx}`)
-          .setLabel(QUESTION)
-          .setStyle(ButtonStyle.Secondary);
-      }
-
-      actionRow.addComponents(btn);
-    }
-
-    rows.push(actionRow);
-  }
-
-  return rows;
-}
-
 export function buildMinesPanelEmbed(
   game: MinesGame,
   status: "active" | "won" | "lost",
@@ -122,69 +63,73 @@ export function buildMinesPanelEmbed(
   const nextWin = Math.floor(game.bet * nextMult);
 
   const color =
-    status === "active"
-      ? COLORS.primary
-      : status === "won"
-        ? COLORS.success
-        : COLORS.danger;
+    status === "active" ? COLORS.primary : status === "won" ? COLORS.success : COLORS.danger;
 
-  const titleMap = {
-    active: `${BOMB} Mines — In Progress`,
-    won: `${GEM} Mines — Cashed Out!`,
-    lost: `${BOMB} Mines — Bomb Hit!`,
+  const titles: Record<string, string> = {
+    active: `${BOMB} Mines`,
+    won:    `${GEM} Mines — Cashed Out!`,
+    lost:   `${BOMB} Mines — You Hit a Bomb!`,
   };
 
   const embed = new EmbedBuilder()
     .setColor(color)
-    .setTitle(titleMap[status])
+    .setTitle(titles[status] ?? "Mines")
     .addFields(
-      {
-        name: "💰 Bet",
-        value: `${formatAmount(game.bet)} gems`,
-        inline: true,
-      },
-      {
-        name: `${BOMB} Mines`,
-        value: `${game.minesCount}`,
-        inline: true,
-      },
-      {
-        name: `${GEM} Found`,
-        value: `${game.gemsFound} / ${totalGems}`,
-        inline: true,
-      },
-      {
-        name: "✨ Multiplier",
-        value: formatMult(game.multiplier),
-        inline: true,
-      },
-      {
-        name: "💎 Current",
-        value: `${formatAmount(currentWin)} gems`,
-        inline: true,
-      },
+      { name: "💰 Bet",        value: `${formatAmount(game.bet)} gems`,      inline: true },
+      { name: `${BOMB} Mines`, value: `${game.minesCount}`,                   inline: true },
+      { name: `${GEM} Found`,  value: `${game.gemsFound} / ${totalGems}`,     inline: true },
+      { name: "✨ Multiplier", value: formatMult(game.multiplier),             inline: true },
+      { name: "💎 Current",   value: `${formatAmount(currentWin)} gems`,      inline: true },
       ...(status === "active"
-        ? [
-            {
-              name: "⭐ Next gem",
-              value: `${formatAmount(nextWin)} gems`,
-              inline: true,
-            },
-          ]
-        : []),
+        ? [{ name: "⭐ Next gem", value: `${formatAmount(nextWin)} gems`, inline: true }]
+        : [{ name: "\u200b",      value: "\u200b",                        inline: true }]),
     )
     .setTimestamp();
 
-  if (status === "won") {
-    embed.setFooter({ text: `Profit: +${formatAmount(currentWin - game.bet)} gems` });
-  } else if (status === "lost") {
-    embed.setFooter({ text: `Lost: ${formatAmount(game.bet)} gems` });
-  }
+  if (status === "won")  embed.setFooter({ text: `Profit: +${formatAmount(currentWin - game.bet)} gems` });
+  if (status === "lost") embed.setFooter({ text: `Lost: ${formatAmount(game.bet)} gems` });
 
   return embed;
 }
 
-export function buildCashoutRow(): ActionRowBuilder<MessageActionRowComponentBuilder> {
+export function buildMinesGrid(
+  game: MinesGame,
+  showAll: boolean,
+): ActionRowBuilder<MessageActionRowComponentBuilder>[] {
+  const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
+
+  for (let row = 0; row < 5; row++) {
+    const actionRow = new ActionRowBuilder<MessageActionRowComponentBuilder>();
+    for (let col = 0; col < 5; col++) {
+      const idx = row * 5 + col;
+      const isRevealed = game.revealed[idx];
+      const cell = game.board[idx];
+
+      let btn: ButtonBuilder;
+
+      if (isRevealed || showAll) {
+        const isGem = cell === "gem";
+        btn = new ButtonBuilder()
+          .setCustomId(`mines_r_${idx}`)
+          .setLabel(isGem ? GEM : BOMB)
+          .setStyle(isGem ? (isRevealed ? ButtonStyle.Success : ButtonStyle.Secondary) : ButtonStyle.Danger)
+          .setDisabled(true);
+      } else {
+        btn = new ButtonBuilder()
+          .setCustomId(`mines_r_${idx}`)
+          .setLabel("⬜")
+          .setStyle(ButtonStyle.Secondary);
+      }
+
+      actionRow.addComponents(btn);
+    }
+    rows.push(actionRow);
+  }
+
+  return rows;
+}
+
+export function buildCashoutMessage(): ActionRowBuilder<MessageActionRowComponentBuilder> {
   return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId("mines_cash")
@@ -196,12 +141,9 @@ export function buildCashoutRow(): ActionRowBuilder<MessageActionRowComponentBui
 // ─── Command ─────────────────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
   .setName("mines")
-  .setDescription("Play Mines — reveal gems, avoid the bombs!")
+  .setDescription("Reveal gems, avoid the bombs — cash out anytime!")
   .addStringOption((opt) =>
-    opt
-      .setName("amount")
-      .setDescription("Bet amount (e.g. 1m, 2.5b)")
-      .setRequired(true),
+    opt.setName("amount").setDescription("Bet amount (e.g. 1m, 2.5b)").setRequired(true),
   )
   .addIntegerOption((opt) =>
     opt
@@ -215,38 +157,27 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply();
 
-  const amountStr = interaction.options.getString("amount", true);
-  const minesCount = interaction.options.getInteger("mines", true);
+  const amountStr   = interaction.options.getString("amount", true);
+  const minesCount  = interaction.options.getInteger("mines", true);
+  const amount      = parseAmount(amountStr);
 
-  const amount = parseAmount(amountStr);
   if (!amount || amount <= 0) {
-    return interaction.editReply({
-      embeds: [errorEmbed("Invalid amount. Try `1m`, `2.5b`, `500k`.")],
-    });
+    return interaction.editReply({ embeds: [errorEmbed("Invalid amount. Try `1m`, `2.5b`, `500k`.")] });
   }
 
   if (activeMinesGames.has(interaction.user.id)) {
-    return interaction.editReply({
-      embeds: [errorEmbed("You already have an active Mines game! Finish it first.")],
-    });
+    return interaction.editReply({ embeds: [errorEmbed("You already have an active Mines game!")] });
   }
 
-  const user = await getOrCreateUser(
-    interaction.user.id,
-    interaction.user.username,
-  );
+  const user = await getOrCreateUser(interaction.user.id, interaction.user.username);
 
   if (user.balance < amount) {
     return interaction.editReply({
-      embeds: [
-        errorEmbed(
-          `Insufficient balance. You have **${formatAmount(user.balance)} gems**.`,
-        ),
-      ],
+      embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} gems**.`)],
     });
   }
 
-  // Deduct bet
+  // Deduct bet up-front
   await addBalance(interaction.user.id, -amount);
 
   // Generate board
@@ -258,95 +189,83 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   minePositions.forEach((pos) => (board[pos] = "bomb"));
 
   const game: MinesGame = {
-    userId: interaction.user.id,
-    bet: amount,
+    userId:          interaction.user.id,
+    bet:             amount,
     minesCount,
     board,
-    revealed: Array(25).fill(false),
-    gemsFound: 0,
-    multiplier: 1.0,
-    gridMessageId: "",
-    panelMessageId: "",
-    channelId: interaction.channelId,
+    revealed:        Array(25).fill(false),
+    gemsFound:       0,
+    multiplier:      1.0,
+    panelMessageId:  "",
+    gridMessageId:   "",
+    cashoutMessageId: "",
+    channelId:       interaction.channelId,
   };
 
-  // Send grid message
-  const gridComponents = buildMinesGrid(game, false);
-  const gridMsg = await interaction.editReply({ components: gridComponents });
-  game.gridMessageId = gridMsg.id;
-
-  // Send panel message immediately after (same channel, appears attached)
-  const channel = interaction.channel!;
-  const panelMsg = await channel.send({
+  // ── Message order: 1) panel embed, 2) grid, 3) cashout button ──
+  const panelMsg = await interaction.editReply({
     embeds: [buildMinesPanelEmbed(game, "active")],
-    components: [buildCashoutRow()],
   });
   game.panelMessageId = panelMsg.id;
+
+  const channel = interaction.channel!;
+
+  const gridMsg = await channel.send({
+    components: buildMinesGrid(game, false),
+  });
+  game.gridMessageId = gridMsg.id;
+
+  const cashoutMsg = await channel.send({
+    components: [buildCashoutMessage()],
+  });
+  game.cashoutMessageId = cashoutMsg.id;
 
   activeMinesGames.set(interaction.user.id, game);
 }
 
 // ─── Button handlers ──────────────────────────────────────────────────────────
-export async function handleReveal(
-  interaction: ButtonInteraction,
-  cellIndex: number,
-) {
+export async function handleReveal(interaction: ButtonInteraction, cellIndex: number) {
   await interaction.deferUpdate();
 
   const game = activeMinesGames.get(interaction.user.id);
-  if (!game) {
-    await interaction.followUp({
-      embeds: [errorEmbed("No active Mines game found.")],
-      ephemeral: true,
-    });
-    return;
-  }
-
-  if (game.revealed[cellIndex]) return;
+  if (!game || game.revealed[cellIndex]) return;
 
   game.revealed[cellIndex] = true;
   const isGem = game.board[cellIndex] === "gem";
+  const channel = interaction.channel!;
 
   if (isGem) {
     game.gemsFound++;
     game.multiplier = calcMinesMultiplier(game.minesCount, game.gemsFound);
     const totalGems = 25 - game.minesCount;
 
-    // Update grid
+    // Update grid (button that was pressed is on the grid message)
     await interaction.editReply({ components: buildMinesGrid(game, false) });
 
-    const channel = interaction.channel!;
-    const panelMsg = await channel.messages.fetch(game.panelMessageId);
-
-    // Auto-win: found all gems
     if (game.gemsFound === totalGems) {
+      // Auto-win — found everything
       activeMinesGames.delete(interaction.user.id);
       const winnings = Math.floor(game.bet * game.multiplier);
       await addBalance(interaction.user.id, winnings);
 
-      await interaction.editReply({ components: buildMinesGrid(game, false) });
-      await panelMsg.edit({
-        embeds: [buildMinesPanelEmbed(game, "won")],
-        components: [],
-      });
+      const panelMsg   = await channel.messages.fetch(game.panelMessageId);
+      const cashoutMsg = await channel.messages.fetch(game.cashoutMessageId);
+      await panelMsg.edit({ embeds: [buildMinesPanelEmbed(game, "won")] });
+      await cashoutMsg.edit({ components: [] });
     } else {
-      await panelMsg.edit({
-        embeds: [buildMinesPanelEmbed(game, "active")],
-        components: [buildCashoutRow()],
-      });
+      const panelMsg = await channel.messages.fetch(game.panelMessageId);
+      await panelMsg.edit({ embeds: [buildMinesPanelEmbed(game, "active")] });
     }
   } else {
-    // Hit a bomb — game over
+    // Bomb hit
     activeMinesGames.delete(interaction.user.id);
 
     await interaction.editReply({ components: buildMinesGrid(game, true) });
 
-    const channel = interaction.channel!;
-    const panelMsg = await channel.messages.fetch(game.panelMessageId);
-    await panelMsg.edit({
-      embeds: [buildMinesPanelEmbed(game, "lost")],
-      components: [],
-    });
+    const panelMsg   = await channel.messages.fetch(game.panelMessageId);
+    const cashoutMsg = await channel.messages.fetch(game.cashoutMessageId);
+    await panelMsg.edit({ embeds: [buildMinesPanelEmbed(game, "lost")] });
+    await cashoutMsg.edit({ components: [] });
   }
 }
 
@@ -354,13 +273,7 @@ export async function handleCashout(interaction: ButtonInteraction) {
   await interaction.deferUpdate();
 
   const game = activeMinesGames.get(interaction.user.id);
-  if (!game) {
-    await interaction.followUp({
-      embeds: [errorEmbed("No active Mines game found.")],
-      ephemeral: true,
-    });
-    return;
-  }
+  if (!game) return;
 
   if (game.gemsFound === 0) {
     await interaction.followUp({
@@ -371,18 +284,21 @@ export async function handleCashout(interaction: ButtonInteraction) {
   }
 
   activeMinesGames.delete(interaction.user.id);
-
   const winnings = Math.floor(game.bet * game.multiplier);
   await addBalance(interaction.user.id, winnings);
 
-  // Update panel (the message that has cashout button)
-  await interaction.editReply({
-    embeds: [buildMinesPanelEmbed(game, "won")],
-    components: [],
-  });
-
-  // Disable the grid
   const channel = interaction.channel!;
-  const gridMsg = await channel.messages.fetch(game.gridMessageId);
-  await gridMsg.edit({ components: buildMinesGrid(game, false) });
+
+  // Remove cashout button (this is the message with the button)
+  await interaction.editReply({ components: [] });
+
+  // Update panel and disable grid
+  const [panelMsg, gridMsg] = await Promise.all([
+    channel.messages.fetch(game.panelMessageId),
+    channel.messages.fetch(game.gridMessageId),
+  ]);
+  await Promise.all([
+    panelMsg.edit({ embeds: [buildMinesPanelEmbed(game, "won")] }),
+    gridMsg.edit({ components: buildMinesGrid(game, false) }),
+  ]);
 }
