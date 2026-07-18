@@ -44,7 +44,11 @@ function pickResult(): { result: Segment; poolIdx: number } {
 function buildStrip(centreIdx: number, highlight: boolean): string {
   return Array.from({ length: 7 }, (_, i) => {
     const seg = POOL[(centreIdx - 3 + i + POOL.length) % POOL.length]!;
-    if (i === 3 && highlight) return `▶ **${seg.emoji} ${seg.label}** ◀`;
+    if (i === 3) {
+      return highlight
+        ? `▶ **${seg.emoji} ${seg.label}** ◀`
+        : `▶ ${seg.emoji} ${seg.label} ◀`;
+    }
     return `${seg.emoji} ${seg.label}`;
   }).join("  ·  ");
 }
