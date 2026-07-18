@@ -38,15 +38,13 @@ function pickResult(): { result: Segment; poolIdx: number } {
   return { result: POOL[poolIdx]!, poolIdx };
 }
 
-// Horizontal 7-item strip; ▶ ◀ are always attached to the centre element (index 3)
+// Horizontal 7-item strip.
+// During animation (highlight=false) all items look identical so the strip width is stable.
+// On the final result (highlight=true) the centre gets ▶ ◀ markers.
 function buildStrip(centreIdx: number, highlight: boolean): string {
   return Array.from({ length: 7 }, (_, i) => {
     const seg = POOL[(centreIdx - 3 + i + POOL.length) % POOL.length]!;
-    if (i === 3) {
-      return highlight
-        ? `▶ **${seg.emoji} ${seg.label}** ◀`
-        : `▶ ${seg.emoji} ${seg.label} ◀`;
-    }
+    if (i === 3 && highlight) return `▶ **${seg.emoji} ${seg.label}** ◀`;
     return `${seg.emoji} ${seg.label}`;
   }).join("  ·  ");
 }

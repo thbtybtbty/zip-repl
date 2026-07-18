@@ -53,15 +53,13 @@ function pocketLabels(p: Pocket): string {
   return [col, par, rng, doz].join("  ·  ");
 }
 
-// Horizontal 7-item strip; ▶ ◀ are always attached to the centre element (index 3)
+// Horizontal 7-item strip.
+// During animation (highlight=false) all items look identical so the strip width is stable.
+// On the final result (highlight=true) the centre gets ▶ ◀ markers.
 function buildStrip(centreIdx: number, highlight: boolean): string {
   return Array.from({ length: 7 }, (_, i) => {
     const p = WHEEL[(centreIdx - 3 + i + WHEEL.length) % WHEEL.length]!;
-    if (i === 3) {
-      return highlight
-        ? `▶ **${pocketEmoji(p)} ${p}** ◀`
-        : `▶ ${pocketEmoji(p)} ${p} ◀`;
-    }
+    if (i === 3 && highlight) return `▶ **${pocketEmoji(p)} ${p}** ◀`;
     return `${pocketEmoji(p)} ${p}`;
   }).join("  ·  ");
 }
