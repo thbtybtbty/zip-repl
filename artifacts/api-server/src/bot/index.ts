@@ -25,9 +25,8 @@ import * as addbalance    from "./commands/addbalance.js";
 import * as removebalance from "./commands/removebalance.js";
 import * as wheel         from "./commands/wheel.js";
 import * as roulette      from "./commands/roulette.js";
-import * as crash         from "./commands/crash.js";
 
-const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, roulette, crash];
+const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, roulette];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -53,7 +52,6 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "removebalance") return await removebalance.execute(interaction);
       if (name === "wheel")         return await wheel.execute(interaction);
       if (name === "roulette")      return await roulette.execute(interaction);
-      if (name === "crash")         return await crash.execute(interaction);
     } catch (err) {
       logger.error({ err, command: name }, "Error executing command");
       const payload = { content: "❌ Something went wrong. Please try again.", ephemeral: true };
@@ -99,9 +97,6 @@ async function handleInteraction(interaction: Interaction) {
       // Withdraw (mod side)
       if (id.startsWith("with_approve_"))    return await withdraw.handleApprove(bi, id.slice("with_approve_".length));
       if (id.startsWith("with_disapprove_")) return await withdraw.handleDisapprove(bi, id.slice("with_disapprove_".length));
-
-      // Crash
-      if (id.startsWith("crash_cash_")) return await crash.handleCashout(bi, id.slice("crash_cash_".length));
 
       // Add balance (admin)
       if (id.startsWith("addbalnc_enter_"))  return await addbalance.handleEnter(bi, id.slice("addbalnc_enter_".length));
@@ -168,29 +163,24 @@ export async function startBot() {
   const rest = new REST().setToken(token);
 
   client.once(Events.ClientReady, async (c) => {
-    const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=277025770560&scope=bot+applications.commands`;
-    logger.info({ tag: c.user.tag, inviteUrl }, "Discord bot ready");
+    logger.info({ tag: c.user.tag }, "Discord bot ready");
 
-    // Fetch all guilds via REST (reliable — not dependent on gateway cache)
-    let guildIds: string[] = [];
+    // Clear global commands (no duplicates)
     try {
-      const fetched = await c.guilds.fetch();
-      guildIds = [...fetched.keys()];
+      await rest.put(Routes.applicationCommands(clientId), { body: [] });
     } catch (err) {
-      logger.warn({ err }, "Failed to fetch guild list — falling back to cache");
-      guildIds = [...c.guilds.cache.keys()];
+      logger.error({ err }, "Failed to clear global commands");
     }
 
-    logger.info({ count: guildIds.length }, "Registering commands across guilds");
-
     // Register guild commands (instant propagation)
+    const guilds = [...c.guilds.cache.values()];
     await Promise.all(
-      guildIds.map(async (guildId) => {
+      guilds.map(async (guild) => {
         try {
-          await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commandData });
-          logger.info({ guildId, count: commandData.length }, "Guild commands registered");
+          await rest.put(Routes.applicationGuildCommands(clientId, guild.id), { body: commandData });
+          logger.info({ guildId: guild.id, guildName: guild.name, count: commandData.length }, "Guild commands registered");
         } catch (err) {
-          logger.error({ err, guildId }, "Failed to register guild commands");
+          logger.error({ err, guildId: guild.id }, "Failed to register guild commands");
         }
       }),
     );
