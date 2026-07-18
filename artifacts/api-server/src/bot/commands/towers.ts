@@ -25,19 +25,20 @@ type Difficulty = "easy" | "medium" | "hard";
 type TileType = "diamond" | "bomb";
 
 interface LevelRecord {
-  picked: number;        // column index that was chosen (0=left,1=mid,2=right)
+  picked: number;          // column index chosen
   result: "safe" | "bomb";
+  row: TileType[];         // full tile layout so we can reveal it
 }
 
 export interface TowersGame {
   userId: string;
   bet: number;
   difficulty: Difficulty;
-  level: number;          // current 0-indexed level (0 = level 1)
+  level: number;           // current 0-indexed level
   maxLevels: number;
   multiplier: number;
-  row: TileType[];        // current level's tiles
-  history: LevelRecord[]; // completed levels (index 0 = level 1)
+  row: TileType[];         // current level's tiles
+  history: LevelRecord[];  // past levels (index 0 = level 1)
   messageId: string;
   channelId: string;
 }
@@ -48,21 +49,9 @@ export const activeTowersGames = new Map<string, TowersGame>();
 const MAX_LEVELS = 8;
 
 const LEVEL_MULT: Record<Difficulty, number> = {
-  easy:   1.46,  // 2/3 safe
-  medium: 1.94,  // 1/2 safe
-  hard:   2.91,  // 1/3 safe
-};
-
-const DIFF_LABEL: Record<Difficulty, string> = {
-  easy:   "🟢 Easy",
-  medium: "🟡 Medium",
-  hard:   "🔴 Hard",
-};
-
-const DIFF_TILES: Record<Difficulty, string> = {
-  easy:   "2 💎 · 1 💣",
-  medium: "1 💎 · 1 💣",
-  hard:   "1 💎 · 2 💣",
+  easy:   1.46,
+  medium: 1.94,
+  hard:   2.91,
 };
 
 // ─── Row generation ───────────────────────────────────────────────────────────
@@ -76,61 +65,59 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 function generateRow(difficulty: Difficulty): TileType[] {
-  if (difficulty === "easy")   return shuffle(["diamond", "diamond", "bomb"]);
-  if (difficulty === "medium") return shuffle(["diamond", "bomb"]);   // length 2
-  return shuffle(["diamond", "bomb", "bomb"]);
+  if (difficulty === "easy")   return shuffle(["diamond", "diamond", "bomb"] as TileType[]);
+  if (difficulty === "medium") return shuffle(["diamond", "bomb"] as TileType[]);
+  return shuffle(["diamond", "bomb", "bomb"] as TileType[]);
 }
 
-// ─── Tower visual ─────────────────────────────────────────────────────────────
-/**
- * Builds a visual representation of all levels:
- *
- *  Lv 8  ⬛ ⬛ ⬛
- *  Lv 7  ⬛ ⬛ ⬛
- *  Lv 5  ⬛ ⬛ ⬛
- *  Lv 4  ⬛ ⬛ ⬛
- *  Lv 3  ⬛ ⬛ ⬛
- * ▶ Lv 2  ❓ ❓ ❓   ← current
- *   Lv 1  💎 · ·    ← completed safe
- */
+// ─── Tower visual (top → bottom, highest level first) ────────────────────────
+// Tile emojis:
+//   💎  = diamond you picked (safe, correct pick)
+//   🔹  = diamond you didn't pick (revealed after level complete)
+//   💣  = bomb (revealed after level)
+//   🟦  = current level slot (unknown, clickable via buttons)
+//   ⬛  = locked future level slot
+
+function tileEmoji(type: TileType, picked: boolean): string {
+  if (type === "diamond") return picked ? "💎" : "🔹";
+  return "💣"; // bomb always shows as bomb after reveal
+}
+
 function buildTowerVisual(game: TowersGame): string {
   const isMedium = game.difficulty === "medium";
   const colCount = isMedium ? 2 : 3;
   const lines: string[] = [];
 
-  // Iterate top → bottom (maxLevels → 1)
   for (let lvl = game.maxLevels; lvl >= 1; lvl--) {
-    const idx = lvl - 1; // 0-indexed
-    const prefix = idx === game.level ? "▶" : " ";
+    const idx      = lvl - 1;
+    const isCurrent = idx === game.level;
+    const isFuture  = idx > game.level;
 
-    if (idx > game.level) {
-      // Future level — locked
-      const tiles = isMedium ? "⬛ ⬛" : "⬛ ⬛ ⬛";
-      lines.push(`${prefix} **Lv ${lvl}**  ${tiles}`);
-    } else if (idx === game.level) {
-      // Current level — question marks
-      const tiles = isMedium ? "❓ ❓" : "❓ ❓ ❓";
-      lines.push(`${prefix} **Lv ${lvl}**  ${tiles}`);
+    let tileStr: string;
+
+    if (isFuture) {
+      tileStr = Array(colCount).fill("⬛").join("  ");
+    } else if (isCurrent) {
+      tileStr = Array(colCount).fill("🟦").join("  ");
     } else {
-      // Completed level
+      // Completed — reveal full tile layout
       const record = game.history[idx];
-      if (!record) continue;
-      const cells: string[] = [];
-      for (let c = 0; c < colCount; c++) {
-        if (c === record.picked) {
-          cells.push(record.result === "safe" ? "💎" : "💣");
-        } else {
-          cells.push("▫️");
-        }
+      if (!record) { tileStr = Array(colCount).fill("▫️").join("  "); }
+      else {
+        const cells = record.row.map((tile, c) => tileEmoji(tile, c === record.picked));
+        tileStr = cells.join("  ");
       }
-      lines.push(`${prefix} **Lv ${lvl}**  ${cells.join(" ")}`);
     }
+
+    const prefix = isCurrent ? "▶ " : "   ";
+    const label  = `Lv ${String(lvl).padStart(2, " ")}`;
+    lines.push(`${prefix}\`${label}\`  ${tileStr}`);
   }
 
   return lines.join("\n");
 }
 
-// ─── Embed builder ────────────────────────────────────────────────────────────
+// ─── Embed ────────────────────────────────────────────────────────────────────
 export function buildTowersEmbed(
   game: TowersGame,
   status: "active" | "won" | "lost" | "cashed",
@@ -146,11 +133,17 @@ export function buildTowersEmbed(
     lost:   COLORS.danger,
   };
 
+  const diffName: Record<Difficulty, string> = {
+    easy:   "🟢 Easy",
+    medium: "🟡 Medium",
+    hard:   "🔴 Hard",
+  };
+
   const titles: Record<string, string> = {
     active: `🗼 Towers — Level ${game.level + 1} / ${game.maxLevels}`,
-    won:    `🗼 Towers — All Levels Cleared! 🏆`,
+    won:    `🗼 Towers — Cleared! 🏆`,
     lost:   `🗼 Towers — Bomb Hit! 💥`,
-    cashed: `🗼 Towers — Cashed Out! 💸`,
+    cashed: `🗼 Towers — Cashed Out!`,
   };
 
   const embed = new EmbedBuilder()
@@ -158,14 +151,14 @@ export function buildTowersEmbed(
     .setTitle(titles[status] ?? "Towers")
     .setDescription(buildTowerVisual(game))
     .addFields(
-      { name: "💰 Bet",         value: `${formatAmount(game.bet)} gems`,      inline: true },
-      { name: "🎯 Difficulty",  value: `${DIFF_LABEL[game.difficulty]}\n${DIFF_TILES[game.difficulty]}`, inline: true },
-      { name: "\u200b",         value: "\u200b",                               inline: true },
-      { name: "✨ Multiplier",  value: formatMult(game.multiplier),            inline: true },
-      { name: "💎 Current",    value: `${formatAmount(currentWin)} gems`,     inline: true },
+      { name: "💰 Bet",        value: `${formatAmount(game.bet)} gems`,  inline: true },
+      { name: "🎯 Difficulty", value: diffName[game.difficulty],          inline: true },
+      { name: "\u200b",        value: "\u200b",                           inline: true },
+      { name: "✨ Multiplier", value: formatMult(game.multiplier),        inline: true },
+      { name: "💎 Current",   value: `${formatAmount(currentWin)} gems`, inline: true },
       ...(status === "active"
-        ? [{ name: "⭐ Next level", value: `${formatAmount(nextWin)} gems`, inline: true }]
-        : [{ name: "\u200b", value: "\u200b", inline: true }]),
+        ? [{ name: "⭐ Next",  value: `${formatAmount(nextWin)} gems`,   inline: true }]
+        : [{ name: "\u200b",   value: "\u200b",                           inline: true }]),
     )
     .setTimestamp();
 
@@ -176,7 +169,7 @@ export function buildTowersEmbed(
   return embed;
 }
 
-// ─── Components builder ───────────────────────────────────────────────────────
+// ─── Components ───────────────────────────────────────────────────────────────
 export function buildTowersComponents(
   game: TowersGame,
   disabled: boolean,
@@ -186,7 +179,6 @@ export function buildTowersComponents(
   const choiceRow = new ActionRowBuilder<MessageActionRowComponentBuilder>();
 
   if (isMedium) {
-    // Left and Right only; middle is a disabled spacer
     choiceRow.addComponents(
       new ButtonBuilder()
         .setCustomId("towers_l")
@@ -195,7 +187,7 @@ export function buildTowersComponents(
         .setDisabled(disabled),
       new ButtonBuilder()
         .setCustomId("towers_m")
-        .setLabel("・")
+        .setLabel("　·　")
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(true),
       new ButtonBuilder()
@@ -224,13 +216,12 @@ export function buildTowersComponents(
     );
   }
 
-  const canCashout = !disabled && game.multiplier > 1.0;
   const cashRow = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId("towers_cash")
       .setLabel("💸  Cash Out")
       .setStyle(ButtonStyle.Success)
-      .setDisabled(!canCashout),
+      .setDisabled(disabled || game.multiplier <= 1.0),
   );
 
   return [choiceRow, cashRow];
@@ -241,10 +232,7 @@ export const data = new SlashCommandBuilder()
   .setName("towers")
   .setDescription("Climb the tower — pick safe tiles to multiply your bet!")
   .addStringOption((opt) =>
-    opt
-      .setName("amount")
-      .setDescription("Bet amount (e.g. 1m, 2.5b)")
-      .setRequired(true),
+    opt.setName("amount").setDescription("Bet amount (e.g. 1m, 2.5b)").setRequired(true),
   )
   .addStringOption((opt) =>
     opt
@@ -252,9 +240,9 @@ export const data = new SlashCommandBuilder()
       .setDescription("Game difficulty")
       .setRequired(true)
       .addChoices(
-        { name: "🟢 Easy — 2 diamonds, 1 bomb per level",  value: "easy" },
-        { name: "🟡 Medium — 1 diamond, 1 bomb per level", value: "medium" },
-        { name: "🔴 Hard — 1 diamond, 2 bombs per level",  value: "hard" },
+        { name: "🟢 Easy — 2 diamonds, 1 bomb",  value: "easy" },
+        { name: "🟡 Medium — 1 diamond, 1 bomb", value: "medium" },
+        { name: "🔴 Hard — 1 diamond, 2 bombs",  value: "hard" },
       ),
   );
 
@@ -268,13 +256,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (!amount || amount <= 0) {
     return interaction.editReply({ embeds: [errorEmbed("Invalid amount. Try `1m`, `2.5b`, `500k`.")] });
   }
-
   if (activeTowersGames.has(interaction.user.id)) {
     return interaction.editReply({ embeds: [errorEmbed("You already have an active Towers game!")] });
   }
 
   const user = await getOrCreateUser(interaction.user.id, interaction.user.username);
-
   if (user.balance < amount) {
     return interaction.editReply({
       embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} gems**.`)],
@@ -317,13 +303,14 @@ export async function handleChoice(interaction: ButtonInteraction, choice: Tower
     return;
   }
 
-  const colIndex = CHOICE_INDEX[choice];
-  // For medium: left=0, right=1 (row length is 2)
-  const effectiveIndex = game.difficulty === "medium" && colIndex === 2 ? 1 : colIndex;
-  const tile = game.row[effectiveIndex] ?? "bomb";
+  // For medium, right button maps to index 1 in the 2-tile row
+  let colIndex = CHOICE_INDEX[choice];
+  if (game.difficulty === "medium" && choice === "r") colIndex = 1;
 
-  // Record history before modifying level
-  game.history.push({ picked: effectiveIndex, result: tile === "diamond" ? "safe" : "bomb" });
+  const tile = game.row[colIndex] ?? "bomb";
+
+  // Record this level's result (with full row revealed)
+  game.history.push({ picked: colIndex, result: tile === "diamond" ? "safe" : "bomb", row: game.row });
 
   if (tile === "bomb") {
     activeTowersGames.delete(interaction.user.id);
@@ -349,7 +336,6 @@ export async function handleChoice(interaction: ButtonInteraction, choice: Tower
     return;
   }
 
-  // Next level
   game.row = generateRow(game.difficulty);
   await interaction.editReply({
     embeds:     [buildTowersEmbed(game, "active")],
@@ -365,7 +351,6 @@ export async function handleCashout(interaction: ButtonInteraction) {
     await interaction.followUp({ embeds: [errorEmbed("No active Towers game.")], ephemeral: true });
     return;
   }
-
   if (game.multiplier <= 1.0) {
     await interaction.followUp({
       embeds: [errorEmbed("Complete at least one level before cashing out!")],
