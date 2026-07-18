@@ -6,22 +6,25 @@ import {
   Routes,
   type Interaction,
   type ButtonInteraction,
+  type ModalSubmitInteraction,
 } from "discord.js";
 import { logger } from "../lib/logger.js";
 
 // ─── Commands ─────────────────────────────────────────────────────────────────
-import * as balance   from "./commands/balance.js";
-import * as tip       from "./commands/tip.js";
-import * as mines     from "./commands/mines.js";
-import * as towers    from "./commands/towers.js";
-import * as rps       from "./commands/rps.js";
-import * as coinflip  from "./commands/coinflip.js";
-import * as blackjack from "./commands/blackjack.js";
-import * as setup     from "./commands/setup.js";
-import * as deposit   from "./commands/deposit.js";
-import * as withdraw  from "./commands/withdraw.js";
+import * as balance       from "./commands/balance.js";
+import * as tip           from "./commands/tip.js";
+import * as mines         from "./commands/mines.js";
+import * as towers        from "./commands/towers.js";
+import * as rps           from "./commands/rps.js";
+import * as coinflip      from "./commands/coinflip.js";
+import * as blackjack     from "./commands/blackjack.js";
+import * as setup         from "./commands/setup.js";
+import * as deposit       from "./commands/deposit.js";
+import * as withdraw      from "./commands/withdraw.js";
+import * as addbalance    from "./commands/addbalance.js";
+import * as removebalance from "./commands/removebalance.js";
 
-const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw];
+const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -33,16 +36,18 @@ async function handleInteraction(interaction: Interaction) {
   if (interaction.isChatInputCommand()) {
     const name = interaction.commandName;
     try {
-      if (name === "balance")   return await balance.execute(interaction);
-      if (name === "tip")       return await tip.execute(interaction);
-      if (name === "mines")     return await mines.execute(interaction);
-      if (name === "towers")    return await towers.execute(interaction);
-      if (name === "rps")       return await rps.execute(interaction);
-      if (name === "coinflip")  return await coinflip.execute(interaction);
-      if (name === "blackjack") return await blackjack.execute(interaction);
-      if (name === "setup")     return await setup.execute(interaction);
-      if (name === "deposit")   return await deposit.execute(interaction);
-      if (name === "withdraw")  return await withdraw.execute(interaction);
+      if (name === "balance")       return await balance.execute(interaction);
+      if (name === "tip")           return await tip.execute(interaction);
+      if (name === "mines")         return await mines.execute(interaction);
+      if (name === "towers")        return await towers.execute(interaction);
+      if (name === "rps")           return await rps.execute(interaction);
+      if (name === "coinflip")      return await coinflip.execute(interaction);
+      if (name === "blackjack")     return await blackjack.execute(interaction);
+      if (name === "setup")         return await setup.execute(interaction);
+      if (name === "deposit")       return await deposit.execute(interaction);
+      if (name === "withdraw")      return await withdraw.execute(interaction);
+      if (name === "addbalance")    return await addbalance.execute(interaction);
+      if (name === "removebalance") return await removebalance.execute(interaction);
     } catch (err) {
       logger.error({ err, command: name }, "Error executing command");
       const payload = { content: "❌ Something went wrong. Please try again.", ephemeral: true };
@@ -73,17 +78,69 @@ async function handleInteraction(interaction: Interaction) {
       if (id === "bj_stand")  return await blackjack.handleStand(bi);
       if (id === "bj_double") return await blackjack.handleDouble(bi);
 
-      // Deposit
-      if (id.startsWith("dep_accept_")) return await deposit.handleAccept(bi, id.slice("dep_accept_".length));
-      if (id.startsWith("dep_deny_"))   return await deposit.handleDeny(bi, id.slice("dep_deny_".length));
+      // Deposit (player side)
+      if (id.startsWith("dep_sent_"))   return await deposit.handleSent(bi, id.slice("dep_sent_".length));
+      if (id.startsWith("dep_cancel_")) return await deposit.handleCancel(bi, id.slice("dep_cancel_".length));
 
-      // Withdraw
-      if (id.startsWith("with_accept_")) return await withdraw.handleAccept(bi, id.slice("with_accept_".length));
-      if (id.startsWith("with_deny_"))   return await withdraw.handleDeny(bi, id.slice("with_deny_".length));
+      // Deposit (mod side)
+      if (id.startsWith("dep_approve_"))    return await deposit.handleApprove(bi, id.slice("dep_approve_".length));
+      if (id.startsWith("dep_notapprove_")) return await deposit.handleNotApprove(bi, id.slice("dep_notapprove_".length));
+
+      // Withdraw (player side)
+      if (id.startsWith("with_confirm_")) return await withdraw.handleConfirm(bi, id.slice("with_confirm_".length));
+      if (id.startsWith("with_cancel_"))  return await withdraw.handleCancel(bi, id.slice("with_cancel_".length));
+
+      // Withdraw (mod side)
+      if (id.startsWith("with_approve_"))    return await withdraw.handleApprove(bi, id.slice("with_approve_".length));
+      if (id.startsWith("with_disapprove_")) return await withdraw.handleDisapprove(bi, id.slice("with_disapprove_".length));
+
+      // Add balance (admin)
+      if (id.startsWith("addbalnc_enter_"))  return await addbalance.handleEnter(bi, id.slice("addbalnc_enter_".length));
+      if (id.startsWith("addbalnc_cancel_")) return await addbalance.handleCancelBtn(bi, id.slice("addbalnc_cancel_".length));
+
+      // Remove balance (admin)
+      if (id.startsWith("rembalnc_enter_"))  return await removebalance.handleEnter(bi, id.slice("rembalnc_enter_".length));
+      if (id.startsWith("rembalnc_cancel_")) return await removebalance.handleCancelBtn(bi, id.slice("rembalnc_cancel_".length));
+
     } catch (err) {
       logger.error({ err, buttonId: id }, "Error handling button");
       if (!bi.replied && !bi.deferred) {
         await bi.reply({ content: "❌ Something went wrong.", ephemeral: true });
+      }
+    }
+    return;
+  }
+
+  // ── Modal submissions ──
+  if (interaction.isModalSubmit()) {
+    const mi = interaction as ModalSubmitInteraction;
+    const id = mi.customId;
+
+    try {
+      // Deposit: mod denied with reason
+      if (id.startsWith("dep_notapprove_modal_"))
+        return await deposit.handleNotApproveModal(mi, id.slice("dep_notapprove_modal_".length));
+
+      // Withdraw: mod approved with note
+      if (id.startsWith("with_approve_modal_"))
+        return await withdraw.handleApproveModal(mi, id.slice("with_approve_modal_".length));
+
+      // Withdraw: mod disapproved with reason
+      if (id.startsWith("with_disapprove_modal_"))
+        return await withdraw.handleDisapproveModal(mi, id.slice("with_disapprove_modal_".length));
+
+      // Add balance: admin entered amount + reason
+      if (id.startsWith("addbalnc_modal_"))
+        return await addbalance.handleModal(mi, id.slice("addbalnc_modal_".length));
+
+      // Remove balance: admin entered amount + reason
+      if (id.startsWith("rembalnc_modal_"))
+        return await removebalance.handleModal(mi, id.slice("rembalnc_modal_".length));
+
+    } catch (err) {
+      logger.error({ err, modalId: id }, "Error handling modal");
+      if (!mi.replied && !mi.deferred) {
+        await mi.reply({ content: "❌ Something went wrong.", ephemeral: true });
       }
     }
   }

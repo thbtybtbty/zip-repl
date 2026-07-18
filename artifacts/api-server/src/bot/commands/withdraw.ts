@@ -4,8 +4,13 @@ import {
   ButtonBuilder,
   ButtonStyle,
   ActionRowBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  MessageFlags,
   type ChatInputCommandInteraction,
   type ButtonInteraction,
+  type ModalSubmitInteraction,
   type MessageActionRowComponentBuilder,
   type TextChannel,
 } from "discord.js";
@@ -17,10 +22,11 @@ interface PendingWithdraw {
   userId: string;
   username: string;
   amount: number;
-  robloxUser: string; // the requesting user's Roblox username
+  sendToUserId: string;
+  sendToUsername: string;
 }
 
-export const pendingWithdraws = new Map<string, PendingWithdraw>(); // reqId → data
+export const pendingWithdraws = new Map<string, PendingWithdraw>();
 
 function makeReqId(): string {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -33,12 +39,12 @@ export const data = new SlashCommandBuilder()
   .addStringOption((opt) =>
     opt.setName("amount").setDescription("Amount of gems to withdraw (e.g. 1m, 2.5b)").setRequired(true),
   )
-  .addStringOption((opt) =>
-    opt.setName("roblox_user").setDescription("Your Roblox username — Robux will be sent here").setRequired(true),
+  .addUserOption((opt) =>
+    opt.setName("send_to").setDescription("The Discord user the gems should be sent to").setRequired(true),
   );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const cfg = getServerConfig();
   if (!cfg) {
@@ -47,132 +53,243 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     });
   }
 
-  const amountStr  = interaction.options.getString("amount",      true);
-  const robloxUser = interaction.options.getString("roblox_user", true);
-  const amount     = parseAmount(amountStr);
+  const amountStr = interaction.options.getString("amount", true);
+  const sendToUser = interaction.options.getUser("send_to", true);
+  const amount = parseAmount(amountStr);
 
   if (!amount || amount <= 0) {
     return interaction.editReply({ embeds: [errorEmbed("Invalid amount. Try `1m`, `2.5b`, `500k`.")] });
   }
 
-  const user = await getOrCreateUser(interaction.user.id, interaction.user.username);
-  if (user.balance < amount) {
+  const dbUser = await getOrCreateUser(interaction.user.id, interaction.user.username);
+  if (dbUser.balance < amount) {
     return interaction.editReply({
-      embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} gems**.`)],
+      embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(dbUser.balance)} 💎 gems**.`)],
     });
   }
 
-  // Deduct gems immediately — refunded if denied
-  await addBalance(interaction.user.id, -amount);
-
   const reqId = makeReqId();
   pendingWithdraws.set(reqId, {
-    userId:     interaction.user.id,
-    username:   interaction.user.username,
+    userId: interaction.user.id,
+    username: interaction.user.username,
     amount,
-    robloxUser,
+    sendToUserId: sendToUser.id,
+    sendToUsername: sendToUser.username,
   });
 
-  // Send request to the request channel
-  const requestChannel = interaction.client.channels.cache.get(cfg.requestChannelId) as TextChannel | undefined;
-  if (!requestChannel) {
-    // Refund and bail
-    await addBalance(interaction.user.id, amount);
-    pendingWithdraws.delete(reqId);
-    return interaction.editReply({ embeds: [errorEmbed("Request channel not found. Ask an admin to re-run `/setup`.")]});
-  }
-
-  const reqEmbed = new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setColor(COLORS.warning)
-    .setTitle("📤  Withdraw Request")
-    .addFields(
-      { name: "👤 User",          value: `<@${interaction.user.id}>`,    inline: true },
-      { name: "💎 Amount",        value: `${formatAmount(amount)} gems`, inline: true },
-      { name: "🎮 Send Robux to", value: `\`${robloxUser}\``,           inline: true },
+    .setTitle("📤 Withdraw Request")
+    .setDescription(
+      `You requested to withdraw **${formatAmount(amount)} 💎 gems** to <@${sendToUser.id}>.\n\n` +
+      `Click **Accept** to confirm your withdrawal request, or **Cancel** to abort.`,
     )
     .setTimestamp();
 
   const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
     new ButtonBuilder()
-      .setCustomId(`with_accept_${reqId}`)
-      .setLabel("✅  Accept")
+      .setCustomId(`with_confirm_${reqId}`)
+      .setLabel("Accept")
+      .setEmoji("✅")
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
-      .setCustomId(`with_deny_${reqId}`)
-      .setLabel("❌  Deny")
+      .setCustomId(`with_cancel_${reqId}`)
+      .setLabel("Cancel")
+      .setEmoji("❌")
       .setStyle(ButtonStyle.Danger),
   );
 
-  await requestChannel.send({ embeds: [reqEmbed], components: [row] });
-
-  await interaction.editReply({
-    embeds: [
-      new EmbedBuilder()
-        .setColor(COLORS.success)
-        .setTitle("📤  Withdraw Request Sent")
-        .setDescription(
-          `Your request to withdraw **${formatAmount(amount)} gems** has been submitted.\n\nRobux will be sent to your Roblox account: \`${robloxUser}\`\nYour gems have been held and will be refunded if the request is denied.`,
-        )
-        .setTimestamp(),
-    ],
-  });
+  await interaction.editReply({ embeds: [embed], components: [row] });
 }
 
-// ─── Button: Accept ───────────────────────────────────────────────────────────
-export async function handleAccept(interaction: ButtonInteraction, reqId: string) {
-  await interaction.deferUpdate();
-
+// ─── Button: player clicked "Accept" ──────────────────────────────────────────
+export async function handleConfirm(interaction: ButtonInteraction, reqId: string) {
   const req = pendingWithdraws.get(reqId);
   if (!req) {
-    return interaction.followUp({ content: "❌ This request has already been processed.", ephemeral: true });
+    return interaction.reply({ content: "❌ This request is no longer active.", flags: MessageFlags.Ephemeral });
+  }
+  if (interaction.user.id !== req.userId) {
+    return interaction.reply({ content: "❌ This is not your withdrawal request.", flags: MessageFlags.Ephemeral });
   }
 
-  pendingWithdraws.delete(reqId);
-  // Gems were already deducted — just confirm
+  // Deduct gems
+  await addBalance(req.userId, -req.amount);
 
-  await interaction.editReply({
+  const cfg = getServerConfig();
+
+  // Update player's ephemeral panel
+  await interaction.update({
     embeds: [
       new EmbedBuilder()
         .setColor(COLORS.success)
-        .setTitle("✅  Withdraw Accepted")
-        .addFields(
-          { name: "👤 User",          value: `<@${req.userId}>`,           inline: true },
-          { name: "💎 Amount",        value: `${formatAmount(req.amount)} gems`, inline: true },
-          { name: "🎮 Send Robux to", value: `\`${req.robloxUser}\``,     inline: true },
-          { name: "🛡️ By",           value: `<@${interaction.user.id}>`,   inline: true },
+        .setTitle("📤 Withdrawal Recorded")
+        .setDescription(
+          `Your withdrawal of **${formatAmount(req.amount)} 💎 gems** to <@${req.sendToUserId}> has been recorded.\n\n` +
+          `The moderators will send the gems and you will receive a DM by this bot when the gems have been sent to your account.\n\n` +
+          `Thank you!`,
         )
         .setTimestamp(),
     ],
     components: [],
   });
 
-  // Notify user via withdraw channel
-  const cfg = getServerConfig();
-  if (cfg) {
-    const ch = interaction.client.channels.cache.get(cfg.withdrawChannelId) as TextChannel | undefined;
-    if (ch) {
-      await ch.send({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(COLORS.success)
-            .setDescription(`✅ <@${req.userId}> — your withdrawal of **${formatAmount(req.amount)} gems** has been approved! Robux will be sent to \`${req.robloxUser}\` shortly.`)
-            .setTimestamp(),
-        ],
-      });
-    }
-  }
+  if (!cfg) return;
+
+  // Send to request channel
+  const requestChannel = interaction.client.channels.cache.get(cfg.requestChannelId) as TextChannel | undefined;
+  if (!requestChannel) return;
+
+  const reqEmbed = new EmbedBuilder()
+    .setColor(COLORS.warning)
+    .setTitle("📤 Withdraw Request")
+    .addFields(
+      { name: "👤 From", value: `<@${req.userId}>`, inline: true },
+      { name: "💎 Amount", value: `${formatAmount(req.amount)} gems`, inline: true },
+      { name: "📨 Send Gems To", value: `<@${req.sendToUserId}>`, inline: true },
+    )
+    .setTimestamp();
+
+  const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`with_approve_${reqId}`)
+      .setLabel("Approve")
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`with_disapprove_${reqId}`)
+      .setLabel("Disapprove")
+      .setStyle(ButtonStyle.Danger),
+  );
+
+  await requestChannel.send({ embeds: [reqEmbed], components: [row] });
 }
 
-// ─── Button: Deny ─────────────────────────────────────────────────────────────
-export async function handleDeny(interaction: ButtonInteraction, reqId: string) {
+// ─── Button: player clicked "Cancel" ──────────────────────────────────────────
+export async function handleCancel(interaction: ButtonInteraction, reqId: string) {
+  const req = pendingWithdraws.get(reqId);
+  if (!req) {
+    return interaction.update({ embeds: [], components: [], content: "Already processed." });
+  }
+  if (interaction.user.id !== req.userId) {
+    return interaction.reply({ content: "❌ This is not your withdrawal request.", flags: MessageFlags.Ephemeral });
+  }
+
+  pendingWithdraws.delete(reqId);
+  await interaction.update({
+    embeds: [
+      new EmbedBuilder()
+        .setColor(COLORS.dark)
+        .setDescription("❌ Withdrawal cancelled.")
+        .setTimestamp(),
+    ],
+    components: [],
+  });
+}
+
+// ─── Button: mod clicked "Approve" — show modal for reason ────────────────────
+export async function handleApprove(interaction: ButtonInteraction, reqId: string) {
+  const req = pendingWithdraws.get(reqId);
+  if (!req) {
+    return interaction.reply({ content: "❌ This request has already been processed.", flags: MessageFlags.Ephemeral });
+  }
+
+  const modal = new ModalBuilder()
+    .setCustomId(`with_approve_modal_${reqId}`)
+    .setTitle("Approve Withdrawal — Add Note");
+
+  const reasonInput = new TextInputBuilder()
+    .setCustomId("reason")
+    .setLabel("Note / confirmation message")
+    .setStyle(TextInputStyle.Paragraph)
+    .setRequired(true)
+    .setPlaceholder("e.g. Gems sent, check your mailbox…");
+
+  modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(reasonInput));
+  await interaction.showModal(modal);
+}
+
+// ─── Modal: mod approved with note ────────────────────────────────────────────
+export async function handleApproveModal(interaction: ModalSubmitInteraction, reqId: string) {
   await interaction.deferUpdate();
 
   const req = pendingWithdraws.get(reqId);
   if (!req) {
-    return interaction.followUp({ content: "❌ This request has already been processed.", ephemeral: true });
+    return interaction.followUp({ content: "❌ This request has already been processed.", flags: MessageFlags.Ephemeral });
   }
 
+  const reason = interaction.fields.getTextInputValue("reason");
   pendingWithdraws.delete(reqId);
+  // Gems were already deducted when player confirmed — no further deduction needed
+
+  await interaction.editReply({
+    embeds: [
+      new EmbedBuilder()
+        .setColor(COLORS.success)
+        .setTitle("✅ Withdrawal Approved")
+        .addFields(
+          { name: "👤 From", value: `<@${req.userId}>`, inline: true },
+          { name: "💎 Amount", value: `${formatAmount(req.amount)} gems`, inline: true },
+          { name: "📨 Sent To", value: `<@${req.sendToUserId}>`, inline: true },
+          { name: "🛡️ By", value: `<@${interaction.user.id}>`, inline: true },
+          { name: "📝 Note", value: reason, inline: false },
+        )
+        .setTimestamp(),
+    ],
+    components: [],
+  });
+
+  // DM the player
+  try {
+    const user = await interaction.client.users.fetch(req.userId);
+    await user.send({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(COLORS.success)
+          .setTitle("💎 Withdrawal Approved!")
+          .setDescription(
+            `Your withdrawal of **${formatAmount(req.amount)} 💎 gems** to <@${req.sendToUserId}> has been processed.\n\n**Note:** ${reason}`,
+          )
+          .setTimestamp(),
+      ],
+    });
+  } catch {
+    // DM failed — ignore silently
+  }
+}
+
+// ─── Button: mod clicked "Disapprove" — show modal for reason ─────────────────
+export async function handleDisapprove(interaction: ButtonInteraction, reqId: string) {
+  const req = pendingWithdraws.get(reqId);
+  if (!req) {
+    return interaction.reply({ content: "❌ This request has already been processed.", flags: MessageFlags.Ephemeral });
+  }
+
+  const modal = new ModalBuilder()
+    .setCustomId(`with_disapprove_modal_${reqId}`)
+    .setTitle("Disapprove Withdrawal — Enter Reason");
+
+  const reasonInput = new TextInputBuilder()
+    .setCustomId("reason")
+    .setLabel("Reason for disapproval")
+    .setStyle(TextInputStyle.Paragraph)
+    .setRequired(true)
+    .setPlaceholder("e.g. Suspicious activity, invalid request…");
+
+  modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(reasonInput));
+  await interaction.showModal(modal);
+}
+
+// ─── Modal: mod disapproved with reason ───────────────────────────────────────
+export async function handleDisapproveModal(interaction: ModalSubmitInteraction, reqId: string) {
+  await interaction.deferUpdate();
+
+  const req = pendingWithdraws.get(reqId);
+  if (!req) {
+    return interaction.followUp({ content: "❌ This request has already been processed.", flags: MessageFlags.Ephemeral });
+  }
+
+  const reason = interaction.fields.getTextInputValue("reason");
+  pendingWithdraws.delete(reqId);
+
   // Refund gems
   await addBalance(req.userId, req.amount);
 
@@ -180,30 +297,33 @@ export async function handleDeny(interaction: ButtonInteraction, reqId: string) 
     embeds: [
       new EmbedBuilder()
         .setColor(COLORS.danger)
-        .setTitle("❌  Withdraw Denied")
+        .setTitle("❌ Withdrawal Disapproved")
         .addFields(
-          { name: "👤 User",   value: `<@${req.userId}>`,           inline: true },
+          { name: "👤 User", value: `<@${req.userId}>`, inline: true },
           { name: "💎 Amount", value: `${formatAmount(req.amount)} gems`, inline: true },
-          { name: "🛡️ By",    value: `<@${interaction.user.id}>`,   inline: true },
+          { name: "🛡️ By", value: `<@${interaction.user.id}>`, inline: true },
+          { name: "📝 Reason", value: reason, inline: false },
         )
         .setTimestamp(),
     ],
     components: [],
   });
 
-  // Notify user via withdraw channel
-  const cfg = getServerConfig();
-  if (cfg) {
-    const ch = interaction.client.channels.cache.get(cfg.withdrawChannelId) as TextChannel | undefined;
-    if (ch) {
-      await ch.send({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(COLORS.danger)
-            .setDescription(`❌ <@${req.userId}> — your withdrawal of **${formatAmount(req.amount)} gems** was denied. Your gems have been refunded.`)
-            .setTimestamp(),
-        ],
-      });
-    }
+  // DM the player
+  try {
+    const user = await interaction.client.users.fetch(req.userId);
+    await user.send({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(COLORS.danger)
+          .setTitle("❌ Withdrawal Disapproved")
+          .setDescription(
+            `Your withdrawal of **${formatAmount(req.amount)} 💎 gems** was disapproved and your gems have been refunded.\n\n**Reason:** ${reason}`,
+          )
+          .setTimestamp(),
+      ],
+    });
+  } catch {
+    // DM failed — ignore silently
   }
 }
