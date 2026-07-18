@@ -20,66 +20,80 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface CrashSession {
-  userId:     string;
-  bet:        number;
-  crashPoint: number;
-  startTime:  number;
-  status:     "flying" | "cashed" | "crashed";
-  timer:      NodeJS.Timeout;
+  userId:      string;
+  bet:         number;
+  crashPoint:  number;
+  startTime:   number;
+  status:      "flying" | "cashed" | "crashed";
+  frame:       number;
+  timer:       NodeJS.Timeout;
   interaction: ChatInputCommandInteraction;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const HOUSE_EDGE  = 0.04;   // 4% chance of instant crash at 1.00×
-const GROWTH      = 0.10;   // continuous growth rate (e^0.10 per second)
-const UPDATE_MS   = 2_000;  // refresh interval in ms
+const HOUSE_EDGE = 0.04;   // 4% instant-crash probability
+const GROWTH     = 0.10;   // e^0.10 per second
+const UPDATE_MS  = 1_500;  // refresh cadence
 
-// ─── Active sessions (sessionId → game) ──────────────────────────────────────
+// ─── Sessions ─────────────────────────────────────────────────────────────────
 export const activeSessions = new Map<string, CrashSession>();
 
-// ─── Crash point generation ───────────────────────────────────────────────────
-// Produces an exponential distribution: median ≈ 1.44×, ~10% chance of > 10×
+// ─── Math helpers ─────────────────────────────────────────────────────────────
 function generateCrashPoint(): number {
   const r = Math.random();
   if (r < HOUSE_EDGE) return 1.00;
-  const raw = 1 / (1 - r);
-  return Math.floor(raw * 100) / 100;
+  return Math.floor((1 / (1 - r)) * 100) / 100;
 }
 
-// ─── Multiplier at elapsed time ───────────────────────────────────────────────
 function multAt(elapsedMs: number): number {
   return Math.exp(GROWTH * elapsedMs / 1_000);
 }
 
-// ─── Progress bar (log scale: 1× → 10× = 0 → 10 blocks) ─────────────────────
-function buildBar(mult: number): string {
-  const filled = Math.min(10, Math.round(Math.log10(mult) * 10));
-  return "▰".repeat(filled) + "▱".repeat(10 - filled);
+// ─── Rocket track ─────────────────────────────────────────────────────────────
+// Moves 🚀 from 🌍 to 🌙 on a log scale (1× at left, 10× at right).
+// The exhaust character cycles each frame to give a flicker effect.
+const EXHAUST = ["🔥", "✨", "💫", "⚡"];
+const SLOTS   = 13;
+
+function buildTrack(mult: number, frame: number): string {
+  const pos     = Math.min(SLOTS - 1, Math.floor(Math.log10(Math.max(1.001, mult)) * SLOTS));
+  const exhaust = pos > 0 ? (EXHAUST[frame % EXHAUST.length] ?? "🔥") : "";
+  const trail   = pos > 1 ? "━".repeat(pos - 1) : "";
+  const ahead   = pos < SLOTS - 1 ? "─".repeat(SLOTS - 1 - pos) : "";
+  const rocket  = pos >= SLOTS - 1 ? "🌙" : "🚀";
+  return `🌍${trail}${exhaust}${rocket}${ahead}🌙`;
 }
 
-// ─── Embed helpers ────────────────────────────────────────────────────────────
-function flyingEmbed(mult: number, bet: number): EmbedBuilder {
+// ─── Status line (changes with altitude) ─────────────────────────────────────
+function statusLine(mult: number, frame: number): string {
+  const spin = ["◐", "◓", "◑", "◒"][frame % 4]!;
+  if (mult >= 10) return `🌕 **MOON SHOT!** The rocket left the atmosphere!`;
+  if (mult >= 5)  return `⚡ **BLAZING!** Cash out before it's too late!`;
+  if (mult >= 2)  return `🔥 **Picking up speed!** Hold tight…`;
+  return `${spin} Climbing… don't be greedy.`;
+}
+
+// ─── Embeds ───────────────────────────────────────────────────────────────────
+function flyingEmbed(mult: number, bet: number, frame: number): EmbedBuilder {
   const potential = Math.floor(bet * mult);
   const color =
-    mult >= 5  ? COLORS.gold :
+    mult >= 10 ? COLORS.gold    :
+    mult >= 5  ? 0xe67e22       :  // orange
     mult >= 2  ? COLORS.success :
                  COLORS.primary;
 
-  const icon =
-    mult >= 10 ? "🌕" :
-    mult >= 5  ? "🌟" :
-    mult >= 2  ? "🚀" :
-                 "🛫";
-
   return new EmbedBuilder()
     .setColor(color)
-    .setTitle(`${icon}  Crash — Flying!`)
-    .setDescription(`## ${mult.toFixed(2)}×\n${buildBar(mult)}`)
+    .setTitle("🚀  Crash")
+    .setDescription(
+      `${buildTrack(mult, frame)}\n` +
+      `## ${mult.toFixed(2)}×\n` +
+      `${statusLine(mult, frame)}`,
+    )
     .addFields(
       { name: "💰 Bet",          value: `${formatAmount(bet)} gems`,       inline: true },
       { name: "💵 Cash Out Now", value: `${formatAmount(potential)} gems`,  inline: true },
     )
-    .setFooter({ text: "Click Cash Out before it crashes!" })
     .setTimestamp();
 }
 
@@ -87,7 +101,10 @@ function crashedEmbed(crashPoint: number, bet: number): EmbedBuilder {
   return new EmbedBuilder()
     .setColor(COLORS.danger)
     .setTitle("💥  Crashed!")
-    .setDescription(`## ${crashPoint.toFixed(2)}×`)
+    .setDescription(
+      `🌍${"━".repeat(SLOTS - 2)}💥🌙\n` +
+      `## ${crashPoint.toFixed(2)}×`,
+    )
     .addFields(
       { name: "💸 Lost", value: `${formatAmount(bet)} gems`, inline: true },
     )
@@ -98,21 +115,27 @@ function crashedEmbed(crashPoint: number, bet: number): EmbedBuilder {
 function cashedEmbed(mult: number, bet: number, crashPoint: number): EmbedBuilder {
   const winnings = Math.floor(bet * mult);
   const net      = winnings - bet;
+  const pos      = Math.min(SLOTS - 1, Math.floor(Math.log10(Math.max(1.001, mult)) * SLOTS));
+  const track    = `🌍${"━".repeat(pos > 1 ? pos - 1 : 0)}✅${"─".repeat(Math.max(0, SLOTS - 1 - pos))}🌙`;
+
   return new EmbedBuilder()
     .setColor(net > 0 ? COLORS.success : COLORS.warning)
     .setTitle("✅  Cashed Out!")
-    .setDescription(`## ${mult.toFixed(2)}×  *(crashed at ${crashPoint.toFixed(2)}×)*`)
+    .setDescription(
+      `${track}\n` +
+      `## ${mult.toFixed(2)}×  *(crashed @ ${crashPoint.toFixed(2)}×)*`,
+    )
     .addFields(
-      { name: "💰 Bet",    value: `${formatAmount(bet)} gems`,      inline: true },
-      { name: "💵 Return", value: `${formatAmount(winnings)} gems`,  inline: true },
+      { name: "💰 Bet",    value: `${formatAmount(bet)} gems`,                            inline: true },
+      { name: "💵 Return", value: `${formatAmount(winnings)} gems`,                        inline: true },
       { name: net >= 0 ? "📈 Profit" : "📉 Loss",
-        value: `${net >= 0 ? "+" : ""}${formatAmount(net)} gems`,    inline: true },
+        value: `${net >= 0 ? "+" : ""}${formatAmount(net)} gems`,                          inline: true },
     )
     .setFooter({ text: net > 0 ? "Nice cashout! 🎉" : net === 0 ? "Break even." : "Unlucky timing." })
     .setTimestamp();
 }
 
-// ─── Cash Out button row ──────────────────────────────────────────────────────
+// ─── Buttons ──────────────────────────────────────────────────────────────────
 function cashOutRow(sessionId: string): ActionRowBuilder<MessageActionRowComponentBuilder> {
   return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
     new ButtonBuilder()
@@ -146,7 +169,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} gems**.`)],
     });
 
-  // One active game per user
   const alreadyActive = [...activeSessions.values()].find((s) => s.userId === interaction.user.id);
   if (alreadyActive)
     return interaction.editReply({ embeds: [errorEmbed("You already have a Crash game in progress!")] });
@@ -157,23 +179,24 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const startTime  = Date.now();
   const sessionId  = `${interaction.user.id}_${startTime}`;
 
-  // Show initial state immediately
+  // Show frame 0 immediately
   await interaction.editReply({
-    embeds:     [flyingEmbed(1.00, amount)],
+    embeds:     [flyingEmbed(1.00, amount, 0)],
     components: [cashOutRow(sessionId)],
   });
 
-  // ── Tick loop ──────────────────────────────────────────────────────────────
   const session: CrashSession = {
     userId: interaction.user.id,
     bet:    amount,
     crashPoint,
     startTime,
     status: "flying",
+    frame:  0,
     interaction,
     timer: setInterval(async () => {
       if (session.status !== "flying") return;
 
+      session.frame++;
       const elapsed = Date.now() - session.startTime;
       const mult    = multAt(elapsed);
 
@@ -187,10 +210,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       } else {
         try {
           await interaction.editReply({
-            embeds:     [flyingEmbed(mult, amount)],
+            embeds:     [flyingEmbed(mult, amount, session.frame)],
             components: [cashOutRow(sessionId)],
           });
-        } catch { /* rate-limit miss — skip this frame */ }
+        } catch { /* rate-limit miss — skip frame */ }
       }
     }, UPDATE_MS),
   };
@@ -198,7 +221,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   activeSessions.set(sessionId, session);
 }
 
-// ─── Button: Cash Out ──────────────────────────────────────────────────────────
+// ─── Cash Out handler ─────────────────────────────────────────────────────────
 export async function handleCashout(interaction: ButtonInteraction, sessionId: string) {
   const session = activeSessions.get(sessionId);
 
@@ -209,10 +232,7 @@ export async function handleCashout(interaction: ButtonInteraction, sessionId: s
     });
   }
   if (interaction.user.id !== session.userId) {
-    return interaction.reply({
-      content: "❌ This isn't your game.",
-      flags:   MessageFlags.Ephemeral,
-    });
+    return interaction.reply({ content: "❌ This isn't your game.", flags: MessageFlags.Ephemeral });
   }
 
   clearInterval(session.timer);
@@ -224,7 +244,6 @@ export async function handleCashout(interaction: ButtonInteraction, sessionId: s
   const winnings = Math.floor(session.bet * mult);
 
   await addBalance(session.userId, winnings);
-
   await interaction.update({
     embeds:     [cashedEmbed(mult, session.bet, session.crashPoint)],
     components: [],
