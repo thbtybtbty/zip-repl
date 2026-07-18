@@ -168,24 +168,29 @@ export async function startBot() {
   const rest = new REST().setToken(token);
 
   client.once(Events.ClientReady, async (c) => {
-    logger.info({ tag: c.user.tag }, "Discord bot ready");
+    const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=277025770560&scope=bot+applications.commands`;
+    logger.info({ tag: c.user.tag, inviteUrl }, "Discord bot ready");
 
-    // Clear global commands (no duplicates)
+    // Fetch all guilds via REST (reliable — not dependent on gateway cache)
+    let guildIds: string[] = [];
     try {
-      await rest.put(Routes.applicationCommands(clientId), { body: [] });
+      const fetched = await c.guilds.fetch();
+      guildIds = [...fetched.keys()];
     } catch (err) {
-      logger.error({ err }, "Failed to clear global commands");
+      logger.warn({ err }, "Failed to fetch guild list — falling back to cache");
+      guildIds = [...c.guilds.cache.keys()];
     }
 
+    logger.info({ count: guildIds.length }, "Registering commands across guilds");
+
     // Register guild commands (instant propagation)
-    const guilds = [...c.guilds.cache.values()];
     await Promise.all(
-      guilds.map(async (guild) => {
+      guildIds.map(async (guildId) => {
         try {
-          await rest.put(Routes.applicationGuildCommands(clientId, guild.id), { body: commandData });
-          logger.info({ guildId: guild.id, guildName: guild.name, count: commandData.length }, "Guild commands registered");
+          await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commandData });
+          logger.info({ guildId, count: commandData.length }, "Guild commands registered");
         } catch (err) {
-          logger.error({ err, guildId: guild.id }, "Failed to register guild commands");
+          logger.error({ err, guildId }, "Failed to register guild commands");
         }
       }),
     );
