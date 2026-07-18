@@ -18,32 +18,11 @@ import * as rps       from "./commands/rps.js";
 import * as coinflip  from "./commands/coinflip.js";
 import * as blackjack from "./commands/blackjack.js";
 
-const commands = [balance, tip, mines, towers, rps, coinflip, blackjack];
+const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack];
+const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-
-// ─── Register slash commands ──────────────────────────────────────────────────
-async function registerCommands() {
-  const token    = process.env["DISCORD_BOT_TOKEN"];
-  const clientId = process.env["DISCORD_CLIENT_ID"];
-
-  if (!token || !clientId) {
-    logger.error("DISCORD_BOT_TOKEN or DISCORD_CLIENT_ID is missing");
-    return;
-  }
-
-  const rest = new REST().setToken(token);
-
-  try {
-    await rest.put(Routes.applicationCommands(clientId), {
-      body: commands.map((cmd) => cmd.data.toJSON()),
-    });
-    logger.info({ count: commands.length }, "Discord slash commands registered");
-  } catch (err) {
-    logger.error({ err }, "Failed to register Discord slash commands");
-  }
-}
 
 // ─── Interaction routing ──────────────────────────────────────────────────────
 async function handleInteraction(interaction: Interaction) {
@@ -98,17 +77,34 @@ async function handleInteraction(interaction: Interaction) {
 
 // ─── Start bot ────────────────────────────────────────────────────────────────
 export async function startBot() {
-  const token = process.env["DISCORD_BOT_TOKEN"];
+  const token    = process.env["DISCORD_BOT_TOKEN"];
+  const clientId = process.env["DISCORD_CLIENT_ID"];
 
-  if (!token) {
-    logger.warn("DISCORD_BOT_TOKEN not set — Discord bot will not start");
+  if (!token || !clientId) {
+    logger.warn("DISCORD_BOT_TOKEN or DISCORD_CLIENT_ID not set — Discord bot will not start");
     return;
   }
 
-  await registerCommands();
+  const rest = new REST().setToken(token);
 
-  client.once(Events.ClientReady, (c) => {
+  client.once(Events.ClientReady, async (c) => {
     logger.info({ tag: c.user.tag }, "Discord bot ready");
+
+    // Register as guild commands (instant) for every server the bot is in.
+    // Global commands take up to 1 hour to propagate, so we always prefer guild registration.
+    const guilds = [...c.guilds.cache.values()];
+    await Promise.all(
+      guilds.map(async (guild) => {
+        try {
+          await rest.put(Routes.applicationGuildCommands(clientId, guild.id), {
+            body: commandData,
+          });
+          logger.info({ guildId: guild.id, guildName: guild.name, count: commandData.length }, "Guild commands registered");
+        } catch (err) {
+          logger.error({ err, guildId: guild.id }, "Failed to register guild commands");
+        }
+      }),
+    );
   });
 
   client.on(Events.InteractionCreate, (interaction) => {
