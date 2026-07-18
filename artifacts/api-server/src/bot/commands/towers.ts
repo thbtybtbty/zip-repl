@@ -162,9 +162,6 @@ export function buildTowersEmbed(
     )
     .setTimestamp();
 
-  if (status === "cashed") embed.setFooter({ text: `Profit: +${formatAmount(currentWin - game.bet)} gems` });
-  if (status === "lost")   embed.setFooter({ text: `Lost: ${formatAmount(game.bet)} gems` });
-  if (status === "won")    embed.setFooter({ text: `Profit: +${formatAmount(currentWin - game.bet)} gems  ·  All ${game.maxLevels} levels cleared!` });
 
   return embed;
 }

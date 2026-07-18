@@ -77,8 +77,6 @@ export function buildMinesPanelEmbed(
     )
     .setTimestamp();
 
-  if (status === "won")  embed.setFooter({ text: `Profit: +${formatAmount(currentWin - game.bet)} gems` });
-  if (status === "lost") embed.setFooter({ text: `Lost: ${formatAmount(game.bet)} gems` });
 
   return embed;
 }
