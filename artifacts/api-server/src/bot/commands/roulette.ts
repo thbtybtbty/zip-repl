@@ -53,14 +53,17 @@ function pocketLabels(p: Pocket): string {
   return [col, par, rng, doz].join("  ·  ");
 }
 
-// Build a 7-pocket display strip centred on wheelIdx
+// Vertical 5-item reel; centre is always line 3 (index 2)
 function buildStrip(centreIdx: number, highlight: boolean): string {
-  return Array.from({ length: 7 }, (_, i) => {
-    const p = WHEEL[(centreIdx - 3 + i + WHEEL.length) % WHEEL.length]!;
-    return i === 3 && highlight
-      ? `**❰ ${pocketEmoji(p)} ${p} ❱**`
-      : `${pocketEmoji(p)} ${p}`;
-  }).join("  ·  ");
+  return Array.from({ length: 5 }, (_, i) => {
+    const p = WHEEL[(centreIdx - 2 + i + WHEEL.length) % WHEEL.length]!;
+    if (i === 2) {
+      return highlight
+        ? `▶ **${pocketEmoji(p)} ${p}** ◀`
+        : `▶ ${pocketEmoji(p)} ${p} ◀`;
+    }
+    return `${pocketEmoji(p)} ${p}`;
+  }).join("\n");
 }
 
 // ─── Bet evaluation ───────────────────────────────────────────────────────────
@@ -196,14 +199,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const FRAME_MS = 420;
   const spinners = ["⠋","⠙","⠹","⠸","⠼","⠴"];
 
-  const ARROW = "━━━━━━━━━━━━━━━━━━━━━ ▼ ━━━━━━━━━━━━━━━━━━━━━";
-
   for (let f = 0; f < FRAMES; f++) {
     const shift  = Math.floor((FRAMES - f) * 5);
     const centre = (resultIdx - shift + WHEEL.length * 10) % WHEEL.length;
     const strip  = buildStrip(centre, false);
     await interaction.editReply({
-      content: `🎰  **The ball is rolling…** ${spinners[f % 6]}\n\n${ARROW}\n${strip}`,
+      content: `🎰  **The ball is rolling…** ${spinners[f % 6]}\n\n${strip}`,
       embeds:  [],
     });
     await sleep(FRAME_MS);
@@ -219,7 +220,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     .setColor(color)
     .setTitle("🎰  American Roulette")
     .setDescription(
-      `${ARROW}\n${buildStrip(resultIdx, true)}\n\n` +
+      `${buildStrip(resultIdx, true)}\n\n` +
       `${pocketEmoji(result)}  **${result}**  —  ${pocketLabels(result)}`,
     )
     .addFields(

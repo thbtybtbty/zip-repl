@@ -38,14 +38,17 @@ function pickResult(): { result: Segment; poolIdx: number } {
   return { result: POOL[poolIdx]!, poolIdx };
 }
 
-// Build a display strip of 7 segments centred on `centreIdx` in the pool
+// Vertical 5-item reel; centre is always line 3 (index 2)
 function buildStrip(centreIdx: number, highlight: boolean): string {
-  return Array.from({ length: 7 }, (_, i) => {
-    const seg = POOL[(centreIdx - 3 + i + POOL.length) % POOL.length]!;
-    return i === 3 && highlight
-      ? `**❰ ${seg.emoji} ${seg.label} ❱**`
-      : `${seg.emoji} ${seg.label}`;
-  }).join("  ·  ");
+  return Array.from({ length: 5 }, (_, i) => {
+    const seg = POOL[(centreIdx - 2 + i + POOL.length) % POOL.length]!;
+    if (i === 2) {
+      return highlight
+        ? `▶ **${seg.emoji} ${seg.label}** ◀`
+        : `▶ ${seg.emoji} ${seg.label} ◀`;
+    }
+    return `${seg.emoji} ${seg.label}`;
+  }).join("\n");
 }
 
 // ─── Command ──────────────────────────────────────────────────────────────────
@@ -83,15 +86,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const FRAMES = 6;
   const FRAME_MS = 420;
 
-  const ARROW = "━━━━━━━━━━━━━━━━━━━━━ ▼ ━━━━━━━━━━━━━━━━━━━━━";
-
   for (let f = 0; f < FRAMES; f++) {
     const shift  = Math.floor((FRAMES - f) * 4.5);
     const centre = (poolIdx - shift + POOL.length * 10) % POOL.length;
     const strip  = buildStrip(centre, false);
     const dots   = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴"][f % 6];
     await interaction.editReply({
-      content: `🎡  **Spinning…** ${dots}\n\n${ARROW}\n${strip}`,
+      content: `🎡  **Spinning…** ${dots}\n\n${strip}`,
       embeds: [],
     });
     await sleep(FRAME_MS);
@@ -123,7 +124,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     .setColor(embedColor)
     .setTitle("🎡  Wheel of Fortune")
     .setDescription(
-      `${ARROW}\n${buildStrip(poolIdx, true)}\n\n${outcomeText}`,
+      `${buildStrip(poolIdx, true)}\n\n${outcomeText}`,
     )
     .addFields(
       { name: "💰 Bet",        value: `${formatAmount(amount)} gems`,   inline: true },
