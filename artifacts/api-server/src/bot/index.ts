@@ -26,8 +26,9 @@ import * as removebalance from "./commands/removebalance.js";
 import * as wheel         from "./commands/wheel.js";
 import * as roulette      from "./commands/roulette.js";
 import * as crash         from "./commands/crash.js";
+import * as plinko        from "./commands/plinko.js";
 
-const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, roulette, crash];
+const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, roulette, crash, plinko];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -54,6 +55,7 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "wheel")         return await wheel.execute(interaction);
       if (name === "roulette")      return await roulette.execute(interaction);
       if (name === "crash")         return await crash.execute(interaction);
+      if (name === "plinko")        return await plinko.execute(interaction);
     } catch (err) {
       logger.error({ err, command: name }, "Error executing command");
       const payload = { content: "❌ Something went wrong. Please try again.", ephemeral: true };
