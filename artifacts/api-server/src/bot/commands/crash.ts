@@ -95,16 +95,13 @@ function crashedEmbed(crashPoint: number, bet: number): EmbedBuilder {
 
 function cashedEmbed(mult: number, bet: number, crashPoint: number): EmbedBuilder {
   const winnings = Math.floor(bet * mult);
-  const net      = winnings - bet;
   return new EmbedBuilder()
-    .setColor(net > 0 ? COLORS.success : COLORS.warning)
+    .setColor(winnings > bet ? COLORS.success : COLORS.warning)
     .setTitle("✅  Cashed Out!")
     .setDescription(`## ${mult.toFixed(2)}×  *(crashed at ${crashPoint.toFixed(2)}×)*`)
     .addFields(
       { name: "💰 Bet",    value: `${formatAmount(bet)} gems`,      inline: true },
       { name: "💵 Return", value: `${formatAmount(winnings)} gems`,  inline: true },
-      { name: net >= 0 ? "📈 Profit" : "📉 Loss",
-        value: `${net >= 0 ? "+" : ""}${formatAmount(net)} gems`,    inline: true },
     )
     .setTimestamp();
 }
