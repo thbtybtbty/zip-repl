@@ -78,7 +78,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       { name: "\u200b", value: "\u200b", inline: true },
       { name: "\u200b", value: "\u200b", inline: true },
     )
-    .setFooter({ text: won ? "Lucky flip! 🍀" : "Better luck next time." })
     .setTimestamp();
 
   await interaction.editReply({ embeds: [embed] });

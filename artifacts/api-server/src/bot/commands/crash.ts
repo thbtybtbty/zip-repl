@@ -120,7 +120,7 @@ function cashOutRow(sessionId: string): ActionRowBuilder<MessageActionRowCompone
 // ─── Command ──────────────────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
   .setName("crash")
-  .setDescription("Bet on a rising multiplier — cash out before it crashes!")
+  .setDescription("Play the Crash game")
   .addStringOption((opt) =>
     opt.setName("amount").setDescription("Bet amount (e.g. 1m, 2.5b)").setRequired(true),
   );

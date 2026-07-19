@@ -59,7 +59,7 @@ const DELAYS  = [140, 160, 200, 260, 320, 390, 460, 530, 650] as const;
 // ─── Command ──────────────────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
   .setName("wheel")
-  .setDescription("Spin the Wheel of Fortune — land on a multiplier and win big!")
+  .setDescription("Spin the Wheel of Fortune")
   .addStringOption((opt) =>
     opt.setName("amount").setDescription("Bet amount (e.g. 1m, 2.5b)").setRequired(true),
   );

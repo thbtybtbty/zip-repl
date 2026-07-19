@@ -123,7 +123,7 @@ const DELAYS  = [140, 160, 200, 260, 320, 390, 460, 530, 650] as const;
 // ─── Command ──────────────────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
   .setName("roulette")
-  .setDescription("Spin the American Roulette wheel — 38 pockets, real casino rules!")
+  .setDescription("Spin the American Roulette wheel ")
   .addStringOption((opt) =>
     opt.setName("amount").setDescription("Bet amount (e.g. 1m, 2.5b)").setRequired(true),
   )
