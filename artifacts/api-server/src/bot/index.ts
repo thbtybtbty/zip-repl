@@ -225,3 +225,8 @@ export async function startBot() {
 
   await client.login(token);
 }
+
+/** Cleanly disconnect the Discord client (called during graceful shutdown). */
+export async function destroyBot(): Promise<void> {
+  await client.destroy();
+}

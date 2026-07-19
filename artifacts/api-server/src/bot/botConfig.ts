@@ -36,7 +36,14 @@ export function saveServerConfig(cfg: ServerConfig): void {
 
 // ─── Admins (static JSON file — edit admins.json to add/remove) ──────────────
 
-const ADMINS_PATH = path.join(process.cwd(), "admins.json");
+// Resolve relative to this file so the path is correct regardless of cwd.
+// In the compiled dist the file lives at dist/index.mjs, one level above src/,
+// so we go up two directories from __dirname-equivalent to reach the project
+// root where admins.json lives (artifacts/api-server/admins.json).
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname2 = path.dirname(__filename);
+const ADMINS_PATH = path.resolve(__dirname2, "../../admins.json");
 
 export function isAdmin(userId: string): boolean {
   try {
