@@ -1,18 +1,12 @@
 #!/usr/bin/env bash
-# ─────────────────────────────────────────────────────────────────────────────
-# PS99 GemSpin Bet — WispByte / VPS startup script
-#
-# Usage:
-#   1. Copy this repo to your server / WispByte project.
-#   2. Set the env vars listed in .env.example (via WispByte dashboard or a
-#      .env file — never commit your real .env).
-#   3. Set your startup command to:   bash start.sh
-#
-# The script installs dependencies, builds the TypeScript, then starts the bot.
-# Re-running after a restart is safe — build is always fresh and the SQLite
-# database (bot.db) is kept on disk between runs.
-# ─────────────────────────────────────────────────────────────────────────────
+# PS99 GemSpin Bet — startup script (WispByte / any VPS)
 set -e
+
+# Install pnpm if the host doesn't have it
+if ! command -v pnpm &>/dev/null; then
+  echo "[start.sh] pnpm not found — installing via npm…"
+  npm install -g pnpm
+fi
 
 echo "[start.sh] Installing dependencies…"
 pnpm install --frozen-lockfile
