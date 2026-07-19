@@ -16,7 +16,7 @@ import {
 interface Segment { emoji: string; label: string; mult: number; weight: number; color: number }
 
 const SEGMENTS: Segment[] = [
-  { emoji: "💀", label: "Bankrupt",  mult: 0,    weight: 9, color: COLORS.dark    },
+  { emoji: "💀", label: "0x",  mult: 0,    weight: 9, color: COLORS.dark    },
   { emoji: "🔴", label: "0.5×",      mult: 0.5,  weight: 7, color: COLORS.danger  },
   { emoji: "🟡", label: "1×",        mult: 1,    weight: 6, color: COLORS.warning  },
   { emoji: "🟢", label: "1.5×",      mult: 1.5,  weight: 5, color: COLORS.success },
@@ -109,7 +109,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   let outcomeText: string;
   if (result.mult === 0) {
-    outcomeText = `💀 **Bankrupt!** You lost **${formatAmount(amount)} 💎**`;
+    outcomeText = `💀 **0x!** You lost **${formatAmount(amount)} 💎**`;
   } else if (result.mult === 1) {
     outcomeText = `😐 Break even — you get your bet back.`;
   } else if (net > 0) {
