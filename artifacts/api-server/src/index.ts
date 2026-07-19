@@ -1,6 +1,7 @@
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
 import { startBot } from "./bot/index.js";
+import { initDb } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
 
@@ -15,6 +16,9 @@ const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
+
+// Ensure SQLite tables exist (safe to run on every boot)
+initDb();
 
 // Start HTTP server
 app.listen(port, (err) => {

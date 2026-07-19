@@ -83,7 +83,7 @@ export async function getOrCreateUser(userId: string, username: string) {
   await db.insert(usersTable).values({
     id: userId,
     username,
-    balance: 10_000_000,
+    balance: 0,
   });
 
   const created = await db

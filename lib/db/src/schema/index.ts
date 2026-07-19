@@ -1,25 +1,31 @@
-import { pgTable, text, bigint, jsonb, timestamp, integer } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const usersTable = pgTable("users", {
-  id: text("id").primaryKey(), // Discord user ID
-  username: text("username").notNull(),
-  balance: bigint("balance", { mode: "number" }).notNull().default(10_000_000), // starts at 10M gems
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+export const usersTable = sqliteTable("users", {
+  id:        text("id").primaryKey(),                         // Discord user ID
+  username:  text("username").notNull(),
+  balance:   integer("balance").notNull().default(0),         // starts at 0 gems
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
-export const gamesTable = pgTable("games", {
-  id: text("id").primaryKey(), // interaction ID or custom
-  userId: text("user_id").notNull().references(() => usersTable.id),
-  gameType: text("game_type").notNull(), // "mines" | "towers"
-  bet: bigint("bet", { mode: "number" }).notNull(),
-  state: jsonb("state").notNull(), // game-specific state JSON
-  status: text("status").notNull().default("active"), // "active" | "won" | "lost" | "cashed"
+export const gamesTable = sqliteTable("games", {
+  id:         text("id").primaryKey(),
+  userId:     text("user_id").notNull().references(() => usersTable.id),
+  gameType:   text("game_type").notNull(),                    // "mines" | "towers"
+  bet:        integer("bet").notNull(),
+  state:      text("state", { mode: "json" }).notNull().$type<Record<string, unknown>>().default({}),
+  status:     text("status").notNull().default("active"),     // "active" | "won" | "lost" | "cashed"
   multiplier: text("multiplier").notNull().default("1.00"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt:  integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt:  integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+/** Key/value store for bot config (e.g. server setup). */
+export const configTable = sqliteTable("config", {
+  key:   text("key").primaryKey(),
+  value: text("value").notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({ createdAt: true, updatedAt: true });
