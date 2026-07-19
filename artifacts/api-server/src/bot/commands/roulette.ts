@@ -183,7 +183,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     });
 
   // ── Settle before animating ────────────────────────────────────────────────
-  const resultIdx = Math.floor(Math.random() * WHEEL.length);
+  // Virtual 39-pocket wheel: 1/39 extra green → house edge 3/39 ≈ 7.69%
+  const raw       = Math.floor(Math.random() * 39);
+  const resultIdx = raw < 38 ? raw : (Math.random() < 0.5 ? 0 : 19); // 0=0, 19="00"
   const result    = WHEEL[resultIdx]!;
 
   await addBalance(interaction.user.id, -amount);

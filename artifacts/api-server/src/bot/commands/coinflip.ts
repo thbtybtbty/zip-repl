@@ -57,9 +57,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     });
   }
 
-  // Flip
-  const result  = SIDES[Math.floor(Math.random() * 2)]!;
-  const won     = result === choice;
+  // Flip — P(win) = 0.4625 → house edge 7.5%
+  const won    = Math.random() < 0.4625;
+  const result = (won ? choice : (choice === "heads" ? "tails" : "heads")) as typeof SIDES[number];
   const payout  = won ? amount : -amount;
   const newBal  = await addBalance(interaction.user.id, payout);
 

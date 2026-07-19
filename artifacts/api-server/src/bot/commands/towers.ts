@@ -48,10 +48,14 @@ export const activeTowersGames = new Map<string, TowersGame>();
 // ─── Config ───────────────────────────────────────────────────────────────────
 const MAX_LEVELS = 8;
 
+// Per-level multiplier = 0.925 / P(safe per tile)
+// easy   2/3 safe → 0.925 / (2/3) = 1.3875 ≈ 1.39
+// medium 1/2 safe → 0.925 / 0.5   = 1.85
+// hard   1/3 safe → 0.925 / (1/3) = 2.775
 const LEVEL_MULT: Record<Difficulty, number> = {
-  easy:   1.46,
-  medium: 1.94,
-  hard:   2.91,
+  easy:   1.39,
+  medium: 1.85,
+  hard:   2.775,
 };
 
 // ─── Row generation ───────────────────────────────────────────────────────────

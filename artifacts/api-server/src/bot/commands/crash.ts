@@ -30,7 +30,7 @@ interface CrashSession {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const HOUSE_EDGE  = 0.04;   // 4% chance of instant crash at 1.00×
+const HOUSE_EDGE  = 0.075;  // 7.5% house edge: P(crash > M) = 0.925/M
 const GROWTH      = 0.10;   // continuous growth rate (e^0.10 per second)
 const UPDATE_MS   = 1_000;  // refresh interval in ms
 
@@ -38,11 +38,11 @@ const UPDATE_MS   = 1_000;  // refresh interval in ms
 export const activeSessions = new Map<string, CrashSession>();
 
 // ─── Crash point generation ───────────────────────────────────────────────────
-// Produces an exponential distribution: median ≈ 1.44×, ~10% chance of > 10×
+// Distribution: P(crash > M) = 0.925/M  →  E[payout at M] = 0.925 = RTP 92.5%
 function generateCrashPoint(): number {
   const r = Math.random();
   if (r < HOUSE_EDGE) return 1.00;
-  const raw = 1 / (1 - r);
+  const raw = (1 - HOUSE_EDGE) / (1 - r);
   return Math.floor(raw * 100) / 100;
 }
 

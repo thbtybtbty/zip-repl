@@ -112,18 +112,21 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
 
   const dealerScore = showDealerFull ? `**${dv}**${dv > 21 ? "  💥 BUST" : ""}` : "**?**";
 
+  const bet        = game.bet * (game.doubled ? 2 : 1);
+  const winPayout  = Math.floor(bet * 0.925);
+  const bjPayout   = Math.floor(game.bet * 1.5 * 0.925);
+
   const statusMeta: Record<GameStatus, { color: number; title: string; footer: string }> = {
-    active:       { color: COLORS.primary, title: "🃏  Blackjack",              footer: "Hit, stand, or double down?" },
-    player_bust:  { color: COLORS.danger,  title: "🃏  Blackjack — Bust!",      footer: `Lost ${formatAmount(game.bet * (game.doubled ? 2 : 1))} gems` },
-    dealer_bust:  { color: COLORS.success, title: "🃏  Blackjack — You Win!",   footer: `Dealer busted · +${formatAmount(game.bet * (game.doubled ? 2 : 1))} gems` },
-    player_win:   { color: COLORS.success, title: "🃏  Blackjack — You Win!",   footer: `+${formatAmount(game.bet * (game.doubled ? 2 : 1))} gems` },
-    dealer_win:   { color: COLORS.danger,  title: "🃏  Blackjack — Dealer Wins", footer: `Lost ${formatAmount(game.bet * (game.doubled ? 2 : 1))} gems` },
-    push:         { color: COLORS.warning, title: "🃏  Blackjack — Push",       footer: "Tie — bet returned" },
-    blackjack:    { color: COLORS.gold,    title: "🃏  Blackjack! 🎉",          footer: `Blackjack pays 3:2 · +${formatAmount(Math.floor(game.bet * 1.5))} gems` },
+    active:       { color: COLORS.primary, title: "🃏  Blackjack",               footer: "Hit, stand, or double down?" },
+    player_bust:  { color: COLORS.danger,  title: "🃏  Blackjack — Bust!",       footer: `Lost ${formatAmount(bet)} gems` },
+    dealer_bust:  { color: COLORS.success, title: "🃏  Blackjack — You Win!",    footer: `Dealer busted · +${formatAmount(winPayout)} gems` },
+    player_win:   { color: COLORS.success, title: "🃏  Blackjack — You Win!",    footer: `+${formatAmount(winPayout)} gems` },
+    dealer_win:   { color: COLORS.danger,  title: "🃏  Blackjack — Dealer Wins", footer: `Lost ${formatAmount(bet)} gems` },
+    push:         { color: COLORS.warning, title: "🃏  Blackjack — Push",        footer: "Tie — bet returned" },
+    blackjack:    { color: COLORS.gold,    title: "🃏  Blackjack! 🎉",           footer: `Blackjack! · +${formatAmount(bjPayout)} gems` },
   };
 
   const meta = statusMeta[status];
-  const bet  = game.bet * (game.doubled ? 2 : 1);
 
   return new EmbedBuilder()
     .setColor(meta.color)
@@ -191,8 +194,9 @@ async function resolveGame(
   const multiplier = game.doubled ? 2 : 1;
   let payout = 0;
 
-  if (status === "blackjack")   payout = Math.floor(game.bet * 1.5);
-  else if (status === "player_win" || status === "dealer_bust") payout = game.bet * multiplier;
+  // 7.5% house edge: win payouts × 0.925
+  if (status === "blackjack")   payout = Math.floor(game.bet * 1.5 * 0.925);
+  else if (status === "player_win" || status === "dealer_bust") payout = Math.floor(game.bet * multiplier * 0.925);
   else if (status === "push")   payout = 0;
   else                          payout = -(game.bet * multiplier);
 
@@ -260,7 +264,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       payout = 0;
     } else if (playerBJ) {
       status  = "blackjack";
-      payout  = Math.floor(amount * 1.5);
+      payout  = Math.floor(amount * 1.5 * 0.925);
     } else {
       status = "dealer_win";
       payout = -amount;

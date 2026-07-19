@@ -27,6 +27,13 @@ const BEATS: Record<Choice, Choice> = {
   scissors: "paper",
 };
 
+// What beats each choice (inverse of BEATS)
+const BEATEN_BY: Record<Choice, Choice> = {
+  rock: "paper",
+  paper: "scissors",
+  scissors: "rock",
+};
+
 const CHOICES: Choice[] = ["rock", "paper", "scissors"];
 
 function getResult(
@@ -91,8 +98,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     });
   }
 
-  // Bot chooses
-  const botChoice = CHOICES[Math.floor(Math.random() * 3)]!;
+  // Bot chooses — biased for 7.5% house edge:
+  // P(player_lose)=0.371, P(tie)=0.333, P(player_win)=0.296
+  const rr = Math.random();
+  const botChoice: Choice =
+    rr < 0.371               ? BEATEN_BY[playerChoice]   // bot wins
+    : rr < 0.371 + 0.333     ? playerChoice              // tie
+                              : BEATS[playerChoice];      // player wins
   const result = getResult(playerChoice, botChoice);
 
   // Calculate payout

@@ -15,16 +15,18 @@ import {
 // ─── Segments ─────────────────────────────────────────────────────────────────
 interface Segment { emoji: string; label: string; mult: number; weight: number; color: number }
 
+// Weights tuned for 7.5% house edge:
+// Σ(weight × mult) / Σ(weight) = 80.5 / 87 ≈ 0.9253 → RTP 92.47%
 const SEGMENTS: Segment[] = [
-  { emoji: "💀", label: "0x",  mult: 0,    weight: 9, color: COLORS.dark    },
-  { emoji: "🔴", label: "0.5×",      mult: 0.5,  weight: 7, color: COLORS.danger  },
-  { emoji: "🟡", label: "1×",        mult: 1,    weight: 6, color: COLORS.warning  },
-  { emoji: "🟢", label: "1.5×",      mult: 1.5,  weight: 5, color: COLORS.success },
-  { emoji: "🔵", label: "2×",        mult: 2,    weight: 4, color: COLORS.primary },
-  { emoji: "🟣", label: "3×",        mult: 3,    weight: 3, color: 0x9b59b6       },
-  { emoji: "🟠", label: "5×",        mult: 5,    weight: 2, color: 0xe67e22       },
-  { emoji: "💛", label: "10×",       mult: 10,   weight: 1, color: COLORS.gold    },
-  { emoji: "💎", label: "25×",       mult: 25,   weight: 1, color: COLORS.gold    },
+  { emoji: "💀", label: "0x",   mult: 0,   weight: 40, color: COLORS.dark    },
+  { emoji: "🔴", label: "0.5×", mult: 0.5, weight: 26, color: COLORS.danger  },
+  { emoji: "🟡", label: "1×",   mult: 1,   weight:  8, color: COLORS.warning },
+  { emoji: "🟢", label: "1.5×", mult: 1.5, weight:  5, color: COLORS.success },
+  { emoji: "🔵", label: "2×",   mult: 2,   weight:  3, color: COLORS.primary },
+  { emoji: "🟣", label: "3×",   mult: 3,   weight:  2, color: 0x9b59b6       },
+  { emoji: "🟠", label: "5×",   mult: 5,   weight:  1, color: 0xe67e22       },
+  { emoji: "💛", label: "10×",  mult: 10,  weight:  1, color: COLORS.gold    },
+  { emoji: "💎", label: "25×",  mult: 25,  weight:  1, color: COLORS.gold    },
 ];
 
 // Weighted pool — each segment appears proportional to its weight

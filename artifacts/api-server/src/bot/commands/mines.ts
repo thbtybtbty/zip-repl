@@ -42,7 +42,7 @@ export function calcMinesMultiplier(minesCount: number, gemsFound: number): numb
   if (gemsFound === 0) return 1.0;
   let mult = 1.0, rem = 25, safe = 25 - minesCount;
   for (let i = 0; i < gemsFound; i++) { mult *= rem / safe; rem--; safe--; }
-  return mult * 0.97;
+  return mult * 0.925;
 }
 
 // ─── Panel embed ──────────────────────────────────────────────────────────────
