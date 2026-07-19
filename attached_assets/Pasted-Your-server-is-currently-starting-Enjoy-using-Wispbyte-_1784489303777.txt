@@ -1,0 +1,95 @@
+Your server is currently starting! Enjoy using Wispbyte
+[21:25:04]v19.9.0
+[21:25:04]Server marked as running
+[21:25:04]:/home/container$ bash start.sh
+[21:25:04][start.sh] Installing pnpm via npm…
+[21:25:07]25l[..................] \ idealTree:lib: sill idealTree buildDeps 25hnpm WARN EBADENGINE Unsupported engine {
+[21:25:07]npm WARN EBADENGINE package: 'pnpm@11.15.0',
+[21:25:07]npm WARN EBADENGINE required: { node: '>=22.13' },
+[21:25:07]npm WARN EBADENGINE current: { node: 'v19.9.0', npm: '9.9.4' }
+[21:25:07]npm WARN EBADENGINE }
+[21:25:07]25l[#########.........] \ idealTree: timing idealTree Completed in 109ms 25hnpm ERR! code ENOENT
+[21:25:07]npm ERR! syscall mkdir
+[21:25:07]npm ERR! path /usr/local/lib/node_modules/pnpm
+[21:25:07]npm ERR! errno -2
+[21:25:07]npm ERR! enoent ENOENT: no such file or directory, mkdir '/usr/local/lib/node_modules/pnpm'
+[21:25:07]npm ERR! enoent This is related to npm not being able to find a file.
+[21:25:07]npm ERR! enoent
+[21:25:07]
+[21:25:07]npm ERR! A complete log of this run can be found in: /home/container/.npm/_logs/2026-07-19T19_25_06_780Z-debug-0.log
+[21:25:07]
+[21:25:07]Server marked as offline
+[21:25:07][Wispbyte]: ---------- Detected server process in a crashed state! ----------
+[21:25:07][Wispbyte]: Exit code: 254
+[21:25:07][Wispbyte]: Out of memory: false
+[21:25:08][Wispbyte]: Checking server disk space usage, this could take a few seconds...
+[21:25:08][Wispbyte]: Updating process configuration files...
+[21:25:08][Wispbyte]: Ensuring file permissions are set correctly, this could take a few seconds...
+[21:25:08]Server marked as starting
+ __        ___           _           _       
+ \ \      / (_)___ _ __ | |__  _   _| |_ ___ 
+  \ \ /\ / /| / __| '_ \| '_ \| | | | __/ _ \
+   \ V  V / | \__ \ |_) | |_) | |_| | ||  __/
+    \_/\_/  |_|___/ .__/|_.__/ \__, |\__\___|
+                  |_|          |___/         
+Your server is currently starting! Enjoy using Wispbyte
+[21:25:10]v19.9.0
+[21:25:10]Server marked as running
+[21:25:10]:/home/container$ bash start.sh
+[21:25:10][start.sh] Installing pnpm via npm…
+[21:25:13]25l[..................] \ idealTree:lib: sill idealTree buildDeps 25hnpm WARN EBADENGINE Unsupported engine {
+[21:25:13]npm WARN EBADENGINE package: 'pnpm@11.15.0',
+[21:25:13]npm WARN EBADENGINE required: { node: '>=22.13' },
+[21:25:13]npm WARN EBADENGINE current: { node: 'v19.9.0', npm: '9.9.4' }
+[21:25:13]npm WARN EBADENGINE }
+[21:25:13]25l[#########.........] \ idealTree: timing idealTree Completed in 111ms 25hnpm ERR! code ENOENT
+[21:25:13]npm ERR! syscall mkdir
+[21:25:13]npm ERR! path /usr/local/lib/node_modules/pnpm
+[21:25:13]npm ERR! errno -2
+[21:25:13]npm ERR! enoent ENOENT: no such file or directory, mkdir '/usr/local/lib/node_modules/pnpm'
+[21:25:13]npm ERR! enoent This is related to npm not being able to find a file.
+[21:25:13]npm ERR! enoent
+[21:25:13]
+[21:25:13]npm ERR! A complete log of this run can be found in: /home/container/.npm/_logs/2026-07-19T19_25_12_432Z-debug-0.log
+[21:25:13]
+[21:25:13]Server marked as offline
+[21:25:13][Wispbyte]: ---------- Detected server process in a crashed state! ----------
+[21:25:13][Wispbyte]: Exit code: 254
+[21:25:13][Wispbyte]: Out of memory: false
+[21:25:13][Wispbyte]: Aborting automatic restart, last crash occurred less than 60 seconds ago.
+[21:25:52][Wispbyte]: Checking server disk space usage, this could take a few seconds...
+[21:25:52][Wispbyte]: Updating process configuration files...
+[21:25:52][Wispbyte]: Ensuring file permissions are set correctly, this could take a few seconds...
+[21:25:52]Server marked as starting
+ __        ___           _           _       
+ \ \      / (_)___ _ __ | |__  _   _| |_ ___ 
+  \ \ /\ / /| / __| '_ \| '_ \| | | | __/ _ \
+   \ V  V / | \__ \ |_) | |_) | |_| | ||  __/
+    \_/\_/  |_|___/ .__/|_.__/ \__, |\__\___|
+                  |_|          |___/         
+Your server is currently starting! Enjoy using Wispbyte
+[21:25:54][Wispbyte] : Docker image pulled successfully
+[21:25:54]v19.9.0
+[21:25:54]Server marked as running
+[21:25:54]:/home/container$ bash start.sh
+[21:25:54][start.sh] Installing pnpm via npm…
+[21:25:57]25l[..................] \ idealTree:lib: sill idealTree buildDeps 25hnpm WARN EBADENGINE Unsupported engine {
+[21:25:57]npm WARN EBADENGINE package: 'pnpm@11.15.0',
+[21:25:57]npm WARN EBADENGINE required: { node: '>=22.13' },
+[21:25:57]npm WARN EBADENGINE current: { node: 'v19.9.0', npm: '9.9.4' }
+[21:25:57]npm WARN EBADENGINE }
+[21:25:57]25l[#########.........] \ idealTree: timing idealTree Completed in 111ms 25hnpm ERR! code ENOENT
+[21:25:57]npm ERR! syscall mkdir
+[21:25:57]npm ERR! path /usr/local/lib/node_modules/pnpm
+[21:25:57]npm ERR! errno -2
+[21:25:57]npm ERR! enoent ENOENT: no such file or directory, mkdir '/usr/local/lib/node_modules/pnpm'
+[21:25:57]npm ERR! enoent This is related to npm not being able to find a file.
+[21:25:57]npm ERR! enoent
+[21:25:57]
+[21:25:57]npm ERR! A complete log of this run can be found in: /home/container/.npm/_logs/2026-07-19T19_25_56_519Z-debug-0.log
+[21:25:57]
+[21:25:57]Server marked as offline
+[21:25:57][Wispbyte]: ---------- Detected server process in a crashed state! ----------
+[21:25:57][Wispbyte]: Exit code: 254
+[21:25:57][Wispbyte]: Out of memory: false
+[21:25:57][Wispbyte]: Aborting automatic restart, last crash occurred less than 60 seconds ago.
