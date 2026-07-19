@@ -79,7 +79,6 @@ function flyingEmbed(mult: number, bet: number): EmbedBuilder {
       { name: "💰 Bet",          value: `${formatAmount(bet)} gems`,       inline: true },
       { name: "💵 Cash Out Now", value: `${formatAmount(potential)} gems`,  inline: true },
     )
-    .setFooter({ text: "Click Cash Out before it crashes!" })
     .setTimestamp();
 }
 
@@ -91,7 +90,6 @@ function crashedEmbed(crashPoint: number, bet: number): EmbedBuilder {
     .addFields(
       { name: "💸 Lost", value: `${formatAmount(bet)} gems`, inline: true },
     )
-    .setFooter({ text: "Better luck next time." })
     .setTimestamp();
 }
 
@@ -108,7 +106,6 @@ function cashedEmbed(mult: number, bet: number, crashPoint: number): EmbedBuilde
       { name: net >= 0 ? "📈 Profit" : "📉 Loss",
         value: `${net >= 0 ? "+" : ""}${formatAmount(net)} gems`,    inline: true },
     )
-    .setFooter({ text: net > 0 ? "Nice cashout! 🎉" : net === 0 ? "Break even." : "Unlucky timing." })
     .setTimestamp();
 }
 

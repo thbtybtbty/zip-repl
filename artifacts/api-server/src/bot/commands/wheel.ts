@@ -27,27 +27,34 @@ const SEGMENTS: Segment[] = [
   { emoji: "💎", label: "25×",       mult: 25,   weight: 1, color: COLORS.gold    },
 ];
 
-// Weighted pool
+// Weighted pool — each segment appears proportional to its weight
 const POOL: Segment[] = SEGMENTS.flatMap((s) => Array(s.weight).fill(s));
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// Pick a random result from the weighted pool
+// ─── Pick a result from the weighted pool ─────────────────────────────────────
 function pickResult(): { result: Segment; poolIdx: number } {
   const poolIdx = Math.floor(Math.random() * POOL.length);
   return { result: POOL[poolIdx]!, poolIdx };
 }
 
-// Horizontal 7-item strip.
-// During animation (highlight=false) all items look identical so the strip width is stable.
-// On the final result (highlight=true) the centre gets ▶ ◀ markers.
+// ─── Strip builder ────────────────────────────────────────────────────────────
+// Always shows 5 items. The center slot (i=2) is permanently framed by 《 》 —
+// it acts as the fixed pointer that never moves. Items scroll past it.
 function buildStrip(centreIdx: number, highlight: boolean): string {
-  return Array.from({ length: 7 }, (_, i) => {
-    const seg = POOL[(centreIdx - 3 + i + POOL.length) % POOL.length]!;
-    if (i === 3 && highlight) return `▶ **${seg.emoji} ${seg.label}** ◀`;
-    return `${seg.emoji} ${seg.label}`;
+  return Array.from({ length: 5 }, (_, i) => {
+    const seg   = POOL[(centreIdx - 2 + i + POOL.length * 10) % POOL.length]!;
+    const label = `${seg.emoji} ${seg.label}`;
+    if (i === 2) return highlight ? `《 **${label}** 》` : `《 ${label} 》`;
+    return label;
   }).join("  ·  ");
 }
+
+// ─── Animation constants ──────────────────────────────────────────────────────
+// Positions decrease (deceleration): strip scrolls fast then eases to a stop.
+// DELAYS[f] = milliseconds to wait after showing frame f.
+const OFFSETS = [36, 28, 21, 15, 10, 6, 3, 1, 0] as const;
+const DELAYS  = [140, 160, 200, 260, 320, 390, 460, 530, 650] as const;
 
 // ─── Command ──────────────────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
@@ -72,65 +79,64 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} 💎**.`)],
     });
 
-  // ── Spin & settle ──────────────────────────────────────────────────────────
+  // ── Settle before animating ────────────────────────────────────────────────
   const { result, poolIdx } = pickResult();
   await addBalance(interaction.user.id, -amount);
-  const winnings = Math.floor(amount * result.mult);
+  const winnings  = Math.floor(amount * result.mult);
   if (winnings > 0) await addBalance(interaction.user.id, winnings);
-  const oddsText = `${((result.weight / POOL.length) * 100).toFixed(1)}%`;
+  const oddsText  = `${((result.weight / POOL.length) * 100).toFixed(1)}%`;
 
-  // ── Animation frames ───────────────────────────────────────────────────────
-  // Move the centre index through the pool so the strip visibly scrolls
-  const FRAMES = 6;
-  const FRAME_MS = 420;
-
-  for (let f = 0; f < FRAMES; f++) {
-    const shift  = Math.floor((FRAMES - 1 - f) * 4.5);
-    const centre = (poolIdx - shift + POOL.length * 10) % POOL.length;
-    const strip  = buildStrip(centre, false);
-    const dots   = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴"][f % 6];
+  // ── Animation: scroll strip through decelerating offsets ──────────────────
+  for (let f = 0; f < OFFSETS.length; f++) {
+    const centre = (poolIdx - OFFSETS[f]! + POOL.length * 10) % POOL.length;
+    // Last frame (offset = 0): strip is already on the result — highlight it
+    const isLast = OFFSETS[f] === 0;
     await interaction.editReply({
-      content: `🎡  **Spinning…** ${dots}\n\n${strip}`,
-      embeds: [],
+      content: "",
+      embeds: [
+        new EmbedBuilder()
+          .setColor(COLORS.primary)
+          .setTitle("🎡  Wheel of Fortune — Spinning…")
+          .setDescription(buildStrip(centre, isLast))
+          .setTimestamp(),
+      ],
     });
-    await sleep(FRAME_MS);
+    await sleep(DELAYS[f]!);
   }
 
-  // ── Final result embed ─────────────────────────────────────────────────────
-  const net       = winnings - amount;
-  const breakeven = result.mult === 1;
+  // ── Result embed ───────────────────────────────────────────────────────────
+  const net = winnings - amount;
 
   let outcomeText: string;
-  let footerText:  string;
   if (result.mult === 0) {
     outcomeText = `💀 **Bankrupt!** You lost **${formatAmount(amount)} 💎**`;
-    footerText  = "Better luck next spin.";
-  } else if (breakeven) {
+  } else if (result.mult === 1) {
     outcomeText = `😐 Break even — you get your bet back.`;
-    footerText  = "Nothing lost, nothing gained.";
   } else if (net > 0) {
     outcomeText = `🎉 **${result.label} win!**  +${formatAmount(net)} 💎`;
-    footerText  = result.mult >= 10 ? "MASSIVE WIN! 🔥" : "Nice spin!";
   } else {
     outcomeText = `📉 **${result.label}** — you get **${formatAmount(winnings)} 💎** back.`;
-    footerText  = "Unlucky — try again!";
   }
 
-  const embedColor = result.mult === 0 ? COLORS.danger : result.mult < 1 ? COLORS.warning : result.color;
+  const embedColor =
+    result.mult === 0 ? COLORS.danger :
+    result.mult <  1 ? COLORS.warning :
+    result.color;
 
-  const embed = new EmbedBuilder()
-    .setColor(embedColor)
-    .setTitle("🎡  Wheel of Fortune")
-    .setDescription(
-      `${buildStrip(poolIdx, true)}\n\n${outcomeText}`,
-    )
-    .addFields(
-      { name: "💰 Bet",        value: `${formatAmount(amount)} gems`,   inline: true },
-      { name: "🎯 Multiplier", value: result.label,                     inline: true },
-      { name: "📊 Odds",       value: oddsText,                         inline: true },
-      { name: "💵 Return",     value: `${formatAmount(winnings)} gems`,  inline: true },
-    )
-    .setTimestamp();
-
-  await interaction.editReply({ content: "", embeds: [embed] });
+  await interaction.editReply({
+    content: "",
+    embeds: [
+      new EmbedBuilder()
+        .setColor(embedColor)
+        .setTitle("🎡  Wheel of Fortune")
+        .setDescription(`${buildStrip(poolIdx, true)}\n\n${outcomeText}`)
+        .addFields(
+          { name: "💰 Bet",        value: `${formatAmount(amount)} gems`,   inline: true },
+          { name: "🎯 Multiplier", value: result.label,                     inline: true },
+          { name: "📊 Odds",       value: oddsText,                         inline: true },
+          { name: "💵 Return",     value: `${formatAmount(winnings)} gems`,  inline: true },
+        )
+        .setTimestamp(),
+    ],
+  });
 }

@@ -32,7 +32,7 @@ type BetType =
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Pocket helpers ───────────────────────────────────────────────────────────
 function pocketColor(p: Pocket): "green" | "red" | "black" {
   if (p === "00" || p === 0) return "green";
   return RED_NUMBERS.has(p as number) ? "red" : "black";
@@ -53,14 +53,15 @@ function pocketLabels(p: Pocket): string {
   return [col, par, rng, doz].join("  ·  ");
 }
 
-// Horizontal 7-item strip.
-// During animation (highlight=false) all items look identical so the strip width is stable.
-// On the final result (highlight=true) the centre gets ▶ ◀ markers.
+// ─── Strip builder ────────────────────────────────────────────────────────────
+// Always shows 5 pockets. The center slot (i=2) is permanently framed by 《 》 —
+// it acts as the fixed pointer that never moves. Items scroll past it.
 function buildStrip(centreIdx: number, highlight: boolean): string {
-  return Array.from({ length: 7 }, (_, i) => {
-    const p = WHEEL[(centreIdx - 3 + i + WHEEL.length) % WHEEL.length]!;
-    if (i === 3 && highlight) return `▶ **${pocketEmoji(p)} ${p}** ◀`;
-    return `${pocketEmoji(p)} ${p}`;
+  return Array.from({ length: 5 }, (_, i) => {
+    const p     = WHEEL[(centreIdx - 2 + i + WHEEL.length * 10) % WHEEL.length]!;
+    const label = `${pocketEmoji(p)} ${p}`;
+    if (i === 2) return highlight ? `《 **${label}** 》` : `《 ${label} 》`;
+    return label;
   }).join("  ·  ");
 }
 
@@ -112,6 +113,12 @@ const PAYOUT_DISPLAY: Record<BetType, string> = {
   col1: "2:1", col2: "2:1", col3: "2:1",
   straight: "35:1",
 };
+
+// ─── Animation constants ──────────────────────────────────────────────────────
+// Positions decrease (deceleration): strip scrolls fast then eases to a stop.
+// DELAYS[f] = milliseconds to wait after showing frame f.
+const OFFSETS = [36, 28, 21, 15, 10, 6, 3, 1, 0] as const;
+const DELAYS  = [140, 160, 200, 260, 320, 390, 460, 530, 650] as const;
 
 // ─── Command ──────────────────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
@@ -175,7 +182,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} 💎**.`)],
     });
 
-  // ── Spin ───────────────────────────────────────────────────────────────────
+  // ── Settle before animating ────────────────────────────────────────────────
   const resultIdx = Math.floor(Math.random() * WHEEL.length);
   const result    = WHEEL[resultIdx]!;
 
@@ -183,53 +190,55 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const { won, payout } = evaluateBet(bet, numOpt, result);
   if (won) await addBalance(interaction.user.id, amount + amount * payout);
 
-  // Correct odds for American roulette (38 pockets)
   const winningPockets: Record<BetType, number> = {
     red: 18, black: 18, odd: 18, even: 18, low: 18, high: 18,
     dozen1: 12, dozen2: 12, dozen3: 12,
     col1: 12, col2: 12, col3: 12,
     straight: 1,
   };
-  const oddsText = `${((winningPockets[bet]! / 38) * 100).toFixed(1)}%`;
+  const oddsText  = `${((winningPockets[bet]! / 38) * 100).toFixed(1)}%`;
+  const winAmount = won ? amount * payout : 0;
 
-  // ── Animation ──────────────────────────────────────────────────────────────
-  const FRAMES   = 6;
-  const FRAME_MS = 420;
-  const spinners = ["⠋","⠙","⠹","⠸","⠼","⠴"];
-
-  for (let f = 0; f < FRAMES; f++) {
-    const shift  = Math.floor((FRAMES - 1 - f) * 5);
-    const centre = (resultIdx - shift + WHEEL.length * 10) % WHEEL.length;
-    const strip  = buildStrip(centre, false);
+  // ── Animation: scroll strip through decelerating offsets ──────────────────
+  for (let f = 0; f < OFFSETS.length; f++) {
+    const centre = (resultIdx - OFFSETS[f]! + WHEEL.length * 10) % WHEEL.length;
+    const isLast = OFFSETS[f] === 0;
     await interaction.editReply({
-      content: `🎰  **The ball is rolling…** ${spinners[f % 6]}\n\n${strip}`,
-      embeds:  [],
+      content: "",
+      embeds: [
+        new EmbedBuilder()
+          .setColor(COLORS.primary)
+          .setTitle("🎰  American Roulette — Spinning…")
+          .setDescription(buildStrip(centre, isLast))
+          .setTimestamp(),
+      ],
     });
-    await sleep(FRAME_MS);
+    await sleep(DELAYS[f]!);
   }
 
   // ── Result embed ───────────────────────────────────────────────────────────
   const color   = won ? COLORS.success : COLORS.danger;
   const betName = bet === "straight" ? `🎯 Straight on **${numOpt}**` : BET_DISPLAY[bet];
 
-  const winAmount = won ? amount * payout : 0;
-
-  const embed = new EmbedBuilder()
-    .setColor(color)
-    .setTitle("🎰  American Roulette")
-    .setDescription(
-      `${buildStrip(resultIdx, true)}\n\n` +
-      `${pocketEmoji(result)}  **${result}**  —  ${pocketLabels(result)}`,
-    )
-    .addFields(
-      { name: "🎲 Bet",    value: betName,                           inline: true },
-      { name: "💸 Stake",  value: `-${formatAmount(amount)} gems`,   inline: true },
-      { name: "📊 Odds",   value: oddsText,                          inline: true },
-      won
-        ? { name: "🎉 Won",  value: `+${formatAmount(winAmount)} gems`, inline: true }
-        : { name: "💀 Lost", value: `-${formatAmount(amount)} gems`,    inline: true },
-    )
-    .setTimestamp();
-
-  await interaction.editReply({ content: "", embeds: [embed] });
+  await interaction.editReply({
+    content: "",
+    embeds: [
+      new EmbedBuilder()
+        .setColor(color)
+        .setTitle("🎰  American Roulette")
+        .setDescription(
+          `${buildStrip(resultIdx, true)}\n\n` +
+          `${pocketEmoji(result)}  **${result}**  —  ${pocketLabels(result)}`,
+        )
+        .addFields(
+          { name: "🎲 Bet",   value: betName,                           inline: true },
+          { name: "💸 Stake", value: `-${formatAmount(amount)} gems`,   inline: true },
+          { name: "📊 Odds",  value: `${oddsText}  ·  ${PAYOUT_DISPLAY[bet]}`, inline: true },
+          won
+            ? { name: "🎉 Won",  value: `+${formatAmount(winAmount)} gems`, inline: true }
+            : { name: "💀 Lost", value: `-${formatAmount(amount)} gems`,    inline: true },
+        )
+        .setTimestamp(),
+    ],
+  });
 }
