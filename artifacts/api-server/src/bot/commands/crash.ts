@@ -25,13 +25,14 @@ interface CrashSession {
   crashPoint: number;
   startTime:  number;
   status:     "flying" | "cashed" | "crashed";
+  lastMult:   number;   // multiplier shown on the last tick — used for cashout
   timer:      NodeJS.Timeout;
   interaction: ChatInputCommandInteraction;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const HOUSE_EDGE  = 0.075;  // 7.5% house edge: P(crash > M) = 0.925/M
-const GROWTH      = 0.10;   // continuous growth rate (e^0.10 per second)
+const GROWTH      = 0.06;   // continuous growth rate (e^0.06 per second)
 const UPDATE_MS   = 1_000;  // refresh interval in ms
 
 // ─── Active sessions (sessionId → game) ──────────────────────────────────────
@@ -163,7 +164,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     bet:    amount,
     crashPoint,
     startTime,
-    status: "flying",
+    status:   "flying",
+    lastMult: 1.00,
     interaction,
     timer: setInterval(async () => {
       if (session.status !== "flying") return;
@@ -179,6 +181,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
           await interaction.editReply({ embeds: [crashedEmbed(crashPoint, amount)], components: [] });
         } catch { /* expired */ }
       } else {
+        session.lastMult = mult;
         try {
           await interaction.editReply({
             embeds:     [flyingEmbed(mult, amount)],
@@ -213,8 +216,7 @@ export async function handleCashout(interaction: ButtonInteraction, sessionId: s
   session.status = "cashed";
   activeSessions.delete(sessionId);
 
-  const elapsed  = Date.now() - session.startTime;
-  const mult     = Math.min(multAt(elapsed), session.crashPoint);
+  const mult     = session.lastMult;
   const winnings = Math.floor(session.bet * mult);
 
   await addBalance(session.userId, winnings);
