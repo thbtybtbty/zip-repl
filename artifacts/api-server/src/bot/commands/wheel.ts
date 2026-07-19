@@ -1,7 +1,14 @@
 import {
   SlashCommandBuilder,
   EmbedBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ActionRowBuilder,
+  MessageFlags,
+  type Message,
   type ChatInputCommandInteraction,
+  type ButtonInteraction,
+  type MessageActionRowComponentBuilder,
 } from "discord.js";
 import {
   COLORS,
@@ -41,8 +48,6 @@ function pickResult(): { result: Segment; poolIdx: number } {
 }
 
 // ─── Strip builder ────────────────────────────────────────────────────────────
-// Always shows 5 items. The center slot (i=2) is permanently framed by 《 》 —
-// it acts as the fixed pointer that never moves. Items scroll past it.
 function buildStrip(centreIdx: number, highlight: boolean): string {
   return Array.from({ length: 5 }, (_, i) => {
     const seg   = POOL[(centreIdx - 2 + i + POOL.length * 10) % POOL.length]!;
@@ -53,10 +58,87 @@ function buildStrip(centreIdx: number, highlight: boolean): string {
 }
 
 // ─── Animation constants ──────────────────────────────────────────────────────
-// Positions decrease (deceleration): strip scrolls fast then eases to a stop.
-// DELAYS[f] = milliseconds to wait after showing frame f.
 const OFFSETS = [36, 28, 21, 15, 10, 6, 3, 1, 0] as const;
 const DELAYS  = [140, 160, 200, 260, 320, 390, 460, 530, 650] as const;
+
+// ─── Play Again button ────────────────────────────────────────────────────────
+function playAgainRow(userId: string, bet: number, disabled = false): ActionRowBuilder<MessageActionRowComponentBuilder> {
+  return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`pa_wheel_${userId}_${bet}`)
+      .setLabel("🔄  Play Again")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(disabled),
+  );
+}
+
+// ─── Core spin logic (shared by /wheel and Play Again) ────────────────────────
+// editFn updates the message for each animation frame and the final result.
+async function runSpin(
+  userId: string,
+  username: string,
+  bet: number,
+  editFn: (data: { content: string; embeds: EmbedBuilder[]; components?: ActionRowBuilder<MessageActionRowComponentBuilder>[] }) => Promise<unknown>,
+): Promise<void> {
+  const { result, poolIdx } = pickResult();
+  await addBalance(userId, -bet);
+  const winnings = Math.floor(bet * result.mult);
+  if (winnings > 0) await addBalance(userId, winnings);
+  const oddsText = `${((result.weight / POOL.length) * 100).toFixed(1)}%`;
+
+  // Animation frames
+  for (let f = 0; f < OFFSETS.length; f++) {
+    const centre = (poolIdx - OFFSETS[f]! + POOL.length * 10) % POOL.length;
+    const isLast = OFFSETS[f] === 0;
+    await editFn({
+      content: "",
+      embeds: [
+        new EmbedBuilder()
+          .setColor(COLORS.primary)
+          .setTitle("🎡  Wheel of Fortune — Spinning…")
+          .setDescription(buildStrip(centre, isLast))
+          .setTimestamp(),
+      ],
+    });
+    await sleep(DELAYS[f]!);
+  }
+
+  // Result embed
+  const net = winnings - bet;
+  let outcomeText: string;
+  if (result.mult === 0) {
+    outcomeText = `💀 **0x!** You lost **${formatAmount(bet)} 💎**`;
+  } else if (result.mult === 1) {
+    outcomeText = `😐 Break even — you get your bet back.`;
+  } else if (net > 0) {
+    outcomeText = `🎉 **${result.label} win!**  +${formatAmount(net)} 💎`;
+  } else {
+    outcomeText = `📉 **${result.label}** — you get **${formatAmount(winnings)} 💎** back.`;
+  }
+
+  const embedColor =
+    result.mult === 0 ? COLORS.danger :
+    result.mult <  1 ? COLORS.warning :
+    result.color;
+
+  await editFn({
+    content: "",
+    embeds: [
+      new EmbedBuilder()
+        .setColor(embedColor)
+        .setTitle("🎡  Wheel of Fortune")
+        .setDescription(`${buildStrip(poolIdx, true)}\n\n${outcomeText}`)
+        .addFields(
+          { name: "💰 Bet",        value: `${formatAmount(bet)} gems`,   inline: true },
+          { name: "🎯 Multiplier", value: result.label,                   inline: true },
+          { name: "📊 Odds",       value: oddsText,                       inline: true },
+          { name: "💵 Return",     value: `${formatAmount(winnings)} gems`, inline: true },
+        )
+        .setTimestamp(),
+    ],
+    components: [playAgainRow(userId, bet)],
+  });
+}
 
 // ─── Command ──────────────────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
@@ -81,64 +163,46 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} 💎**.`)],
     });
 
-  // ── Settle before animating ────────────────────────────────────────────────
-  const { result, poolIdx } = pickResult();
-  await addBalance(interaction.user.id, -amount);
-  const winnings  = Math.floor(amount * result.mult);
-  if (winnings > 0) await addBalance(interaction.user.id, winnings);
-  const oddsText  = `${((result.weight / POOL.length) * 100).toFixed(1)}%`;
+  await runSpin(
+    interaction.user.id,
+    interaction.user.username,
+    amount,
+    (data) => interaction.editReply(data),
+  );
+}
 
-  // ── Animation: scroll strip through decelerating offsets ──────────────────
-  for (let f = 0; f < OFFSETS.length; f++) {
-    const centre = (poolIdx - OFFSETS[f]! + POOL.length * 10) % POOL.length;
-    // Last frame (offset = 0): strip is already on the result — highlight it
-    const isLast = OFFSETS[f] === 0;
-    await interaction.editReply({
-      content: "",
-      embeds: [
-        new EmbedBuilder()
-          .setColor(COLORS.primary)
-          .setTitle("🎡  Wheel of Fortune — Spinning…")
-          .setDescription(buildStrip(centre, isLast))
-          .setTimestamp(),
-      ],
+// ─── Button: Play Again ───────────────────────────────────────────────────────
+export async function handlePlayAgain(interaction: ButtonInteraction, userId: string, betStr: string): Promise<void> {
+  if (interaction.user.id !== userId) {
+    return void interaction.reply({ content: "❌ This isn't your game.", flags: MessageFlags.Ephemeral });
+  }
+
+  const bet = parseInt(betStr, 10);
+
+  // Disable the button on the old result message immediately
+  await interaction.deferUpdate();
+  await interaction.editReply({ components: [playAgainRow(userId, bet, true)] });
+
+  const user = await getOrCreateUser(userId, interaction.user.username);
+  if (user.balance < bet) {
+    await interaction.followUp({
+      embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} 💎**.`)],
+      ephemeral: true,
     });
-    await sleep(DELAYS[f]!);
+    return;
   }
 
-  // ── Result embed ───────────────────────────────────────────────────────────
-  const net = winnings - amount;
-
-  let outcomeText: string;
-  if (result.mult === 0) {
-    outcomeText = `💀 **0x!** You lost **${formatAmount(amount)} 💎**`;
-  } else if (result.mult === 1) {
-    outcomeText = `😐 Break even — you get your bet back.`;
-  } else if (net > 0) {
-    outcomeText = `🎉 **${result.label} win!**  +${formatAmount(net)} 💎`;
-  } else {
-    outcomeText = `📉 **${result.label}** — you get **${formatAmount(winnings)} 💎** back.`;
-  }
-
-  const embedColor =
-    result.mult === 0 ? COLORS.danger :
-    result.mult <  1 ? COLORS.warning :
-    result.color;
-
-  await interaction.editReply({
+  // Create the new game message via followUp, then animate into it
+  const spinMsg: Message = await interaction.followUp({
     content: "",
     embeds: [
       new EmbedBuilder()
-        .setColor(embedColor)
-        .setTitle("🎡  Wheel of Fortune")
-        .setDescription(`${buildStrip(poolIdx, true)}\n\n${outcomeText}`)
-        .addFields(
-          { name: "💰 Bet",        value: `${formatAmount(amount)} gems`,   inline: true },
-          { name: "🎯 Multiplier", value: result.label,                     inline: true },
-          { name: "📊 Odds",       value: oddsText,                         inline: true },
-          { name: "💵 Return",     value: `${formatAmount(winnings)} gems`,  inline: true },
-        )
+        .setColor(COLORS.primary)
+        .setTitle("🎡  Wheel of Fortune — Spinning…")
+        .setDescription("…")
         .setTimestamp(),
     ],
   });
+
+  await runSpin(userId, interaction.user.username, bet, (data) => spinMsg.edit(data));
 }

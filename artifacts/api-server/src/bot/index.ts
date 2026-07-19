@@ -103,6 +103,28 @@ async function handleInteraction(interaction: Interaction) {
       // Crash
       if (id.startsWith("crash_cashout_")) return await crash.handleCashout(bi, id.slice("crash_cashout_".length));
 
+      // Play Again buttons
+      if (id.startsWith("pa_wheel_")) {
+        const [userId, bet] = id.slice("pa_wheel_".length).split("_");
+        return await wheel.handlePlayAgain(bi, userId!, bet!);
+      }
+      if (id.startsWith("pa_crash_")) {
+        const [userId, bet] = id.slice("pa_crash_".length).split("_");
+        return await crash.handlePlayAgain(bi, userId!, bet!);
+      }
+      if (id.startsWith("pa_towers_")) {
+        const parts = id.slice("pa_towers_".length).split("_");
+        // format: userId_difficulty_bet  (userId is 18-digit snowflake, no underscores)
+        const [userId, difficulty, bet] = parts;
+        return await towers.handlePlayAgain(bi, userId!, difficulty!, bet!);
+      }
+      if (id.startsWith("pa_mines_")) {
+        const parts = id.slice("pa_mines_".length).split("_");
+        // format: userId_minesCount_bet
+        const [userId, minesCount, bet] = parts;
+        return await mines.handlePlayAgain(bi, userId!, minesCount!, bet!);
+      }
+
       // Setup confirmation
       if (id.startsWith("setup_confirm_")) return await setup.handleConfirm(bi, id.slice("setup_confirm_".length));
       if (id.startsWith("setup_cancel_"))  return await setup.handleCancelSetup(bi, id.slice("setup_cancel_".length));

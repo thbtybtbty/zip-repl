@@ -5,6 +5,7 @@ import {
   ButtonStyle,
   ActionRowBuilder,
   MessageFlags,
+  type Message,
   type ChatInputCommandInteraction,
   type ButtonInteraction,
   type MessageActionRowComponentBuilder,
@@ -20,14 +21,14 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface CrashSession {
-  userId:     string;
-  bet:        number;
-  crashPoint: number;
-  startTime:  number;
-  status:     "flying" | "cashed" | "crashed";
-  lastMult:   number;   // multiplier shown on the last tick — used for cashout
-  timer:      NodeJS.Timeout;
-  interaction: ChatInputCommandInteraction;
+  userId:      string;
+  bet:         number;
+  crashPoint:  number;
+  startTime:   number;
+  status:      "flying" | "cashed" | "crashed";
+  lastMult:    number;   // multiplier shown on the last tick — used for cashout
+  gameMessage: Message;  // the flying embed message to edit
+  timer:       NodeJS.Timeout;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -39,7 +40,6 @@ const UPDATE_MS   = 1_000;  // refresh interval in ms
 export const activeSessions = new Map<string, CrashSession>();
 
 // ─── Crash point generation ───────────────────────────────────────────────────
-// Distribution: P(crash > M) = 0.925/M  →  E[payout at M] = 0.925 = RTP 92.5%
 function generateCrashPoint(): number {
   const r = Math.random();
   if (r < HOUSE_EDGE) return 1.00;
@@ -107,7 +107,7 @@ function cashedEmbed(mult: number, bet: number, crashPoint: number): EmbedBuilde
     .setTimestamp();
 }
 
-// ─── Cash Out button row ──────────────────────────────────────────────────────
+// ─── Button rows ──────────────────────────────────────────────────────────────
 function cashOutRow(sessionId: string): ActionRowBuilder<MessageActionRowComponentBuilder> {
   return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
     new ButtonBuilder()
@@ -116,6 +116,62 @@ function cashOutRow(sessionId: string): ActionRowBuilder<MessageActionRowCompone
       .setEmoji("💵")
       .setStyle(ButtonStyle.Success),
   );
+}
+
+function playAgainRow(userId: string, bet: number, disabled = false): ActionRowBuilder<MessageActionRowComponentBuilder> {
+  return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`pa_crash_${userId}_${bet}`)
+      .setLabel("🔄  Play Again")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(disabled),
+  );
+}
+
+// ─── Core session launcher (shared by /crash and Play Again) ──────────────────
+function launchCrash(userId: string, bet: number, gameMessage: Message): string {
+  const sessionId  = `${userId}_${Date.now()}`;
+  const crashPoint = generateCrashPoint();
+  const startTime  = Date.now();
+
+  const session: CrashSession = {
+    userId,
+    bet,
+    crashPoint,
+    startTime,
+    status:      "flying",
+    lastMult:    1.00,
+    gameMessage,
+    timer: setInterval(async () => {
+      if (session.status !== "flying") return;
+
+      const elapsed = Date.now() - session.startTime;
+      const mult    = multAt(elapsed);
+
+      if (mult >= crashPoint) {
+        clearInterval(session.timer);
+        session.status = "crashed";
+        activeSessions.delete(sessionId);
+        try {
+          await session.gameMessage.edit({
+            embeds:     [crashedEmbed(crashPoint, bet)],
+            components: [playAgainRow(userId, bet)],
+          });
+        } catch { /* message expired */ }
+      } else {
+        session.lastMult = mult;
+        try {
+          await session.gameMessage.edit({
+            embeds:     [flyingEmbed(mult, bet)],
+            components: [cashOutRow(sessionId)],
+          });
+        } catch { /* rate-limit miss — skip this frame */ }
+      }
+    }, UPDATE_MS),
+  };
+
+  activeSessions.set(sessionId, session);
+  return sessionId;
 }
 
 // ─── Command ──────────────────────────────────────────────────────────────────
@@ -141,58 +197,22 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} gems**.`)],
     });
 
-  // One active game per user
   const alreadyActive = [...activeSessions.values()].find((s) => s.userId === interaction.user.id);
   if (alreadyActive)
     return interaction.editReply({ embeds: [errorEmbed("You already have a Crash game in progress!")] });
 
   await addBalance(interaction.user.id, -amount);
 
-  const crashPoint = generateCrashPoint();
-  const startTime  = Date.now();
-  const sessionId  = `${interaction.user.id}_${startTime}`;
-
-  // Show initial state immediately
-  await interaction.editReply({
+  // Show initial state, then hand the message to launchCrash
+  const gameMessage = await interaction.editReply({
     embeds:     [flyingEmbed(1.00, amount)],
-    components: [cashOutRow(sessionId)],
+    components: [], // sessionId not yet known — launchCrash sets up the interval
   });
 
-  // ── Tick loop ──────────────────────────────────────────────────────────────
-  const session: CrashSession = {
-    userId: interaction.user.id,
-    bet:    amount,
-    crashPoint,
-    startTime,
-    status:   "flying",
-    lastMult: 1.00,
-    interaction,
-    timer: setInterval(async () => {
-      if (session.status !== "flying") return;
+  const sessionId = launchCrash(interaction.user.id, amount, gameMessage);
 
-      const elapsed = Date.now() - session.startTime;
-      const mult    = multAt(elapsed);
-
-      if (mult >= crashPoint) {
-        clearInterval(session.timer);
-        session.status = "crashed";
-        activeSessions.delete(sessionId);
-        try {
-          await interaction.editReply({ embeds: [crashedEmbed(crashPoint, amount)], components: [] });
-        } catch { /* expired */ }
-      } else {
-        session.lastMult = mult;
-        try {
-          await interaction.editReply({
-            embeds:     [flyingEmbed(mult, amount)],
-            components: [cashOutRow(sessionId)],
-          });
-        } catch { /* rate-limit miss — skip this frame */ }
-      }
-    }, UPDATE_MS),
-  };
-
-  activeSessions.set(sessionId, session);
+  // Immediately update with the correct cashout button now that we have the sessionId
+  await gameMessage.edit({ components: [cashOutRow(sessionId)] });
 }
 
 // ─── Button: Cash Out ──────────────────────────────────────────────────────────
@@ -223,6 +243,45 @@ export async function handleCashout(interaction: ButtonInteraction, sessionId: s
 
   await interaction.update({
     embeds:     [cashedEmbed(mult, session.bet, session.crashPoint)],
+    components: [playAgainRow(session.userId, session.bet)],
+  });
+}
+
+// ─── Button: Play Again ───────────────────────────────────────────────────────
+export async function handlePlayAgain(interaction: ButtonInteraction, userId: string, betStr: string): Promise<void> {
+  if (interaction.user.id !== userId) {
+    return void interaction.reply({ content: "❌ This isn't your game.", flags: MessageFlags.Ephemeral });
+  }
+
+  const bet = parseInt(betStr, 10);
+
+  // Disable the Play Again button on the old result message
+  await interaction.deferUpdate();
+  await interaction.editReply({ components: [playAgainRow(userId, bet, true)] });
+
+  const alreadyActive = [...activeSessions.values()].find((s) => s.userId === userId);
+  if (alreadyActive) {
+    await interaction.followUp({ embeds: [errorEmbed("You already have a Crash game in progress!")], ephemeral: true });
+    return;
+  }
+
+  const user = await getOrCreateUser(userId, interaction.user.username);
+  if (user.balance < bet) {
+    await interaction.followUp({
+      embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} gems**.`)],
+      ephemeral: true,
+    });
+    return;
+  }
+
+  await addBalance(userId, -bet);
+
+  // Create the new game message via followUp
+  const gameMessage: Message = await interaction.followUp({
+    embeds:     [flyingEmbed(1.00, bet)],
     components: [],
   });
+
+  const sessionId = launchCrash(userId, bet, gameMessage);
+  await gameMessage.edit({ components: [cashOutRow(sessionId)] });
 }

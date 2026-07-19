@@ -4,6 +4,8 @@ import {
   ButtonBuilder,
   ButtonStyle,
   ActionRowBuilder,
+  MessageFlags,
+  type Message,
   type ChatInputCommandInteraction,
   type ButtonInteraction,
   type MessageActionRowComponentBuilder,
@@ -25,20 +27,20 @@ type Difficulty = "easy" | "medium" | "hard";
 type TileType = "diamond" | "bomb";
 
 interface LevelRecord {
-  picked: number;          // column index chosen
+  picked: number;
   result: "safe" | "bomb";
-  row: TileType[];         // full tile layout so we can reveal it
+  row: TileType[];
 }
 
 export interface TowersGame {
   userId: string;
   bet: number;
   difficulty: Difficulty;
-  level: number;           // current 0-indexed level
+  level: number;
   maxLevels: number;
   multiplier: number;
-  row: TileType[];         // current level's tiles
-  history: LevelRecord[];  // past levels (index 0 = level 1)
+  row: TileType[];
+  history: LevelRecord[];
   messageId: string;
   channelId: string;
 }
@@ -48,10 +50,6 @@ export const activeTowersGames = new Map<string, TowersGame>();
 // ─── Config ───────────────────────────────────────────────────────────────────
 const MAX_LEVELS = 8;
 
-// Per-level multiplier = 0.925 / P(safe per tile)
-// easy   2/3 safe → 0.925 / (2/3) = 1.3875 ≈ 1.39
-// medium 1/2 safe → 0.925 / 0.5   = 1.85
-// hard   1/3 safe → 0.925 / (1/3) = 2.775
 const LEVEL_MULT: Record<Difficulty, number> = {
   easy:   1.39,
   medium: 1.85,
@@ -74,18 +72,11 @@ function generateRow(difficulty: Difficulty): TileType[] {
   return shuffle(["diamond", "bomb", "bomb"] as TileType[]);
 }
 
-// ─── Tower visual (top → bottom, highest level first) ────────────────────────
-// Tile emojis:
-//   💎  = diamond you picked (safe, correct pick)
-//   🔹  = diamond you didn't pick (revealed after level complete)
-//   💣  = bomb (revealed after level)
-//   🟦  = current level slot (unknown, clickable via buttons)
-//   ⬛  = locked future level slot
-
+// ─── Tower visual ─────────────────────────────────────────────────────────────
 function tileEmoji(type: TileType, picked: boolean, exploded = false): string {
-  if (exploded && type === "bomb") return "💥"; // the exact bomb the player hit
+  if (exploded && type === "bomb") return "💥";
   if (type === "diamond") return picked ? "💎" : "🔹";
-  return "💣"; // other bombs revealed after the level
+  return "💣";
 }
 
 function buildTowerVisual(game: TowersGame, status: "active" | "won" | "lost" | "cashed"): string {
@@ -103,10 +94,8 @@ function buildTowerVisual(game: TowersGame, status: "active" | "won" | "lost" | 
     if (isFuture) {
       tileStr = Array(colCount).fill("⬛").join("  ");
     } else if (isCurrent && status !== "lost") {
-      // Active level — show clickable placeholders
       tileStr = Array(colCount).fill("🟦").join("  ");
     } else {
-      // Completed level, or the level we just lost on — reveal tiles from history
       const record = game.history[idx];
       if (!record) { tileStr = Array(colCount).fill("▫️").join("  "); }
       else {
@@ -157,7 +146,7 @@ export function buildTowersEmbed(
     cashed: `🗼 Towers — Cashed Out!`,
   };
 
-  const embed = new EmbedBuilder()
+  return new EmbedBuilder()
     .setColor(colors[status] ?? COLORS.primary)
     .setTitle(titles[status] ?? "Towers")
     .setDescription(buildTowerVisual(game, status))
@@ -172,9 +161,6 @@ export function buildTowersEmbed(
         : [{ name: "\u200b",   value: "\u200b",                           inline: true }]),
     )
     .setTimestamp();
-
-
-  return embed;
 }
 
 // ─── Components ───────────────────────────────────────────────────────────────
@@ -188,39 +174,15 @@ export function buildTowersComponents(
 
   if (isMedium) {
     choiceRow.addComponents(
-      new ButtonBuilder()
-        .setCustomId("towers_l")
-        .setLabel("⬅  Left")
-        .setStyle(ButtonStyle.Primary)
-        .setDisabled(disabled),
-      new ButtonBuilder()
-        .setCustomId("towers_m")
-        .setLabel("　·　")
-        .setStyle(ButtonStyle.Secondary)
-        .setDisabled(true),
-      new ButtonBuilder()
-        .setCustomId("towers_r")
-        .setLabel("Right  ➡")
-        .setStyle(ButtonStyle.Primary)
-        .setDisabled(disabled),
+      new ButtonBuilder().setCustomId("towers_l").setLabel("⬅  Left").setStyle(ButtonStyle.Primary).setDisabled(disabled),
+      new ButtonBuilder().setCustomId("towers_m").setLabel("　·　").setStyle(ButtonStyle.Secondary).setDisabled(true),
+      new ButtonBuilder().setCustomId("towers_r").setLabel("Right  ➡").setStyle(ButtonStyle.Primary).setDisabled(disabled),
     );
   } else {
     choiceRow.addComponents(
-      new ButtonBuilder()
-        .setCustomId("towers_l")
-        .setLabel("⬅  Left")
-        .setStyle(ButtonStyle.Primary)
-        .setDisabled(disabled),
-      new ButtonBuilder()
-        .setCustomId("towers_m")
-        .setLabel("⬆  Mid")
-        .setStyle(ButtonStyle.Primary)
-        .setDisabled(disabled),
-      new ButtonBuilder()
-        .setCustomId("towers_r")
-        .setLabel("Right  ➡")
-        .setStyle(ButtonStyle.Primary)
-        .setDisabled(disabled),
+      new ButtonBuilder().setCustomId("towers_l").setLabel("⬅  Left").setStyle(ButtonStyle.Primary).setDisabled(disabled),
+      new ButtonBuilder().setCustomId("towers_m").setLabel("⬆  Mid").setStyle(ButtonStyle.Primary).setDisabled(disabled),
+      new ButtonBuilder().setCustomId("towers_r").setLabel("Right  ➡").setStyle(ButtonStyle.Primary).setDisabled(disabled),
     );
   }
 
@@ -233,6 +195,21 @@ export function buildTowersComponents(
   );
 
   return [choiceRow, cashRow];
+}
+
+function buildEndComponents(
+  game: TowersGame,
+): ActionRowBuilder<MessageActionRowComponentBuilder>[] {
+  const base = buildTowersComponents(game, true);
+  base.push(
+    new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`pa_towers_${game.userId}_${game.difficulty}_${game.bet}`)
+        .setLabel("🔄  Play Again")
+        .setStyle(ButtonStyle.Secondary),
+    ),
+  );
+  return base;
 }
 
 // ─── Command ──────────────────────────────────────────────────────────────────
@@ -261,19 +238,17 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const difficulty = interaction.options.getString("difficulty", true) as Difficulty;
   const amount     = parseAmount(amountStr);
 
-  if (!amount || amount <= 0) {
+  if (!amount || amount <= 0)
     return interaction.editReply({ embeds: [errorEmbed("Invalid amount. Try `1m`, `2.5b`, `500k`.")] });
-  }
-  if (activeTowersGames.has(interaction.user.id)) {
+
+  if (activeTowersGames.has(interaction.user.id))
     return interaction.editReply({ embeds: [errorEmbed("You already have an active Towers game!")] });
-  }
 
   const user = await getOrCreateUser(interaction.user.id, interaction.user.username);
-  if (user.balance < amount) {
+  if (user.balance < amount)
     return interaction.editReply({
       embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} gems**.`)],
     });
-  }
 
   await addBalance(interaction.user.id, -amount);
 
@@ -311,20 +286,17 @@ export async function handleChoice(interaction: ButtonInteraction, choice: Tower
     return;
   }
 
-  // For medium, right button maps to index 1 in the 2-tile row
   let colIndex = CHOICE_INDEX[choice];
   if (game.difficulty === "medium" && choice === "r") colIndex = 1;
 
   const tile = game.row[colIndex] ?? "bomb";
-
-  // Record this level's result (with full row revealed)
   game.history.push({ picked: colIndex, result: tile === "diamond" ? "safe" : "bomb", row: game.row });
 
   if (tile === "bomb") {
     activeTowersGames.delete(interaction.user.id);
     await interaction.editReply({
       embeds:     [buildTowersEmbed(game, "lost")],
-      components: buildTowersComponents(game, true),
+      components: buildEndComponents(game),
     });
     return;
   }
@@ -339,7 +311,7 @@ export async function handleChoice(interaction: ButtonInteraction, choice: Tower
     await addBalance(interaction.user.id, winnings);
     await interaction.editReply({
       embeds:     [buildTowersEmbed(game, "won")],
-      components: buildTowersComponents(game, true),
+      components: buildEndComponents(game),
     });
     return;
   }
@@ -373,6 +345,70 @@ export async function handleCashout(interaction: ButtonInteraction) {
 
   await interaction.editReply({
     embeds:     [buildTowersEmbed(game, "cashed")],
-    components: buildTowersComponents(game, true),
+    components: buildEndComponents(game),
   });
+}
+
+// ─── Button: Play Again ───────────────────────────────────────────────────────
+export async function handlePlayAgain(
+  interaction: ButtonInteraction,
+  userId: string,
+  difficulty: string,
+  betStr: string,
+): Promise<void> {
+  if (interaction.user.id !== userId) {
+    return void interaction.reply({ content: "❌ This isn't your game.", flags: MessageFlags.Ephemeral });
+  }
+  if (activeTowersGames.has(userId)) {
+    return void interaction.reply({ embeds: [errorEmbed("You already have an active Towers game!")], flags: MessageFlags.Ephemeral });
+  }
+
+  const bet  = parseInt(betStr, 10);
+  const diff = difficulty as Difficulty;
+
+  // Disable Play Again on the old message
+  await interaction.deferUpdate();
+  await interaction.editReply({
+    components: [
+      ...buildTowersComponents({ difficulty: diff } as TowersGame, true),
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`pa_towers_${userId}_${difficulty}_${bet}`)
+          .setLabel("🔄  Play Again")
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(true),
+      ),
+    ],
+  });
+
+  const user = await getOrCreateUser(userId, interaction.user.username);
+  if (user.balance < bet) {
+    await interaction.followUp({
+      embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} gems**.`)],
+      ephemeral: true,
+    });
+    return;
+  }
+
+  await addBalance(userId, -bet);
+
+  const game: TowersGame = {
+    userId,
+    bet,
+    difficulty: diff,
+    level:      0,
+    maxLevels:  MAX_LEVELS,
+    multiplier: 1.0,
+    row:        generateRow(diff),
+    history:    [],
+    messageId:  "",
+    channelId:  interaction.channelId,
+  };
+
+  const msg: Message = await interaction.followUp({
+    embeds:     [buildTowersEmbed(game, "active")],
+    components: buildTowersComponents(game, false),
+  });
+  game.messageId = msg.id;
+  activeTowersGames.set(userId, game);
 }
