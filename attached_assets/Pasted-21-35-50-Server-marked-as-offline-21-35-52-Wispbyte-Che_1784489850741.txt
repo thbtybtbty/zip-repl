@@ -1,0 +1,193 @@
+21:35:50]Server marked as offline
+[21:35:52][Wispbyte]: Checking server disk space usage, this could take a few seconds...
+[21:35:52][Wispbyte]: Updating process configuration files...
+[21:35:52][Wispbyte]: Ensuring file permissions are set correctly, this could take a few seconds...
+[21:35:52]Server marked as starting
+ __        ___           _           _       
+ \ \      / (_)___ _ __ | |__  _   _| |_ ___ 
+  \ \ /\ / /| / __| '_ \| '_ \| | | | __/ _ \
+   \ V  V / | \__ \ |_) | |_) | |_| | ||  __/
+    \_/\_/  |_|___/ .__/|_.__/ \__, |\__\___|
+                  |_|          |___/         
+Your server is currently starting! Enjoy using Wispbyte
+[21:35:57]v19.9.0
+[21:35:57]Server marked as running
+[21:35:57]:/home/container$ bash start.sh
+[21:35:57][start.sh] Installing pnpm via npm…
+[21:35:58]25l[..................] | idealTree:lib: sill idealTree buildDeps
+[..................] | idealTree:lib: sill idealTree buildDeps
+[..................] | idealTree:lib: sill idealTree buildDeps
+[..................] | idealTree:lib: sill idealTree buildDeps
+[..................] | idealTree:lib: sill idealTree buildDeps
+[#########.........] \ idealTree: timing idealTree Completed in 352ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[##################] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[##################] \ reify:pnpm: timing reify:loadBundles Completed in 0ms
+[##################] \ reify:pnpm: timing reify:loadBundles Completed in 0ms
+[##################] \ reify:pnpm: timing reify:loadBundles Completed in 0ms 25h
+[21:35:58]changed 1 package in 2s
+[21:35:58]1 package is looking for funding
+[21:35:58]run `npm fund` for details
+[21:35:58][start.sh] Installing dependencies…
+[21:35:59]Scope: all 6 workspace projects
+[21:36:02]Progress: resolved 0, reused 0, downloaded 1, added 0
+[21:36:03]Progress: resolved 17, reused 0, downloaded 17, added 0
+[21:36:04]Progress: resolved 19, reused 0, downloaded 19, added 0
+[21:36:05]Progress: resolved 24, reused 0, downloaded 24, added 0
+[21:36:06]Progress: resolved 31, reused 0, downloaded 26, added 0
+[21:36:07]Progress: resolved 105, reused 0, downloaded 89, added 0
+[21:36:08]Progress: resolved 130, reused 0, downloaded 114, added 0
+[21:36:09]Progress: resolved 150, reused 0, downloaded 133, added 0
+[21:36:10]Progress: resolved 216, reused 0, downloaded 190, added 0
+[21:36:11]Progress: resolved 281, reused 0, downloaded 227, added 0
+[21:36:12]Progress: resolved 325, reused 0, downloaded 245, added 0
+[21:36:13]Progress: resolved 385, reused 0, downloaded 285, added 0
+[21:36:15]Progress: resolved 388, reused 0, downloaded 291, added 0
+[21:36:15]WARN 3 deprecated subdependencies found: @esbuild-kit/core-utils@3.3.2, @esbuild-kit/esm-loader@2.6.5, prebuild-install@7.1.3
+[21:36:15]Packages: +291
+[21:36:16]Progress: resolved 388, reused 0, downloaded 291, added 80
+[21:36:17]Progress: resolved 388, reused 0, downloaded 291, added 214
+[21:36:18]Progress: resolved 388, reused 0, downloaded 291, added 289
+[21:36:18]Progress: resolved 388, reused 0, downloaded 291, added 291, done
+[21:36:18].../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+[21:36:18].../node_modules/better-sqlite3 install$ prebuild-install   node-gyp rebuild --release
+[21:36:18].../esbuild@0.28.1/node_modules/esbuild postinstall$ node install.js
+[21:36:18].../esbuild@0.18.20/node_modules/esbuild postinstall$ node install.js
+[21:36:18]start.sh: line 11: 27 Killed CI=true pnpm install --no-frozen-lockfile
+[21:36:18]Server marked as offline
+[21:36:19][Wispbyte]: ---------- Detected server process in a crashed state! ----------
+[21:36:19][Wispbyte]: Exit code: 137
+[21:36:19][Wispbyte]: Out of memory: true
+[21:36:21][Wispbyte]: Checking server disk space usage, this could take a few seconds...
+[21:36:21][Wispbyte]: Updating process configuration files...
+[21:36:21][Wispbyte]: Ensuring file permissions are set correctly, this could take a few seconds...
+[21:36:21]Server marked as starting
+ __        ___           _           _       
+ \ \      / (_)___ _ __ | |__  _   _| |_ ___ 
+  \ \ /\ / /| / __| '_ \| '_ \| | | | __/ _ \
+   \ V  V / | \__ \ |_) | |_) | |_| | ||  __/
+    \_/\_/  |_|___/ .__/|_.__/ \__, |\__\___|
+                  |_|          |___/         
+Your server is currently starting! Enjoy using Wispbyte
+[21:36:24][Wispbyte] : Docker image pulled successfully
+[21:36:24]v19.9.0
+[21:36:24]Server marked as running
+[21:36:24]:/home/container$ bash start.sh
+[21:36:24][start.sh] Installing pnpm via npm…
+[21:36:27]25l[..................] | idealTree:lib: sill idealTree buildDeps
+[#########.........] \ idealTree: timing idealTree Completed in 146ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[#########.........] - reify:pnpm: timing reify:loadBundles Completed in 0ms
+[##################] / reify:pnpm: timing reify:loadBundles Completed in 0ms
+[##################] \ reify:pnpm: timing reify:loadBundles Completed in 0ms
+[##################] \ reify:pnpm: timing reify:loadBundles Completed in 0ms
+[##################] \ reify:pnpm: timing reify:loadBundles Completed in 0ms 25h
+[21:36:27]changed 1 package in 2s
+[21:36:27]1 package is looking for funding
+[21:36:27]run `npm fund` for details
+[21:36:27][start.sh] Installing dependencies…
+[21:36:30]Scope: all 6 workspace projects
+[21:36:30]Progress: resolved 0, reused 1, downloaded 0, added 0
+[21:36:31]Progress: resolved 30, reused 30, downloaded 0, added 0
+[21:36:32]Progress: resolved 173, reused 147, downloaded 0, added 0
+[21:36:33]Progress: resolved 322, reused 284, downloaded 0, added 0
+[21:36:34]WARN 3 deprecated subdependencies found: @esbuild-kit/core-utils@3.3.2, @esbuild-kit/esm-loader@2.6.5, prebuild-install@7.1.3
+[21:36:34]Packages: +291
+[21:36:34]Progress: resolved 388, reused 291, downloaded 0, added 0
+[21:36:35]Progress: resolved 388, reused 291, downloaded 0, added 0, done
+[21:36:35].../node_modules/better-sqlite3 install$ prebuild-install   node-gyp rebuild --release
+[21:36:35].../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+[21:36:35].../esbuild@0.18.20/node_modules/esbuild postinstall$ node install.js
+[21:36:35].../esbuild@0.28.1/node_modules/esbuild postinstall$ node install.js
+[21:36:35].../esbuild@0.25.12/node_modules/esbuild postinstall$ node install.js
+[21:36:36].../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+[21:36:36].../esbuild@0.18.20/node_modules/esbuild postinstall: Done
+[21:36:36].../esbuild@0.28.1/node_modules/esbuild postinstall: Done
+[21:36:36].../esbuild@0.25.12/node_modules/esbuild postinstall: Done
+[21:36:37].../node_modules/better-sqlite3 install: prebuild-install warn install No prebuilt binaries found (target=19.9.0 runtime=node arch=x64 libc= platform=linux)
+[21:36:37].../node_modules/better-sqlite3 install: gyp info it worked if it ends with ok
+[21:36:37].../node_modules/better-sqlite3 install: gyp info using node-gyp@10.3.1
+[21:36:37].../node_modules/better-sqlite3 install: gyp info using node@19.9.0 | linux | x64
+[21:36:37].../node_modules/better-sqlite3 install: gyp info find Python using Python version 3.9.2 found at "/usr/bin/python3"
+[21:36:37].../node_modules/better-sqlite3 install: gyp http GET https://nodejs.org/download/release/v19.9.0/node-v19.9.0-headers.tar.gz
+[21:36:38].../node_modules/better-sqlite3 install: gyp http 200 https://nodejs.org/download/release/v19.9.0/node-v19.9.0-headers.tar.gz
+[21:36:41].../node_modules/better-sqlite3 install: gyp http GET https://nodejs.org/download/release/v19.9.0/SHASUMS256.txt
+[21:36:41].../node_modules/better-sqlite3 install: gyp http 200 https://nodejs.org/download/release/v19.9.0/SHASUMS256.txt
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn /usr/bin/python3
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args [
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '/home/container/.local/lib/node_modules/pnpm/dist/node_modules/node-gyp/gyp/gyp_main.py',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args 'binding.gyp',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '-f',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args 'make',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '-I',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '/home/container/node_modules/.pnpm/better-sqlite3@12.11.1/node_modules/better-sqlite3/build/config.gypi',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '-I',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '/home/container/.local/lib/node_modules/pnpm/dist/node_modules/node-gyp/addon.gypi',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '-I',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '/home/container/.cache/node-gyp/19.9.0/include/node/common.gypi',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '-Dlibrary=shared_library',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '-Dvisibility=default',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '-Dnode_root_dir=/home/container/.cache/node-gyp/19.9.0',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '-Dnode_gyp_dir=/home/container/.local/lib/node_modules/pnpm/dist/node_modules/node-gyp',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '-Dnode_lib_file=/home/container/.cache/node-gyp/19.9.0/<(target_arch)/node.lib',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '-Dmodule_root_dir=/home/container/node_modules/.pnpm/better-sqlite3@12.11.1/node_modules/better-sqlite3',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '-Dnode_engine=v8',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '--depth=.',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '--no-parallel',
+[21:36:41].../node_modules/better-sqlite3 install: gyp info spawn args '--generator-output',
+[21:36:42].../node_modules/better-sqlite3 install: gyp info spawn args 'build',
+[21:36:42].../node_modules/better-sqlite3 install: gyp info spawn args '-Goutput_dir=.'
+[21:36:42].../node_modules/better-sqlite3 install: gyp info spawn args ]
+[21:36:42].../node_modules/better-sqlite3 install: gyp info spawn make
+[21:36:42].../node_modules/better-sqlite3 install: gyp info spawn args [ 'BUILDTYPE=Release', '-C', 'build' ]
+[21:36:42].../node_modules/better-sqlite3 install: make: Entering directory '/home/container/node_modules/.pnpm/better-sqlite3@12.11.1/node_modules/better-sqlite3/build'
+[21:36:42].../node_modules/better-sqlite3 install: TOUCH ba23eeee118cd63e16015df367567cb043fed872.intermediate
+[21:36:42].../node_modules/better-sqlite3 install: ACTION deps_sqlite3_gyp_locate_sqlite3_target_copy_builtin_sqlite3 ba23eeee118cd63e16015df367567cb043fed872.intermediate
+[21:36:42].../node_modules/better-sqlite3 install: TOUCH Release/obj.target/deps/locate_sqlite3.stamp
+[21:36:42].../node_modules/better-sqlite3 install: CC(target) Release/obj.target/sqlite3/gen/sqlite3/sqlite3.o
+[21:37:03]start.sh: line 11: 27 Killed CI=true pnpm install --no-frozen-lockfile
+[21:37:03]Server marked as offline
+[21:37:03][Wispbyte]: ---------- Detected server process in a crashed state! ----------
+[21:37:03][Wispbyte]: Exit code: 137
+[21:37:03][Wispbyte]: Out of memory: true
+[21:37:03][Wispbyte]: Aborting automatic restart, last crash occurred less than 60 seconds ago.
