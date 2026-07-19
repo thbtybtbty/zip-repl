@@ -8,7 +8,7 @@ npm install -g pnpm@9 --prefix "$HOME/.local"
 export PATH="$HOME/.local/bin:$PATH"
 
 echo "[start.sh] Installing dependencies…"
-pnpm install --frozen-lockfile
+CI=true pnpm install --frozen-lockfile
 
 echo "[start.sh] Building…"
 pnpm --filter @workspace/api-server run build
