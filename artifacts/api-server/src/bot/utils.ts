@@ -1,5 +1,5 @@
 import { db, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import {
   EmbedBuilder,
   ButtonBuilder,
@@ -112,6 +112,40 @@ export async function addBalance(userId: string, delta: number): Promise<number>
     .set({ balance: next, updatedAt: new Date() })
     .where(eq(usersTable.id, userId));
   return next;
+}
+
+/** Track a completed bet: adds to lifetime wagered + updates net profit. */
+export async function recordBet(userId: string, wagered: number, netDelta: number): Promise<void> {
+  await db
+    .update(usersTable)
+    .set({
+      wagered:   sql`${usersTable.wagered} + ${wagered}`,
+      profit:    sql`${usersTable.profit}  + ${netDelta}`,
+      updatedAt: new Date(),
+    })
+    .where(eq(usersTable.id, userId));
+}
+
+/** Increment lifetime deposited counter (call on approved deposit). */
+export async function addDeposited(userId: string, amount: number): Promise<void> {
+  await db
+    .update(usersTable)
+    .set({
+      deposited: sql`${usersTable.deposited} + ${amount}`,
+      updatedAt: new Date(),
+    })
+    .where(eq(usersTable.id, userId));
+}
+
+/** Increment lifetime withdrawn counter (call on approved withdrawal). */
+export async function addWithdrawn(userId: string, amount: number): Promise<void> {
+  await db
+    .update(usersTable)
+    .set({
+      withdrawn: sql`${usersTable.withdrawn} + ${amount}`,
+      updatedAt: new Date(),
+    })
+    .where(eq(usersTable.id, userId));
 }
 
 // ─── Embed helpers ───────────────────────────────────────────────────────────

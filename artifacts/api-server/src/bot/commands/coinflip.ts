@@ -9,6 +9,7 @@ import {
   formatAmount,
   getOrCreateUser,
   addBalance,
+  recordBet,
   errorEmbed,
 } from "../utils.js";
 
@@ -62,6 +63,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const result = (won ? choice : (choice === "heads" ? "tails" : "heads")) as typeof SIDES[number];
   const payout  = won ? amount : -amount;
   const newBal  = await addBalance(interaction.user.id, payout);
+  await recordBet(interaction.user.id, amount, payout);
 
   const embed = new EmbedBuilder()
     .setColor(won ? COLORS.success : COLORS.danger)

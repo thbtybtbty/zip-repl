@@ -19,6 +19,7 @@ import {
   formatMult,
   getOrCreateUser,
   addBalance,
+  recordBet,
   errorEmbed,
 } from "../utils.js";
 
@@ -294,6 +295,7 @@ export async function handleChoice(interaction: ButtonInteraction, choice: Tower
 
   if (tile === "bomb") {
     activeTowersGames.delete(interaction.user.id);
+    await recordBet(interaction.user.id, game.bet, -game.bet);
     await interaction.editReply({
       embeds:     [buildTowersEmbed(game, "lost")],
       components: buildEndComponents(game),
@@ -309,6 +311,7 @@ export async function handleChoice(interaction: ButtonInteraction, choice: Tower
     activeTowersGames.delete(interaction.user.id);
     const winnings = Math.floor(game.bet * game.multiplier);
     await addBalance(interaction.user.id, winnings);
+    await recordBet(interaction.user.id, game.bet, winnings - game.bet);
     await interaction.editReply({
       embeds:     [buildTowersEmbed(game, "won")],
       components: buildEndComponents(game),
@@ -342,6 +345,7 @@ export async function handleCashout(interaction: ButtonInteraction) {
   activeTowersGames.delete(interaction.user.id);
   const winnings = Math.floor(game.bet * game.multiplier);
   await addBalance(interaction.user.id, winnings);
+  await recordBet(interaction.user.id, game.bet, winnings - game.bet);
 
   await interaction.editReply({
     embeds:     [buildTowersEmbed(game, "cashed")],

@@ -3,7 +3,7 @@ import {
   EmbedBuilder,
   type ChatInputCommandInteraction,
 } from "discord.js";
-import { COLORS, getOrCreateUser } from "../utils.js";
+import { COLORS, getOrCreateUser, formatAmount } from "../utils.js";
 
 export const data = new SlashCommandBuilder()
   .setName("balance")
@@ -17,16 +17,26 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     interaction.user.username,
   );
 
-  const formatted = user.balance.toLocaleString("en-US");
+  const balance   = user.balance;
+  const deposited = user.deposited ?? 0;
+  const withdrawn = user.withdrawn ?? 0;
+  const wagered   = user.wagered   ?? 0;
+  const profit    = user.profit    ?? 0;
+
+  const profitSign  = profit >= 0 ? "+" : "-";
+  const profitEmoji = profit >= 0 ? "💚" : "🔴";
 
   const embed = new EmbedBuilder()
-    .setColor(COLORS.gold)
+    .setColor(0x2b2d31)
+    .setTitle(`${interaction.user.displayName}'s Balance`)
     .setThumbnail(interaction.user.displayAvatarURL({ size: 128 }))
     .setDescription(
       [
-        `### ${interaction.user.displayName}`,
-        `## 💎  ${formatted}`,
-        `-# PS99 Gems`,
+        `💎 **Balance** ${formatAmount(balance)} *(${balance.toLocaleString("en-US")})*`,
+        `📥 **Deposited** ${formatAmount(deposited)}`,
+        `📤 **Withdrawn** ${formatAmount(withdrawn)}`,
+        `💎 **Wagered** ${formatAmount(wagered)}`,
+        `${profitEmoji} **Profit** ${profitSign}${formatAmount(Math.abs(profit))}`,
       ].join("\n"),
     )
     .setTimestamp();

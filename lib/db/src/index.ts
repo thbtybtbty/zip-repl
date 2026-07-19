@@ -45,6 +45,17 @@ export function initDb(): void {
       value TEXT NOT NULL
     );
   `);
+
+  // Migrations — safe to run every boot; ALTER TABLE is a no-op if column exists
+  const migrations = [
+    `ALTER TABLE users ADD COLUMN deposited INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN withdrawn INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN wagered   INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN profit    INTEGER NOT NULL DEFAULT 0`,
+  ];
+  for (const stmt of migrations) {
+    try { sqlite.exec(stmt); } catch { /* column already exists — ignore */ }
+  }
 }
 
 export * from "./schema";

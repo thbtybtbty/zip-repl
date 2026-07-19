@@ -10,6 +10,7 @@ import {
   formatAmount,
   getOrCreateUser,
   addBalance,
+  recordBet,
   errorEmbed,
 } from "../utils.js";
 
@@ -127,6 +128,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
 
   const newBalance = await addBalance(interaction.user.id, payout);
+  await recordBet(interaction.user.id, amount, payout);
 
   const embed = new EmbedBuilder()
     .setColor(color)

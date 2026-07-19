@@ -16,6 +16,7 @@ import {
   formatAmount,
   getOrCreateUser,
   addBalance,
+  recordBet,
   errorEmbed,
 } from "../utils.js";
 
@@ -84,6 +85,7 @@ async function runSpin(
   await addBalance(userId, -bet);
   const winnings = Math.floor(bet * result.mult);
   if (winnings > 0) await addBalance(userId, winnings);
+  await recordBet(userId, bet, winnings - bet);
   const oddsText = `${((result.weight / POOL.length) * 100).toFixed(1)}%`;
 
   // Animation frames

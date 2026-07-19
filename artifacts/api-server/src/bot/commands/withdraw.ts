@@ -14,7 +14,7 @@ import {
   type MessageActionRowComponentBuilder,
   type TextChannel,
 } from "discord.js";
-import { COLORS, parseAmount, formatAmount, getOrCreateUser, addBalance, errorEmbed } from "../utils.js";
+import { COLORS, parseAmount, formatAmount, getOrCreateUser, addBalance, addWithdrawn, errorEmbed } from "../utils.js";
 import { getServerConfig } from "../botConfig.js";
 
 // ─── Pending requests ─────────────────────────────────────────────────────────
@@ -217,6 +217,7 @@ export async function handleApproveModal(interaction: ModalSubmitInteraction, re
   const reason = interaction.fields.getTextInputValue("reason");
   pendingWithdraws.delete(reqId);
   // Gems were already deducted when player confirmed — no further deduction needed
+  await addWithdrawn(req.userId, req.amount);
 
   await interaction.editReply({
     embeds: [

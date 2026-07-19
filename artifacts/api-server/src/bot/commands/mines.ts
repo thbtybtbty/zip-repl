@@ -18,6 +18,7 @@ import {
   formatMult,
   getOrCreateUser,
   addBalance,
+  recordBet,
   errorEmbed,
 } from "../utils.js";
 import { gamesTable } from "@workspace/db";
@@ -237,6 +238,7 @@ export async function handleReveal(interaction: ButtonInteraction, cellIndex: nu
       activeMinesGames.delete(interaction.user.id);
       const winnings = Math.floor(game.bet * game.multiplier);
       await addBalance(interaction.user.id, winnings);
+      await recordBet(interaction.user.id, game.bet, winnings - game.bet);
 
       await interaction.editReply({
         embeds:     [buildMinesPanelEmbed(game, "won")],
@@ -256,6 +258,7 @@ export async function handleReveal(interaction: ButtonInteraction, cellIndex: nu
   } else {
     // Bomb hit — reveal all
     activeMinesGames.delete(interaction.user.id);
+    await recordBet(interaction.user.id, game.bet, -game.bet);
     await interaction.editReply({
       embeds:     [buildMinesPanelEmbed(game, "lost")],
       components: buildMinesGrid(game, true),
@@ -284,6 +287,7 @@ export async function handleCashout(interaction: ButtonInteraction) {
   activeMinesGames.delete(interaction.user.id);
   const winnings = Math.floor(game.bet * game.multiplier);
   await addBalance(interaction.user.id, winnings);
+  await recordBet(interaction.user.id, game.bet, winnings - game.bet);
 
   const channel      = interaction.channel!;
   const panelGridMsg = await channel.messages.fetch(game.panelGridMessageId);

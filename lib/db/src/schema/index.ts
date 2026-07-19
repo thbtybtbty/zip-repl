@@ -5,7 +5,11 @@ import { z } from "zod/v4";
 export const usersTable = sqliteTable("users", {
   id:        text("id").primaryKey(),                         // Discord user ID
   username:  text("username").notNull(),
-  balance:   integer("balance").notNull().default(0),         // starts at 0 gems
+  balance:   integer("balance").notNull().default(0),         // current balance
+  deposited: integer("deposited").notNull().default(0),       // lifetime approved deposits
+  withdrawn: integer("withdrawn").notNull().default(0),       // lifetime approved withdrawals
+  wagered:   integer("wagered").notNull().default(0),         // lifetime amount bet
+  profit:    integer("profit").notNull().default(0),          // lifetime net profit (can be negative)
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });

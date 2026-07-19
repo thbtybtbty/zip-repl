@@ -9,6 +9,7 @@ import {
   formatAmount,
   getOrCreateUser,
   addBalance,
+  recordBet,
   errorEmbed,
 } from "../utils.js";
 
@@ -191,6 +192,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await addBalance(interaction.user.id, -amount);
   const { won, payout } = evaluateBet(bet, numOpt, result);
   if (won) await addBalance(interaction.user.id, amount + amount * payout);
+  await recordBet(interaction.user.id, amount, won ? amount * payout : -amount);
 
   const winningPockets: Record<BetType, number> = {
     red: 18, black: 18, odd: 18, even: 18, low: 18, high: 18,

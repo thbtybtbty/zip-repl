@@ -16,6 +16,7 @@ import {
   formatAmount,
   getOrCreateUser,
   addBalance,
+  recordBet,
   errorEmbed,
 } from "../utils.js";
 
@@ -152,6 +153,7 @@ function launchCrash(userId: string, bet: number, gameMessage: Message): string 
         clearInterval(session.timer);
         session.status = "crashed";
         activeSessions.delete(sessionId);
+        await recordBet(userId, bet, -bet);
         try {
           await session.gameMessage.edit({
             embeds:     [crashedEmbed(crashPoint, bet)],
@@ -240,6 +242,7 @@ export async function handleCashout(interaction: ButtonInteraction, sessionId: s
   const winnings = Math.floor(session.bet * mult);
 
   await addBalance(session.userId, winnings);
+  await recordBet(session.userId, session.bet, winnings - session.bet);
 
   await interaction.update({
     embeds:     [cashedEmbed(mult, session.bet, session.crashPoint)],

@@ -14,6 +14,7 @@ import {
   formatAmount,
   getOrCreateUser,
   addBalance,
+  recordBet,
   errorEmbed,
 } from "../utils.js";
 
@@ -213,6 +214,7 @@ async function resolveGame(
   else                                                           payout = -(game.bet * multiplier);
 
   await addBalance(game.userId, payout);
+  await recordBet(game.userId, bet, payout);
 
   await interaction.editReply({
     embeds:     [buildEmbed(game, status)],

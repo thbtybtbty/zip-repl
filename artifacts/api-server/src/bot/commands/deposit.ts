@@ -14,7 +14,7 @@ import {
   type MessageActionRowComponentBuilder,
   type TextChannel,
 } from "discord.js";
-import { COLORS, parseAmount, formatAmount, addBalance, errorEmbed } from "../utils.js";
+import { COLORS, parseAmount, formatAmount, addBalance, addDeposited, errorEmbed } from "../utils.js";
 import { getServerConfig } from "../botConfig.js";
 
 // ─── Pending requests ─────────────────────────────────────────────────────────
@@ -179,6 +179,7 @@ export async function handleApprove(interaction: ButtonInteraction, reqId: strin
 
   pendingDeposits.delete(reqId);
   await addBalance(req.userId, req.amount);
+  await addDeposited(req.userId, req.amount);
 
   await interaction.editReply({
     embeds: [
