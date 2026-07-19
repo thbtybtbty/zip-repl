@@ -113,8 +113,8 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
   const dealerScore = showDealerFull ? `**${dv}**${dv > 21 ? "  💥 BUST" : ""}` : "**?**";
 
   const bet        = game.bet * (game.doubled ? 2 : 1);
-  const winPayout  = Math.floor(bet * 0.925);
-  const bjPayout   = Math.floor(game.bet * 1.5 * 0.925);
+  const winPayout  = bet;
+  const bjPayout   = Math.floor(game.bet * 1.5);
 
   const statusMeta: Record<GameStatus, { color: number; title: string; footer: string }> = {
     active:       { color: COLORS.primary, title: "🃏  Blackjack",               footer: "Hit, stand, or double down?" },
@@ -176,6 +176,16 @@ function buildComponents(
   ];
 }
 
+// ─── House edge ────────────────────────────────────────────────────────────────
+// 7.5% of player wins are silently flipped to dealer wins.
+// Payouts remain full — the edge is in outcome probability, not payout size.
+function applyHouseEdge(status: GameStatus): GameStatus {
+  if (status === "player_win" || status === "dealer_bust" || status === "blackjack") {
+    if (Math.random() < 0.075) return "dealer_win";
+  }
+  return status;
+}
+
 // ─── Dealer play ───────────────────────────────────────────────────────────────
 function dealerPlay(game: BlackjackGame): void {
   while (handValue(game.dealerHand) < 17) {
@@ -191,14 +201,16 @@ async function resolveGame(
 ): Promise<void> {
   activeBlackjackGames.delete(game.userId);
 
+  // Apply hidden house edge: 7.5% of wins become dealer wins
+  status = applyHouseEdge(status);
+
   const multiplier = game.doubled ? 2 : 1;
   let payout = 0;
 
-  // 7.5% house edge: win payouts × 0.925
-  if (status === "blackjack")   payout = Math.floor(game.bet * 1.5 * 0.925);
-  else if (status === "player_win" || status === "dealer_bust") payout = Math.floor(game.bet * multiplier * 0.925);
-  else if (status === "push")   payout = 0;
-  else                          payout = -(game.bet * multiplier);
+  if (status === "blackjack")                                    payout = Math.floor(game.bet * 1.5);
+  else if (status === "player_win" || status === "dealer_bust")  payout = game.bet * multiplier;
+  else if (status === "push")                                    payout = 0;
+  else                                                           payout = -(game.bet * multiplier);
 
   await addBalance(game.userId, payout);
 
@@ -263,8 +275,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       status = "push";
       payout = 0;
     } else if (playerBJ) {
-      status  = "blackjack";
-      payout  = Math.floor(amount * 1.5 * 0.925);
+      status = applyHouseEdge("blackjack");
+      payout = status === "blackjack" ? Math.floor(amount * 1.5) : -amount;
     } else {
       status = "dealer_win";
       payout = -amount;
