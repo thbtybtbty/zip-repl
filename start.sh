@@ -2,11 +2,9 @@
 # PS99 GemSpin Bet — startup script (WispByte / any VPS)
 set -e
 
-# Install pnpm if the host doesn't have it
-if ! command -v pnpm &>/dev/null; then
-  echo "[start.sh] pnpm not found — installing via npm…"
-  npm install -g pnpm
-fi
+# Always install pnpm via npm to bypass Corepack download delays
+echo "[start.sh] Installing pnpm via npm…"
+npm install -g pnpm --prefer-offline 2>/dev/null || npm install -g pnpm
 
 echo "[start.sh] Installing dependencies…"
 pnpm install --frozen-lockfile
