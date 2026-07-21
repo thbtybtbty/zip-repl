@@ -21,7 +21,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const deposited = user.deposited ?? 0;
   const withdrawn = user.withdrawn ?? 0;
   const wagered   = user.wagered   ?? 0;
-  const profit    = user.profit    ?? 0;
+  // profit = current balance + lifetime withdrawals - lifetime deposits
+  const profit    = balance + withdrawn - deposited;
 
   const profitPositive = profit >= 0;
   const profitEmoji    = profitPositive ? "📈" : "📉";
