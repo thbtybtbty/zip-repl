@@ -40,6 +40,33 @@ function pickSymbol(): CardSymbol {
   return SYMBOL_POOL[Math.floor(Math.random() * SYMBOL_POOL.length)]!;
 }
 
+// Generate 9 cells guaranteeing no symbol appears more than 3 times
+function generateCells(): CardSymbol[] {
+  const cells: CardSymbol[] = [];
+  const counts = new Map<string, number>();
+
+  for (let i = 0; i < 9; i++) {
+    // Keep picking until we find a symbol that hasn't hit its cap of 3
+    let pick: CardSymbol;
+    let attempts = 0;
+    do {
+      pick = pickSymbol();
+      attempts++;
+      // Safety valve: if we've tried many times, just pick any symbol under the cap
+      if (attempts > 50) {
+        const available = SYMBOLS.filter((s) => (counts.get(s.emoji) ?? 0) < 3);
+        pick = available[Math.floor(Math.random() * available.length)]!;
+        break;
+      }
+    } while ((counts.get(pick.emoji) ?? 0) >= 3);
+
+    cells.push(pick);
+    counts.set(pick.emoji, (counts.get(pick.emoji) ?? 0) + 1);
+  }
+
+  return cells;
+}
+
 function fmtMult(mult: number): string {
   // Always show one decimal place, e.g. 1.0x, 10.0x, 500.0x
   return `${mult.toFixed(1)}x`;
@@ -65,10 +92,10 @@ function checkWin(cells: CardSymbol[]): { winner: boolean; symbol: CardSymbol | 
     else counts.set(cell.emoji, { symbol: cell, count: 1 });
   }
 
-  // Pick the highest-mult symbol that appears 3+ times
+  // Pick the highest-mult symbol that appears exactly 3 times
   let best: { symbol: CardSymbol; count: number } | null = null;
   for (const entry of counts.values()) {
-    if (entry.count >= 3) {
+    if (entry.count === 3) {
       if (!best || entry.symbol.mult > best.symbol.mult) best = entry;
     }
   }
@@ -216,7 +243,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const game: ScratchGame = {
     userId:   interaction.user.id,
     bet:      amount,
-    cells:    Array.from({ length: 9 }, () => pickSymbol()),
+    cells:    generateCells(),
     revealed: Array(9).fill(false),
     settled:  false,
   };
