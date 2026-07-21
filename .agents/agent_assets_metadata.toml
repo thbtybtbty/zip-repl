@@ -6,3 +6,9 @@ id = "oGEyWVwtqd5JB0A-GQSTO"
 uri = "file://bot.zip"
 type = "unspecified"
 title = "bot.zip — WispByte deployment"
+
+[[outputs]]
+id = "Wu6dL-J6fx1iI0yawm7cY"
+uri = "file://wispbyte-upload-new.zip"
+type = "unspecified"
+title = "WispByte Bot Upload (132 KB)"
