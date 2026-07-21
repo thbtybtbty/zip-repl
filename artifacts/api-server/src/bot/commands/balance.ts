@@ -23,20 +23,21 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const wagered   = user.wagered   ?? 0;
   const profit    = user.profit    ?? 0;
 
-  const profitSign  = profit >= 0 ? "+" : "-";
-  const profitEmoji = profit >= 0 ? "💚" : "🔴";
+  const profitPositive = profit >= 0;
+  const profitEmoji    = profitPositive ? "📈" : "📉";
+  const profitStr      = `${profitPositive ? "+" : "-"}${formatAmount(Math.abs(profit))}`;
 
   const embed = new EmbedBuilder()
-    .setColor(0x2b2d31)
-    .setTitle(`${interaction.user.displayName}'s Balance`)
+    .setColor(profitPositive ? 0x57f287 : 0xed4245)
+    .setTitle(`💎 ${interaction.user.displayName}'s Balance`)
     .setThumbnail(interaction.user.displayAvatarURL({ size: 128 }))
     .setDescription(
       [
-        `💎 **Balance** ${formatAmount(balance)} *(${balance.toLocaleString("en-US")})*`,
-        `📥 **Deposited** ${formatAmount(deposited)}`,
-        `📤 **Withdrawn** ${formatAmount(withdrawn)}`,
-        `💎 **Wagered** ${formatAmount(wagered)}`,
-        `${profitEmoji} **Profit** ${profitSign}${formatAmount(Math.abs(profit))}`,
+        `💎 **Balance**   \`${formatAmount(balance)}\` *(${balance.toLocaleString("en-US")})*`,
+        `📥 **Deposited** \`${formatAmount(deposited)}\``,
+        `📤 **Withdrawn** \`${formatAmount(withdrawn)}\``,
+        `💸 **Wagered**   \`${formatAmount(wagered)}\``,
+        `${profitEmoji} **Profit**    \`${profitStr}\``,
       ].join("\n"),
     )
     .setTimestamp();
