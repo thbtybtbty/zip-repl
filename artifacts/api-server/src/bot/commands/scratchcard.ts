@@ -348,12 +348,7 @@ export async function handlePlayAgain(
 
   // Disable the Play Again button on the old message immediately
   await interaction.deferUpdate();
-  const oldGrid = buildGrid(
-    { userId, bet, cells: [], revealed: Array(9).fill(true), settled: true },
-    true,
-  );
-  oldGrid[oldGrid.length - 1] = buildPlayAgainRow(userId, bet, true);
-  await interaction.editReply({ components: oldGrid });
+  await interaction.editReply({ components: [buildPlayAgainRow(userId, bet, true)] });
 
   const user = await getOrCreateUser(userId, interaction.user.username);
   if (user.balance < bet) {
