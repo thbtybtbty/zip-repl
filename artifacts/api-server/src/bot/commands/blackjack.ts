@@ -129,6 +129,11 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
 
   const meta = statusMeta[status];
 
+  const statsLines = [
+    `💎 **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
+    status !== "active" ? `${meta.footer}` : ``,
+  ].filter(Boolean).join("\n");
+
   return new EmbedBuilder()
     .setColor(meta.color)
     .setTitle(meta.title)
@@ -139,14 +144,10 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
         ``,
         `**Your Hand**  **${pv}**${pv > 21 ? "  💥 BUST" : ""}`,
         `\`${handStr(game.playerHand)}\``,
+        ``,
+        statsLines,
       ].join("\n"),
     )
-    .addFields(
-      { name: "💰 Bet",   value: `${formatAmount(bet)} gems${game.doubled ? "  *(doubled)*" : ""}`, inline: true },
-      { name: "\u200b",   value: "\u200b",  inline: true },
-      { name: "\u200b",   value: "\u200b",  inline: true },
-    )
-    .setFooter({ text: meta.footer })
     .setTimestamp();
 }
 

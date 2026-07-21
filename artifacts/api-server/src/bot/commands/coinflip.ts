@@ -67,18 +67,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   const embed = new EmbedBuilder()
     .setColor(won ? COLORS.success : COLORS.danger)
-    .setTitle("🪙  Coin Flip")
-    .addFields(
-      { name: "Your pick",  value: SIDE_DISPLAY[choice]!,  inline: true },
-      { name: "Result",     value: SIDE_DISPLAY[result]!,  inline: true },
-      { name: "\u200b",     value: "\u200b",               inline: true },
-      {
-        name:   won ? "🎉 Won" : "💀 Lost",
-        value:  `${won ? "+" : "-"}${formatAmount(amount)} gems`,
-        inline: true,
-      },
-      { name: "\u200b", value: "\u200b", inline: true },
-      { name: "\u200b", value: "\u200b", inline: true },
+    .setTitle(won ? "🪙  Coin Flip — You Win!" : "🪙  Coin Flip — You Lose!")
+    .setDescription(
+      [
+        `🎯 **Your pick**  \`${SIDE_DISPLAY[choice]!}\``,
+        `🪙 **Result**     \`${SIDE_DISPLAY[result]!}\``,
+        `💎 **Bet**        \`${formatAmount(amount)}\``,
+        won
+          ? `🎉 **Won**        \`+${formatAmount(amount)}\``
+          : `💀 **Lost**       \`-${formatAmount(amount)}\``,
+      ].join("\n"),
     )
     .setTimestamp();
 

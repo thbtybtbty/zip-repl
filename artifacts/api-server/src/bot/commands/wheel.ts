@@ -123,19 +123,20 @@ async function runSpin(
     result.mult <  1 ? COLORS.warning :
     result.color;
 
+  const statsLines = [
+    `💎 **Bet**        \`${formatAmount(bet)}\``,
+    `🎯 **Multiplier** \`${result.label}\``,
+    `📊 **Odds**       \`${oddsText}\``,
+    `💵 **Return**     \`${formatAmount(winnings)}\``,
+  ].join("\n");
+
   await editFn({
     content: "",
     embeds: [
       new EmbedBuilder()
         .setColor(embedColor)
         .setTitle("🎡  Wheel of Fortune")
-        .setDescription(`${buildStrip(poolIdx, true)}\n\n${outcomeText}`)
-        .addFields(
-          { name: "💰 Bet",        value: `${formatAmount(bet)} gems`,   inline: true },
-          { name: "🎯 Multiplier", value: result.label,                   inline: true },
-          { name: "📊 Odds",       value: oddsText,                       inline: true },
-          { name: "💵 Return",     value: `${formatAmount(winnings)} gems`, inline: true },
-        )
+        .setDescription(`${buildStrip(poolIdx, true)}\n\n${outcomeText}\n\n${statsLines}`)
         .setTimestamp(),
     ],
     components: [playAgainRow(userId, bet)],

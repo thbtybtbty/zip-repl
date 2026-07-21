@@ -76,10 +76,14 @@ function flyingEmbed(mult: number, bet: number): EmbedBuilder {
   return new EmbedBuilder()
     .setColor(color)
     .setTitle(`${icon}  Crash — Flying!`)
-    .setDescription(`## ${mult.toFixed(2)}×\n${buildBar(mult)}`)
-    .addFields(
-      { name: "💰 Bet",          value: `${formatAmount(bet)} gems`,       inline: true },
-      { name: "💵 Cash Out Now", value: `${formatAmount(potential)} gems`,  inline: true },
+    .setDescription(
+      [
+        `## ${mult.toFixed(2)}×`,
+        buildBar(mult),
+        ``,
+        `💎 **Bet**          \`${formatAmount(bet)}\``,
+        `💵 **Cash Out Now** \`${formatAmount(potential)}\``,
+      ].join("\n"),
     )
     .setTimestamp();
 }
@@ -87,10 +91,14 @@ function flyingEmbed(mult: number, bet: number): EmbedBuilder {
 function crashedEmbed(crashPoint: number, bet: number): EmbedBuilder {
   return new EmbedBuilder()
     .setColor(COLORS.danger)
-    .setTitle("💥  Crashed!")
-    .setDescription(`## ${crashPoint.toFixed(2)}×`)
-    .addFields(
-      { name: "💸 Lost", value: `${formatAmount(bet)} gems`, inline: true },
+    .setTitle("💥  Crash — Crashed!")
+    .setDescription(
+      [
+        `## ${crashPoint.toFixed(2)}×`,
+        ``,
+        `💎 **Bet**   \`${formatAmount(bet)}\``,
+        `💸 **Lost**  \`-${formatAmount(bet)}\``,
+      ].join("\n"),
     )
     .setTimestamp();
 }
@@ -99,11 +107,17 @@ function cashedEmbed(mult: number, bet: number, crashPoint: number): EmbedBuilde
   const winnings = Math.floor(bet * mult);
   return new EmbedBuilder()
     .setColor(winnings > bet ? COLORS.success : COLORS.warning)
-    .setTitle("✅  Cashed Out!")
-    .setDescription(`## ${mult.toFixed(2)}×  *(crashed at ${crashPoint.toFixed(2)}×)*`)
-    .addFields(
-      { name: "💰 Bet",    value: `${formatAmount(bet)} gems`,      inline: true },
-      { name: "💵 Return", value: `${formatAmount(winnings)} gems`,  inline: true },
+    .setTitle("✅  Crash — Cashed Out!")
+    .setDescription(
+      [
+        `## ${mult.toFixed(2)}×  *(crashed at ${crashPoint.toFixed(2)}×)*`,
+        ``,
+        `💎 **Bet**     \`${formatAmount(bet)}\``,
+        `💵 **Return**  \`${formatAmount(winnings)}\``,
+        winnings > bet
+          ? `🎉 **Profit**  \`+${formatAmount(winnings - bet)}\``
+          : ``,
+      ].filter(Boolean).join("\n"),
     )
     .setTimestamp();
 }

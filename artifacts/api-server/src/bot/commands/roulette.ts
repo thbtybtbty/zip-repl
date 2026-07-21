@@ -224,6 +224,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const color   = won ? COLORS.success : COLORS.danger;
   const betName = bet === "straight" ? `🎯 Straight on **${numOpt}**` : BET_DISPLAY[bet];
 
+  const statsLines = [
+    `🎲 **Bet**    \`${betName}\``,
+    `💸 **Stake**  \`${formatAmount(amount)}\``,
+    `📊 **Odds**   \`${oddsText}  ·  ${PAYOUT_DISPLAY[bet]}\``,
+    won
+      ? `🎉 **Won**    \`+${formatAmount(winAmount)}\``
+      : `💀 **Lost**   \`-${formatAmount(amount)}\``,
+  ].join("\n");
+
   await interaction.editReply({
     content: "",
     embeds: [
@@ -231,16 +240,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         .setColor(color)
         .setTitle("🎰  American Roulette")
         .setDescription(
-          `${buildStrip(resultIdx, true)}\n\n` +
-          `${pocketEmoji(result)}  **${result}**  —  ${pocketLabels(result)}`,
-        )
-        .addFields(
-          { name: "🎲 Bet",   value: betName,                           inline: true },
-          { name: "💸 Stake", value: `-${formatAmount(amount)} gems`,   inline: true },
-          { name: "📊 Odds",  value: `${oddsText}  ·  ${PAYOUT_DISPLAY[bet]}`, inline: true },
-          won
-            ? { name: "🎉 Won",  value: `+${formatAmount(winAmount)} gems`, inline: true }
-            : { name: "💀 Lost", value: `-${formatAmount(amount)} gems`,    inline: true },
+          `${buildStrip(resultIdx, true)}\n` +
+          `${pocketEmoji(result)}  **${result}**  —  ${pocketLabels(result)}\n\n` +
+          statsLines,
         )
         .setTimestamp(),
     ],
