@@ -1,0 +1,77 @@
+[23:28:12]v19.9.0
+[23:28:12]Server marked as running
+[23:28:12]:/home/container$ node index.js
+[23:28:12][boot] DB → /home/container/artifacts/api-server/bot.db
+[23:28:13][boot] Installing better-sqlite3 (prebuilt)...
+[23:28:17]25l[..................] \ reify: timing arborist:ctor Completed in 2ms
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] / idealTree:container: sill idealTree buildDeps
+[..................] / idealTree:container: sill idealTree buildDeps
+[..................] / idealTree:container: sill idealTree buildDeps
+[..................] / idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] / idealTree:container: sill idealTree buildDeps
+[..................] / idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] - idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] - idealTree:container: timing idealTree:#root Completed in
+[#########.........] - idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] | idealTree:container: timing idealTree:#root Completed in
+[#########.........] - idealTree:container: timing idealTree:#root Completed in
+[#########.........] - idealTree:container: timing idealTree:#root Completed in
+[#########.........] - idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] - idealTree:container: timing idealTree:#root Completed in
+[#########.........] - idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] | idealTree:container: timing idealTree:#root Completed in 25hnpm WARN EBADENGINE Unsupported engine {
+[23:28:17]npm WARN EBADENGINE package: 'better-sqlite3@12.11.1',
+[23:28:17]npm WARN EBADENGINE required: { node: '20.x   22.x   23.x   24.x   25.x   26.x' },
+[23:28:17]npm WARN EBADENGINE current: { node: 'v19.9.0', npm: '9.9.4' }
+[23:28:17]npm WARN EBADENGINE }
+[23:28:18]25l[#########.........] / idealTree: timing idealTree Completed in 3132ms
+[#########.........] | reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] / reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] / reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] / reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] - reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] - reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] - reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] - reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] - reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] - reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] - reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] | reify:util-deprecate: http fetch GET 200 https://registr
+[#############.....] / reify:node-abi: http fetch GET 200 https://registry.npmj
+[################..] / reify:bl: http fetch GET 200 https://registry.npmjs.org/
+[################..] - reify:minimist: http fetch GET 200 https://registry.npmj 25hnpm WARN deprecated prebuild-install@7.1.3: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
