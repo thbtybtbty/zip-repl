@@ -4,6 +4,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   ActionRowBuilder,
+  MessageFlags,
   type ChatInputCommandInteraction,
   type ButtonInteraction,
   type MessageActionRowComponentBuilder,
@@ -178,6 +179,17 @@ function buildComponents(
   ];
 }
 
+// ─── Play Again button ────────────────────────────────────────────────────────
+function playAgainRow(userId: string, bet: number, disabled = false): ActionRowBuilder<MessageActionRowComponentBuilder> {
+  return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`pa_bj_${userId}_${bet}`)
+      .setLabel("🔄  Play Again")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(disabled),
+  );
+}
+
 // ─── House edge ────────────────────────────────────────────────────────────────
 // 7.5% of player wins are silently flipped to dealer wins.
 // Payouts remain full — the edge is in outcome probability, not payout size.
@@ -237,7 +249,7 @@ async function resolveGame(
 
   await interaction.editReply({
     embeds:     [buildEmbed(game, status)],
-    components: buildComponents(game, true),
+    components: [...buildComponents(game, true), playAgainRow(game.userId, game.bet)],
   });
 }
 
@@ -306,7 +318,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     await addBalance(interaction.user.id, payout);
     return interaction.editReply({
       embeds:     [buildEmbed(game, status)],
-      components: buildComponents(game, true),
+      components: [...buildComponents(game, true), playAgainRow(interaction.user.id, amount)],
     });
   }
 
@@ -408,4 +420,81 @@ export async function handleDouble(interaction: ButtonInteraction) {
     : "dealer_win";
 
   return resolveGame(game, interaction, status);
+}
+
+// ─── Button: Play Again ───────────────────────────────────────────────────────
+export async function handlePlayAgain(interaction: ButtonInteraction, userId: string, betStr: string): Promise<void> {
+  if (interaction.user.id !== userId) {
+    return void interaction.reply({ content: "❌ This isn't your game.", flags: MessageFlags.Ephemeral });
+  }
+
+  const bet = parseInt(betStr, 10);
+
+  // Disable the Play Again button on the finished game immediately
+  await interaction.deferUpdate();
+  await interaction.editReply({ components: [playAgainRow(userId, bet, true)] });
+
+  if (activeBlackjackGames.has(userId)) {
+    await interaction.followUp({
+      embeds: [errorEmbed("You already have an active Blackjack game!")],
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const user = await getOrCreateUser(userId, interaction.user.username);
+  if (user.balance < bet) {
+    await interaction.followUp({
+      embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} gems**.`)],
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  await addBalance(userId, -bet);
+
+  const deck = shuffle(buildDeck());
+  const game: BlackjackGame = {
+    userId,
+    bet,
+    deck,
+    playerHand: [deal(deck), deal(deck)],
+    dealerHand: [deal(deck), deal(deck)],
+    doubled:    false,
+    messageId:  "",
+  };
+
+  // Check immediate blackjack
+  const playerBJ = isBlackjack(game.playerHand);
+  const dealerBJ = isBlackjack(game.dealerHand);
+
+  if (playerBJ || dealerBJ) {
+    let status: GameStatus;
+    let payout: number;
+
+    if (playerBJ && dealerBJ) {
+      status = "push";
+      payout = 0;
+    } else if (playerBJ) {
+      status = applyHouseEdge("blackjack");
+      payout = status === "blackjack" ? Math.floor(bet * 1.5) : -bet;
+    } else {
+      status = "dealer_win";
+      payout = -bet;
+    }
+
+    await addBalance(userId, payout);
+    await interaction.followUp({
+      embeds:     [buildEmbed(game, status)],
+      components: [...buildComponents(game, true), playAgainRow(userId, bet)],
+    });
+    return;
+  }
+
+  const msg = await interaction.followUp({
+    embeds:     [buildEmbed(game, "active")],
+    components: buildComponents(game, false),
+  });
+  game.messageId = msg.id;
+  activeBlackjackGames.set(userId, game);
 }

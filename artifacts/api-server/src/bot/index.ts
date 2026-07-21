@@ -112,6 +112,10 @@ async function handleInteraction(interaction: Interaction) {
       if (id.startsWith("crash_cashout_")) return await crash.handleCashout(bi, id.slice("crash_cashout_".length));
 
       // Play Again buttons
+      if (id.startsWith("pa_bj_")) {
+        const [userId, bet] = id.slice("pa_bj_".length).split("_");
+        return await blackjack.handlePlayAgain(bi, userId!, bet!);
+      }
       if (id.startsWith("pa_wheel_")) {
         const [userId, bet] = id.slice("pa_wheel_".length).split("_");
         return await wheel.handlePlayAgain(bi, userId!, bet!);
