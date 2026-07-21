@@ -5,6 +5,7 @@ import {
   ButtonStyle,
   ActionRowBuilder,
   MessageFlags,
+  type Message,
   type ChatInputCommandInteraction,
   type ButtonInteraction,
   type MessageActionRowComponentBuilder,
@@ -36,55 +37,78 @@ const SYMBOLS: CardSymbol[] = [
 const JACKPOT_MULT = 500.0;
 const SYMBOL_POOL: CardSymbol[] = SYMBOLS.flatMap((s) => Array(s.weight).fill(s));
 
-function pickSymbol(): CardSymbol {
+function pickWeighted(): CardSymbol {
   return SYMBOL_POOL[Math.floor(Math.random() * SYMBOL_POOL.length)]!;
 }
 
-// Generate 9 cells guaranteeing no symbol appears more than 3 times
-function generateCells(): CardSymbol[] {
-  const cells: CardSymbol[] = [];
-  const counts = new Map<string, number>();
-
-  for (let i = 0; i < 9; i++) {
-    // Keep picking until we find a symbol that hasn't hit its cap of 3
-    let pick: CardSymbol;
-    let attempts = 0;
-    do {
-      pick = pickSymbol();
-      attempts++;
-      // Safety valve: if we've tried many times, just pick any symbol under the cap
-      if (attempts > 50) {
-        const available = SYMBOLS.filter((s) => (counts.get(s.emoji) ?? 0) < 3);
-        pick = available[Math.floor(Math.random() * available.length)]!;
-        break;
-      }
-    } while ((counts.get(pick.emoji) ?? 0) >= 3);
-
-    cells.push(pick);
-    counts.set(pick.emoji, (counts.get(pick.emoji) ?? 0) + 1);
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j]!, arr[i]!];
   }
-
-  return cells;
+  return arr;
 }
 
 function fmtMult(mult: number): string {
-  // Always show one decimal place, e.g. 1.0x, 10.0x, 500.0x
   return `${mult.toFixed(1)}x`;
+}
+
+// ─── Cell generation — always exactly one triple, never more ──────────────────
+// Strategy:
+//   1. Pick the winning symbol (weighted).
+//   2. Start the card with 3 copies of it.
+//   3. Fill the remaining 6 slots with other symbols, keeping every non-winner
+//      at ≤ 2 occurrences so no accidental second triple forms.
+//   4. Shuffle.
+function generateCells(): CardSymbol[] {
+  // Step 1: pick winner
+  const winner = pickWeighted();
+
+  // Step 2: build the 6 filler cells (no other symbol may appear 3+ times)
+  const fillers: CardSymbol[] = [];
+  const fillerCounts = new Map<string, number>();
+
+  while (fillers.length < 6) {
+    let pick: CardSymbol;
+    let attempts = 0;
+    do {
+      pick = pickWeighted();
+      attempts++;
+      if (attempts > 100) {
+        // Safety: grab any non-winner that's still under 2
+        const available = SYMBOLS.filter(
+          (s) => s.emoji !== winner.emoji && (fillerCounts.get(s.emoji) ?? 0) < 2,
+        );
+        pick = available[Math.floor(Math.random() * available.length)]!;
+        break;
+      }
+    } while (
+      pick.emoji === winner.emoji ||          // can't add more of the winner
+      (fillerCounts.get(pick.emoji) ?? 0) >= 2 // cap every filler at 2
+    );
+
+    fillers.push(pick);
+    fillerCounts.set(pick.emoji, (fillerCounts.get(pick.emoji) ?? 0) + 1);
+  }
+
+  // Step 3: combine + shuffle
+  const cells = [winner, winner, winner, ...fillers];
+  return shuffle(cells);
 }
 
 // ─── Game state ───────────────────────────────────────────────────────────────
 interface ScratchGame {
   userId:   string;
   bet:      number;
-  cells:    CardSymbol[];  // 9 pre-determined symbols
-  revealed: boolean[];     // which cells the user has scratched
-  settled:  boolean;       // true once winnings have been paid out
+  cells:    CardSymbol[];
+  revealed: boolean[];
+  settled:  boolean;
 }
 
 const activeGames = new Map<string, ScratchGame>();
 
-// ─── Win check: find the best 3-of-a-kind (highest multiplier wins) ──────────
-function checkWin(cells: CardSymbol[]): { winner: boolean; symbol: CardSymbol | null; count: number } {
+// ─── Win check — exactly 3 of the same symbol ─────────────────────────────────
+function checkWin(cells: CardSymbol[]): { winner: boolean; symbol: CardSymbol | null } {
   const counts = new Map<string, { symbol: CardSymbol; count: number }>();
   for (const cell of cells) {
     const entry = counts.get(cell.emoji);
@@ -92,7 +116,6 @@ function checkWin(cells: CardSymbol[]): { winner: boolean; symbol: CardSymbol | 
     else counts.set(cell.emoji, { symbol: cell, count: 1 });
   }
 
-  // Pick the highest-mult symbol that appears exactly 3 times
   let best: { symbol: CardSymbol; count: number } | null = null;
   for (const entry of counts.values()) {
     if (entry.count === 3) {
@@ -101,25 +124,37 @@ function checkWin(cells: CardSymbol[]): { winner: boolean; symbol: CardSymbol | 
   }
 
   return best
-    ? { winner: true,  symbol: best.symbol, count: best.count }
-    : { winner: false, symbol: null,         count: 0          };
+    ? { winner: true,  symbol: best.symbol }
+    : { winner: false, symbol: null         };
 }
 
-// ─── Settle (deduct bet upfront; add winnings here once) ─────────────────────
-async function settleGame(game: ScratchGame): Promise<number> {
-  if (game.settled) return 0;
+// ─── Settle ───────────────────────────────────────────────────────────────────
+async function settleGame(game: ScratchGame): Promise<void> {
+  if (game.settled) return;
   game.settled = true;
 
   const win      = checkWin(game.cells);
   const winnings = win.winner ? Math.floor(game.bet * win.symbol!.mult) : 0;
   if (winnings > 0) await addBalance(game.userId, winnings);
   await recordBet(game.userId, game.bet, winnings - game.bet);
-  return winnings;
 }
 
-// ─── Build the 3×3 grid + Scratch All button ─────────────────────────────────
-// winEmoji: when set, cells matching this emoji are highlighted green
-function buildComponents(
+// ─── Components ───────────────────────────────────────────────────────────────
+function buildPlayAgainRow(
+  userId: string,
+  bet: number,
+  disabled = false,
+): ActionRowBuilder<MessageActionRowComponentBuilder> {
+  return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`pa_sc_${userId}_${bet}`)
+      .setLabel("🔄  Play Again")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(disabled),
+  );
+}
+
+function buildGrid(
   game: ScratchGame,
   disabled  = false,
   winEmoji?: string,
@@ -139,10 +174,10 @@ function buildComponents(
         .setDisabled(disabled || isRevealed || allDone);
 
       if (isRevealed) {
-        const isWinner = winEmoji !== undefined && cell.emoji === winEmoji;
-        btn
-          .setLabel(`${cell.emoji} ${fmtMult(cell.mult)}`)
-          .setStyle(isWinner ? ButtonStyle.Success : ButtonStyle.Secondary);
+        const isWin = winEmoji !== undefined && cell.emoji === winEmoji;
+        btn.setLabel(`${cell.emoji} ${fmtMult(cell.mult)}`).setStyle(
+          isWin ? ButtonStyle.Success : ButtonStyle.Secondary,
+        );
       } else {
         btn.setEmoji("🎰").setStyle(ButtonStyle.Primary);
       }
@@ -152,7 +187,7 @@ function buildComponents(
     rows.push(actionRow);
   }
 
-  // Scratch All button
+  // Scratch All / Play Again row
   const scratchedCount = game.revealed.filter(Boolean).length;
   rows.push(
     new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
@@ -167,19 +202,19 @@ function buildComponents(
   return rows;
 }
 
-// ─── Embeds (mines-style description layout) ──────────────────────────────────
+// ─── Embeds ───────────────────────────────────────────────────────────────────
 function buildActiveEmbed(game: ScratchGame): EmbedBuilder {
   const scratchedCount = game.revealed.filter(Boolean).length;
-  const desc = [
-    `💎 **Bet**        \`${formatAmount(game.bet)}\``,
-    `✨ **Jackpot**    \`${fmtMult(JACKPOT_MULT)}\``,
-    `🎃 **Scratched**  \`${scratchedCount}/9\``,
-  ].join("\n");
-
   return new EmbedBuilder()
     .setColor(COLORS.primary)
     .setTitle("🎰 Scratchcard")
-    .setDescription(desc)
+    .setDescription(
+      [
+        `💎 **Bet**        \`${formatAmount(game.bet)}\``,
+        `✨ **Jackpot**    \`${fmtMult(JACKPOT_MULT)}\``,
+        `🎃 **Scratched**  \`${scratchedCount}/9\``,
+      ].join("\n"),
+    )
     .setTimestamp();
 }
 
@@ -188,27 +223,49 @@ function buildResultEmbed(game: ScratchGame): EmbedBuilder {
   const winnings = win.winner ? Math.floor(game.bet * win.symbol!.mult) : 0;
   const net      = winnings - game.bet;
 
-  const title = win.winner
-    ? `🎰 Scratchcard — WINNER!`
-    : `🎰 Scratchcard — NO MATCH`;
-
   const resultLine = win.winner
-    ? `🎉 **${win.count}× ${win.symbol!.emoji}** matched! (${fmtMult(win.symbol!.mult)})\n+**${formatAmount(net >= 0 ? net : winnings)} 💎** payout`
+    ? `🎉 **3× ${win.symbol!.emoji}** matched! (${fmtMult(win.symbol!.mult)})\n` +
+      `${net >= 0 ? "+" : ""}${formatAmount(net)} 💎`
     : `No 3 matching symbols found.\nPayout: **0** 💎`;
-
-  const desc = [
-    `💎 **Bet**         \`${formatAmount(game.bet)}\``,
-    `✨ **Best Match**  ${win.winner ? `\`${win.symbol!.emoji} ${fmtMult(win.symbol!.mult)}\`` : "`None`"}`,
-    `💰 **Winnings**   \`${winnings > 0 ? formatAmount(winnings) : "0"}\``,
-    ``,
-    resultLine,
-  ].join("\n");
 
   return new EmbedBuilder()
     .setColor(win.winner ? COLORS.success : COLORS.danger)
-    .setTitle(title)
-    .setDescription(desc)
+    .setTitle(win.winner ? "🎰 Scratchcard — WINNER!" : "🎰 Scratchcard — NO MATCH")
+    .setDescription(
+      [
+        `💎 **Bet**         \`${formatAmount(game.bet)}\``,
+        `✨ **Best Match**  ${win.winner ? `\`${win.symbol!.emoji} ${fmtMult(win.symbol!.mult)}\`` : "`None`"}`,
+        `💰 **Winnings**   \`${winnings > 0 ? formatAmount(winnings) : "0"}\``,
+        ``,
+        resultLine,
+      ].join("\n"),
+    )
     .setTimestamp();
+}
+
+// ─── Shared finish helper ─────────────────────────────────────────────────────
+async function finishGame(
+  game: ScratchGame,
+  editFn: (data: {
+    embeds:     EmbedBuilder[];
+    components: ActionRowBuilder<MessageActionRowComponentBuilder>[];
+  }) => Promise<void>,
+): Promise<void> {
+  await settleGame(game);
+  activeGames.delete(game.userId);
+
+  const win      = checkWin(game.cells);
+  const winEmoji = win.winner ? win.symbol!.emoji : undefined;
+
+  const gridRows     = buildGrid(game, true, winEmoji);
+  const playAgainRow = buildPlayAgainRow(game.userId, game.bet);
+  // Replace the last row (Scratch All) with Play Again
+  gridRows[gridRows.length - 1] = playAgainRow;
+
+  await editFn({
+    embeds:     [buildResultEmbed(game)],
+    components: gridRows,
+  });
 }
 
 // ─── Command ──────────────────────────────────────────────────────────────────
@@ -234,10 +291,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} 💎**.`)],
     });
 
-  // Cancel any pre-existing game for this user
   activeGames.delete(interaction.user.id);
-
-  // Deduct bet upfront
   await addBalance(interaction.user.id, -amount);
 
   const game: ScratchGame = {
@@ -251,28 +305,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   await interaction.editReply({
     embeds:     [buildActiveEmbed(game)],
-    components: buildComponents(game),
+    components: buildGrid(game),
   });
 }
 
-// ─── Helpers shared by both button handlers ───────────────────────────────────
-async function finishGame(
-  game: ScratchGame,
-  updateFn: (data: { embeds: EmbedBuilder[]; components: ActionRowBuilder<MessageActionRowComponentBuilder>[] }) => Promise<void>,
-) {
-  await settleGame(game);
-  activeGames.delete(game.userId);
-
-  const win      = checkWin(game.cells);
-  const winEmoji = win.winner ? win.symbol!.emoji : undefined;
-
-  await updateFn({
-    embeds:     [buildResultEmbed(game)],
-    components: buildComponents(game, true, winEmoji),
-  });
-}
-
-// ─── Button: Reveal a single cell ────────────────────────────────────────────
+// ─── Button: Reveal single cell ───────────────────────────────────────────────
 export async function handleReveal(
   interaction: ButtonInteraction,
   userId: string,
@@ -284,12 +321,11 @@ export async function handleReveal(
 
   const game = activeGames.get(userId);
   if (!game)
-    return void interaction.reply({ content: "❌ No active scratchcard found. Start one with `/scratchcard`.", flags: MessageFlags.Ephemeral });
+    return void interaction.reply({ content: "❌ No active scratchcard. Use `/scratchcard` to start.", flags: MessageFlags.Ephemeral });
 
   if (game.revealed[idx]) return void interaction.deferUpdate();
 
   game.revealed[idx] = true;
-
   await interaction.deferUpdate();
 
   if (game.revealed.every(Boolean)) {
@@ -297,7 +333,7 @@ export async function handleReveal(
   } else {
     await interaction.editReply({
       embeds:     [buildActiveEmbed(game)],
-      components: buildComponents(game),
+      components: buildGrid(game),
     });
   }
 }
@@ -309,10 +345,60 @@ export async function handleScratchAll(interaction: ButtonInteraction, userId: s
 
   const game = activeGames.get(userId);
   if (!game)
-    return void interaction.reply({ content: "❌ No active scratchcard found. Start one with `/scratchcard`.", flags: MessageFlags.Ephemeral });
+    return void interaction.reply({ content: "❌ No active scratchcard. Use `/scratchcard` to start.", flags: MessageFlags.Ephemeral });
 
   game.revealed.fill(true);
-
   await interaction.deferUpdate();
   await finishGame(game, (d) => interaction.editReply(d));
+}
+
+// ─── Button: Play Again ───────────────────────────────────────────────────────
+export async function handlePlayAgain(
+  interaction: ButtonInteraction,
+  userId: string,
+  betStr: string,
+): Promise<void> {
+  if (interaction.user.id !== userId)
+    return void interaction.reply({ content: "❌ This isn't your button.", flags: MessageFlags.Ephemeral });
+
+  const bet = parseInt(betStr, 10);
+
+  // Disable the Play Again button on the old message immediately
+  await interaction.deferUpdate();
+  const oldGrid = buildGrid(
+    { userId, bet, cells: [], revealed: Array(9).fill(true), settled: true },
+    true,
+  );
+  oldGrid[oldGrid.length - 1] = buildPlayAgainRow(userId, bet, true);
+  await interaction.editReply({ components: oldGrid });
+
+  const user = await getOrCreateUser(userId, interaction.user.username);
+  if (user.balance < bet) {
+    await interaction.followUp({
+      embeds:   [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} 💎**.`)],
+      ephemeral: true,
+    });
+    return;
+  }
+
+  activeGames.delete(userId);
+  await addBalance(userId, -bet);
+
+  const game: ScratchGame = {
+    userId,
+    bet,
+    cells:    generateCells(),
+    revealed: Array(9).fill(false),
+    settled:  false,
+  };
+  activeGames.set(userId, game);
+
+  const msg: Message = await interaction.followUp({
+    embeds:     [buildActiveEmbed(game)],
+    components: buildGrid(game),
+  });
+
+  // Reuse button interactions on the new message via collector pattern —
+  // handled globally by the existing button router in index.ts.
+  void msg;
 }

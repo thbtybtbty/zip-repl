@@ -136,7 +136,6 @@ async function handleInteraction(interaction: Interaction) {
       // Scratchcard
       if (id.startsWith("sc_reveal_")) {
         const parts = id.slice("sc_reveal_".length).split("_");
-        // format: userId_bet_idx  (userId is 18-digit snowflake)
         const idx    = parseInt(parts.pop()!, 10);
         const bet    = parts.pop()!;
         const userId = parts.join("_");
@@ -147,6 +146,13 @@ async function handleInteraction(interaction: Interaction) {
         const lastUs = rest.lastIndexOf("_");
         const userId = rest.slice(0, lastUs);
         return await scratchcard.handleScratchAll(bi, userId);
+      }
+      if (id.startsWith("pa_sc_")) {
+        const rest   = id.slice("pa_sc_".length);
+        const lastUs = rest.lastIndexOf("_");
+        const userId = rest.slice(0, lastUs);
+        const bet    = rest.slice(lastUs + 1);
+        return await scratchcard.handlePlayAgain(bi, userId, bet);
       }
 
       // Setup confirmation
