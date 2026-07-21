@@ -61,6 +61,7 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "wheel")         return await wheel.execute(interaction);
       if (name === "roulette")      return await roulette.execute(interaction);
       if (name === "crash")         return await crash.execute(interaction);
+      if (name === "scratchcard")   return await scratchcard.execute(interaction);
     } catch (err) {
       logger.error({ err, command: name }, "Error executing command");
       const payload = { content: "❌ Something went wrong. Please try again.", ephemeral: true };

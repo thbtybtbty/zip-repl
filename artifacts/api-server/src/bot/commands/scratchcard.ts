@@ -28,6 +28,7 @@ const SYMBOLS: CardSymbol[] = [
   { emoji: "🌿", mult: 1.0,   weight: 15 },
   { emoji: "💰", mult: 2.0,   weight: 12 },
   { emoji: "🎁", mult: 10.0,  weight: 7  },
+  { emoji: "⭐", mult: 100.0, weight: 2  },
   { emoji: "🔥", mult: 50.0,  weight: 3  },
   { emoji: "👑", mult: 500.0, weight: 1  },
 ];
