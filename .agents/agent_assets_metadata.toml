@@ -12,3 +12,9 @@ id = "Wu6dL-J6fx1iI0yawm7cY"
 uri = "file://wispbyte-upload-new.zip"
 type = "unspecified"
 title = "WispByte Bot Upload (1.1 MB)"
+
+[[outputs]]
+id = "13_IhfP4BMSdgMmmm80w8"
+uri = "file://wispbyte-final.zip"
+type = "unspecified"
+title = "WispByte Final Upload (1.1 MB)"
