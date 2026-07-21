@@ -64,16 +64,18 @@ export function buildMinesPanelEmbed(
     lost:   `${BOMB} Mines — Bomb Hit!`,
   };
 
+  const desc = [
+    `💎 **Bet**  \`${formatAmount(game.bet)}\``,
+    `✨ **Multiplier**  \`${formatMult(game.multiplier)} → ${formatMult(nextMult)}\``,
+    `💎 **Gems found**  \`${game.gemsFound}/${totalGems}\``,
+    `💰 **Potential**  \`${formatAmount(currentWin)}\``,
+    `${BOMB} **Bombs**  \`${game.minesCount}\``,
+  ].join("\n");
+
   return new EmbedBuilder()
     .setColor(color)
     .setTitle(titles[status] ?? "Mines")
-    .addFields(
-      { name: "💎 Bet",        value: `\`${formatAmount(game.bet)}\``,                                              inline: false },
-      { name: "✨ Multiplier", value: `\`${formatMult(game.multiplier)} → ${formatMult(nextMult)}\``,               inline: false },
-      { name: "💎 Gems found", value: `\`${game.gemsFound}/${totalGems}\``,                                         inline: false },
-      { name: "💰 Potential",  value: `\`${formatAmount(currentWin)}\``,                                            inline: false },
-      { name: `${BOMB} Bombs`, value: `\`${game.minesCount}\``,                                                     inline: false },
-    )
+    .setDescription(desc)
     .setTimestamp();
 }
 
