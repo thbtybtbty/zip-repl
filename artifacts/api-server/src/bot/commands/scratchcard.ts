@@ -88,7 +88,8 @@ interface ScratchGame {
   settled:  boolean;
 }
 
-const activeGames = new Map<string, ScratchGame>();
+const activeGames   = new Map<string, ScratchGame>();
+const finishedGames = new Map<string, { game: ScratchGame; winEmoji?: string }>();
 
 // ─── Win check — exactly 3 of the same symbol ─────────────────────────────────
 function checkWin(cells: CardSymbol[]): { winner: boolean; symbol: CardSymbol | null } {
@@ -240,9 +241,11 @@ async function finishGame(
   const win      = checkWin(game.cells);
   const winEmoji = win.winner ? win.symbol!.emoji : undefined;
 
+  // Store finished state so Play Again can restore the grid
+  finishedGames.set(game.userId, { game, winEmoji });
+
   const gridRows     = buildGrid(game, true, winEmoji);
   const playAgainRow = buildPlayAgainRow(game.userId, game.bet);
-  // Replace the last row (Scratch All) with Play Again
   gridRows[gridRows.length - 1] = playAgainRow;
 
   await editFn({
@@ -346,9 +349,17 @@ export async function handlePlayAgain(
 
   const bet = parseInt(betStr, 10);
 
-  // Disable the Play Again button on the old message immediately
+  // Keep the finished grid visible; just disable the Play Again button
   await interaction.deferUpdate();
-  await interaction.editReply({ components: [buildPlayAgainRow(userId, bet, true)] });
+  const finished = finishedGames.get(userId);
+  finishedGames.delete(userId);
+  if (finished) {
+    const gridRows = buildGrid(finished.game, true, finished.winEmoji);
+    gridRows[gridRows.length - 1] = buildPlayAgainRow(userId, bet, true);
+    await interaction.editReply({ components: gridRows });
+  } else {
+    await interaction.editReply({ components: [buildPlayAgainRow(userId, bet, true)] });
+  }
 
   const user = await getOrCreateUser(userId, interaction.user.username);
   if (user.balance < bet) {
