@@ -214,7 +214,7 @@ async function resolveGame(
   else                                                           payout = -(game.bet * multiplier);
 
   await addBalance(game.userId, payout);
-  await recordBet(game.userId, bet, payout);
+  await recordBet(game.userId, game.bet * multiplier, payout);
 
   await interaction.editReply({
     embeds:     [buildEmbed(game, status)],
