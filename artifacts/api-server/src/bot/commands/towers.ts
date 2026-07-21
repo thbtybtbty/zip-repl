@@ -147,20 +147,22 @@ export function buildTowersEmbed(
     cashed: `🗼 Towers — Cashed Out!`,
   };
 
+  const statsLines = [
+    `💎 **Bet**         \`${formatAmount(game.bet)}\``,
+    `🎯 **Difficulty**  \`${diffName[game.difficulty]}\``,
+    `✨ **Multiplier**  \`${formatMult(game.multiplier)}\``,
+    `💰 **Potential**   \`${formatAmount(currentWin)}\``,
+    ...(status === "active"
+      ? [`⭐ **Next gem**   \`${formatAmount(nextWin)}\``]
+      : []),
+  ].join("\n");
+
+  const desc = `${buildTowerVisual(game, status)}\n\n${statsLines}`;
+
   return new EmbedBuilder()
     .setColor(colors[status] ?? COLORS.primary)
     .setTitle(titles[status] ?? "Towers")
-    .setDescription(buildTowerVisual(game, status))
-    .addFields(
-      { name: "💰 Bet",        value: `${formatAmount(game.bet)} gems`,  inline: true },
-      { name: "🎯 Difficulty", value: diffName[game.difficulty],          inline: true },
-      { name: "\u200b",        value: "\u200b",                           inline: true },
-      { name: "✨ Multiplier", value: formatMult(game.multiplier),        inline: true },
-      { name: "💎 Current",   value: `${formatAmount(currentWin)} gems`, inline: true },
-      ...(status === "active"
-        ? [{ name: "⭐ Next",  value: `${formatAmount(nextWin)} gems`,   inline: true }]
-        : [{ name: "\u200b",   value: "\u200b",                           inline: true }]),
-    )
+    .setDescription(desc)
     .setTimestamp();
 }
 
