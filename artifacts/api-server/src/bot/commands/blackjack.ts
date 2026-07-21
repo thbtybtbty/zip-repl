@@ -205,16 +205,34 @@ async function resolveGame(
   // Apply hidden house edge: 7.5% of wins become dealer wins
   status = applyHouseEdge(status);
 
+  // The bet was already deducted from the player's balance when the game started.
+  // For doubled games, the extra bet was deducted in handleDouble.
+  // So `payout` here is the gross amount to ADD BACK (stake + profit).
+  // `netDelta` is the true profit/loss for recordBet stats.
   const multiplier = game.doubled ? 2 : 1;
-  let payout = 0;
+  const totalStake = game.bet * multiplier;
+  let payout   = 0; // gross return (added to balance)
+  let netDelta = 0; // net profit/loss (for stats)
 
-  if (status === "blackjack")                                    payout = Math.floor(game.bet * 1.5);
-  else if (status === "player_win" || status === "dealer_bust")  payout = game.bet * multiplier;
-  else if (status === "push")                                    payout = 0;
-  else                                                           payout = -(game.bet * multiplier);
+  if (status === "blackjack") {
+    // 3:2 payout — stake back + 1.5× profit
+    const bjProfit = Math.floor(game.bet * 1.5);
+    payout   = game.bet + bjProfit;
+    netDelta = bjProfit;
+  } else if (status === "player_win" || status === "dealer_bust") {
+    payout   = totalStake * 2; // stake back + equal profit
+    netDelta = totalStake;
+  } else if (status === "push") {
+    payout   = totalStake; // stake returned, no profit
+    netDelta = 0;
+  } else {
+    // loss — stake already gone, nothing to add back
+    payout   = 0;
+    netDelta = -totalStake;
+  }
 
   await addBalance(game.userId, payout);
-  await recordBet(game.userId, game.bet * multiplier, payout);
+  await recordBet(game.userId, totalStake, netDelta);
 
   await interaction.editReply({
     embeds:     [buildEmbed(game, status)],
