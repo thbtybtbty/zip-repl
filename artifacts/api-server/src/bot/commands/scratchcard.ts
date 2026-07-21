@@ -53,47 +53,30 @@ function fmtMult(mult: number): string {
   return `${mult.toFixed(1)}x`;
 }
 
-// ─── Cell generation — always exactly one triple, never more ──────────────────
-// Strategy:
-//   1. Pick the winning symbol (weighted).
-//   2. Start the card with 3 copies of it.
-//   3. Fill the remaining 6 slots with other symbols, keeping every non-winner
-//      at ≤ 2 occurrences so no accidental second triple forms.
-//   4. Shuffle.
+// ─── Cell generation — fully random, but no symbol appears more than 3 times ──
+// This means a win (exactly 3 of the same) can happen or not — pure chance.
 function generateCells(): CardSymbol[] {
-  // Step 1: pick winner
-  const winner = pickWeighted();
+  const cells: CardSymbol[] = [];
+  const counts = new Map<string, number>();
 
-  // Step 2: build the 6 filler cells (no other symbol may appear 3+ times)
-  const fillers: CardSymbol[] = [];
-  const fillerCounts = new Map<string, number>();
-
-  while (fillers.length < 6) {
+  for (let i = 0; i < 9; i++) {
     let pick: CardSymbol;
     let attempts = 0;
     do {
       pick = pickWeighted();
       attempts++;
-      if (attempts > 100) {
-        // Safety: grab any non-winner that's still under 2
-        const available = SYMBOLS.filter(
-          (s) => s.emoji !== winner.emoji && (fillerCounts.get(s.emoji) ?? 0) < 2,
-        );
+      if (attempts > 50) {
+        const available = SYMBOLS.filter((s) => (counts.get(s.emoji) ?? 0) < 3);
         pick = available[Math.floor(Math.random() * available.length)]!;
         break;
       }
-    } while (
-      pick.emoji === winner.emoji ||          // can't add more of the winner
-      (fillerCounts.get(pick.emoji) ?? 0) >= 2 // cap every filler at 2
-    );
+    } while ((counts.get(pick.emoji) ?? 0) >= 3);
 
-    fillers.push(pick);
-    fillerCounts.set(pick.emoji, (fillerCounts.get(pick.emoji) ?? 0) + 1);
+    cells.push(pick);
+    counts.set(pick.emoji, (counts.get(pick.emoji) ?? 0) + 1);
   }
 
-  // Step 3: combine + shuffle
-  const cells = [winner, winner, winner, ...fillers];
-  return shuffle(cells);
+  return cells;
 }
 
 // ─── Game state ───────────────────────────────────────────────────────────────
