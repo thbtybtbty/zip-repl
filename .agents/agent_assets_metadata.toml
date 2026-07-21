@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "oGEyWVwtqd5JB0A-GQSTO"
+uri = "file://bot.zip"
+type = "unspecified"
+title = "bot.zip — WispByte deployment"
