@@ -7,8 +7,12 @@ import {
   type Interaction,
   type ButtonInteraction,
   type ModalSubmitInteraction,
+  type GuildMember,
 } from "discord.js";
+import { db, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
+import { addBalance, formatAmount } from "./utils.js";
 
 // ─── Commands ─────────────────────────────────────────────────────────────────
 import * as balance       from "./commands/balance.js";
@@ -31,7 +35,9 @@ const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setu
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+});
 
 // ─── Interaction routing ──────────────────────────────────────────────────────
 async function handleInteraction(interaction: Interaction) {
@@ -181,6 +187,44 @@ async function handleInteraction(interaction: Interaction) {
   }
 }
 
+// ─── Welcome bonus ────────────────────────────────────────────────────────────
+const WELCOME_BONUS = 10_000_000; // 10m
+
+async function handleNewMember(member: GuildMember) {
+  const userId   = member.id;
+  const username = member.user.username;
+
+  // Check if this user already has a record (left and rejoined)
+  const existing = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId))
+    .limit(1);
+
+  if (existing.length > 0) {
+    logger.info({ userId, username }, "Returning member joined — no bonus awarded");
+    return;
+  }
+
+  // Brand-new user: create their account with the welcome bonus
+  await db.insert(usersTable).values({
+    id: userId,
+    username,
+    balance: WELCOME_BONUS,
+  });
+
+  logger.info({ userId, username, bonus: WELCOME_BONUS }, "New member joined — welcome bonus awarded");
+
+  // DM the user so they know
+  try {
+    await member.send(
+      `👋 Welcome to the server! You've received a **${formatAmount(WELCOME_BONUS)}** welcome bonus. Use \`/balance\` to check your balance!`,
+    );
+  } catch {
+    // User may have DMs disabled — not a critical failure
+  }
+}
+
 // ─── Start bot ────────────────────────────────────────────────────────────────
 export async function startBot() {
   const token    = process.env["DISCORD_BOT_TOKEN"];
@@ -215,6 +259,12 @@ export async function startBot() {
         }
       }),
     );
+  });
+
+  client.on(Events.GuildMemberAdd, (member: GuildMember) => {
+    handleNewMember(member).catch((err) => {
+      logger.error({ err, userId: member.id }, "Error handling new member join");
+    });
   });
 
   client.on(Events.InteractionCreate, (interaction) => {
