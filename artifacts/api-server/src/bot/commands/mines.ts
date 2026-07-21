@@ -101,7 +101,7 @@ export function buildMinesGrid(
       } else {
         btn = new ButtonBuilder()
           .setCustomId(`mines_r_${idx}`)
-          .setLabel(" ")
+          .setLabel("\u2800") // Braille blank — passes Discord validation, renders invisibly
           .setStyle(ButtonStyle.Primary);
       }
       actionRow.addComponents(btn);
