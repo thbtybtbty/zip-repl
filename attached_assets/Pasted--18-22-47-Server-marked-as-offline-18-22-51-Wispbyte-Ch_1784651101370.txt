@@ -1,0 +1,547 @@
+[18:22:47]Server marked as offline
+[18:22:51][Wispbyte]: Checking server disk space usage, this could take a few seconds...
+[18:22:51][Wispbyte]: Updating process configuration files...
+[18:22:51][Wispbyte]: Ensuring file permissions are set correctly, this could take a few seconds...
+[18:22:51]Server marked as starting
+ __        ___           _           _       
+ \ \      / (_)___ _ __ | |__  _   _| |_ ___ 
+  \ \ /\ / /| / __| '_ \| '_ \| | | | __/ _ \
+   \ V  V / | \__ \ |_) | |_) | |_| | ||  __/
+    \_/\_/  |_|___/ .__/|_.__/ \__, |\__\___|
+                  |_|          |___/         
+Your server is currently starting! Enjoy using Wispbyte
+[18:22:53]v19.9.0
+[18:22:53]Server marked as running
+[18:22:53]:/home/container$ bash start.sh
+[18:22:53][start.sh] /data not found — using local database at /home/container/bot.db
+[18:22:53][start.sh] Installing nvm...
+[18:22:53]% Total % Received % Xferd Average Speed Time Time Time Current
+[18:22:53]Dload Upload Total Spent Left Speed
+[18:22:54]0 0 0 0 0 0 0 0 --:--:-- --:--:-- --:--:-- 0 0 0 0 0 0 0 0 0 --:--:-- --:--:-- --:--:-- 0
+100 16555 100 16555 0 0 78833 0 --:--:-- --:--:-- --:--:-- 78459
+[18:22:54]=> Downloading nvm from git to '/home/container/.nvm'
+[18:22:54]=> Cloning into '/home/container/.nvm'...
+[18:22:55]remote: Enumerating objects: 461, done.
+[18:22:55]remote: Counting objects: 0% (1/461)
+remote: Counting objects: 1% (5/461)
+remote: Counting objects: 2% (10/461)
+remote: Counting objects: 3% (14/461)
+remote: Counting objects: 4% (19/461)
+remote: Counting objects: 5% (24/461)
+remote: Counting objects: 6% (28/461)
+remote: Counting objects: 7% (33/461)
+remote: Counting objects: 8% (37/461)
+remote: Counting objects: 9% (42/461)
+remote: Counting objects: 10% (47/461)
+remote: Counting objects: 11% (51/461)
+remote: Counting objects: 12% (56/461)
+remote: Counting objects: 13% (60/461)
+remote: Counting objects: 14% (65/461)
+remote: Counting objects: 15% (70/461)
+remote: Counting objects: 16% (74/461)
+remote: Counting objects: 17% (79/461)
+remote: Counting objects: 18% (83/461)
+remote: Counting objects: 19% (88/461)
+remote: Counting objects: 20% (93/461)
+remote: Counting objects: 21% (97/461)
+remote: Counting objects: 22% (102/461)
+remote: Counting objects: 23% (107/461)
+remote: Counting objects: 24% (111/461)
+remote: Counting objects: 25% (116/461)
+remote: Counting objects: 26% (120/461)
+remote: Counting objects: 27% (125/461)
+remote: Counting objects: 28% (130/461)
+remote: Counting objects: 29% (134/461)
+remote: Counting objects: 30% (139/461)
+remote: Counting objects: 31% (143/461)
+remote: Counting objects: 32% (148/461)
+remote: Counting objects: 33% (153/461)
+remote: Counting objects: 34% (157/461)
+remote: Counting objects: 35% (162/461)
+remote: Counting objects: 36% (166/461)
+remote: Counting objects: 37% (171/461)
+remote: Counting objects: 38% (176/461)
+remote: Counting objects: 39% (180/461)
+remote: Counting objects: 40% (185/461)
+remote: Counting objects: 41% (190/461)
+remote: Counting objects: 42% (194/461)
+remote: Counting objects: 43% (199/461)
+remote: Counting objects: 44% (203/461)
+remote: Counting objects: 45% (208/461)
+remote: Counting objects: 46% (213/461)
+remote: Counting objects: 47% (217/461)
+remote: Counting objects: 48% (222/461)
+remote: Counting objects: 49% (226/461)
+remote: Counting objects: 50% (231/461)
+remote: Counting objects: 51% (236/461)
+remote: Counting objects: 52% (240/461)
+remote: Counting objects: 53% (245/461)
+remote: Counting objects: 54% (249/461)
+remote: Counting objects: 55% (254/461)
+remote: Counting objects: 56% (259/461)
+remote: Counting objects: 57% (263/461)
+remote: Counting objects: 58% (268/461)
+remote: Counting objects: 59% (272/461)
+remote: Counting objects: 60% (277/461)
+remote: Counting objects: 61% (282/461)
+remote: Counting objects: 62% (286/461)
+remote: Counting objects: 63% (291/461)
+remote: Counting objects: 64% (296/461)
+remote: Counting objects: 65% (300/461)
+remote: Counting objects: 66% (305/461)
+remote: Counting objects: 67% (309/461)
+remote: Counting objects: 68% (314/461)
+remote: Counting objects: 69% (319/461)
+remote: Counting objects: 70% (323/461)
+remote: Counting objects: 71% (328/461)
+remote: Counting objects: 72% (332/461)
+remote: Counting objects: 73% (337/461)
+remote: Counting objects: 74% (342/461)
+remote: Counting objects: 75% (346/461)
+remote: Counting objects: 76% (351/461)
+remote: Counting objects: 77% (355/461)
+remote: Counting objects: 78% (360/461)
+remote: Counting objects: 79% (365/461)
+remote: Counting objects: 80% (369/461)
+remote: Counting objects: 81% (374/461)
+remote: Counting objects: 82% (379/461)
+remote: Counting objects: 83% (383/461)
+remote: Counting objects: 84% (388/461)
+remote: Counting objects: 85% (392/461)
+remote: Counting objects: 86% (397/461)
+remote: Counting objects: 87% (402/461)
+remote: Counting objects: 88% (406/461)
+remote: Counting objects: 89% (411/461)
+remote: Counting objects: 90% (415/461)
+remote: Counting objects: 91% (420/461)
+remote: Counting objects: 92% (425/461)
+remote: Counting objects: 93% (429/461)
+remote: Counting objects: 94% (434/461)
+remote: Counting objects: 95% (438/461)
+remote: Counting objects: 96% (443/461)
+remote: Counting objects: 97% (448/461)
+remote: Counting objects: 98% (452/461)
+remote: Counting objects: 99% (457/461)
+remote: Counting objects: 100% (461/461)
+remote: Counting objects: 100% (461/461), done.
+[18:22:55]remote: Compressing objects: 0% (1/383)
+remote: Compressing objects: 1% (4/383)
+remote: Compressing objects: 2% (8/383)
+remote: Compressing objects: 3% (12/383)
+remote: Compressing objects: 4% (16/383)
+remote: Compressing objects: 5% (20/383)
+remote: Compressing objects: 6% (23/383)
+remote: Compressing objects: 7% (27/383)
+remote: Compressing objects: 8% (31/383)
+remote: Compressing objects: 9% (35/383)
+remote: Compressing objects: 10% (39/383)
+remote: Compressing objects: 11% (43/383)
+remote: Compressing objects: 12% (46/383)
+remote: Compressing objects: 13% (50/383)
+remote: Compressing objects: 14% (54/383)
+remote: Compressing objects: 15% (58/383)
+remote: Compressing objects: 16% (62/383)
+remote: Compressing objects: 17% (66/383)
+remote: Compressing objects: 18% (69/383)
+remote: Compressing objects: 19% (73/383)
+remote: Compressing objects: 20% (77/383)
+remote: Compressing objects: 21% (81/383)
+remote: Compressing objects: 22% (85/383)
+remote: Compressing objects: 23% (89/383)
+remote: Compressing objects: 24% (92/383)
+remote: Compressing objects: 25% (96/383)
+remote: Compressing objects: 26% (100/383)
+remote: Compressing objects: 27% (104/383)
+remote: Compressing objects: 28% (108/383)
+remote: Compressing objects: 29% (112/383)
+remote: Compressing objects: 30% (115/383)
+remote: Compressing objects: 31% (119/383)
+remote: Compressing objects: 32% (123/383)
+remote: Compressing objects: 33% (127/383)
+remote: Compressing objects: 34% (131/383)
+remote: Compressing objects: 35% (135/383)
+remote: Compressing objects: 36% (138/383)
+remote: Compressing objects: 37% (142/383)
+remote: Compressing objects: 38% (146/383)
+remote: Compressing objects: 39% (150/383)
+remote: Compressing objects: 40% (154/383)
+remote: Compressing objects: 41% (158/383)
+remote: Compressing objects: 42% (161/383)
+remote: Compressing objects: 43% (165/383)
+remote: Compressing objects: 44% (169/383)
+remote: Compressing objects: 45% (173/383)
+remote: Compressing objects: 46% (177/383)
+remote: Compressing objects: 47% (181/383)
+remote: Compressing objects: 48% (184/383)
+remote: Compressing objects: 49% (188/383)
+remote: Compressing objects: 50% (192/383)
+remote: Compressing objects: 51% (196/383)
+remote: Compressing objects: 52% (200/383)
+remote: Compressing objects: 53% (203/383)
+remote: Compressing objects: 54% (207/383)
+remote: Compressing objects: 55% (211/383)
+remote: Compressing objects: 56% (215/383)
+remote: Compressing objects: 57% (219/383)
+remote: Compressing objects: 58% (223/383)
+remote: Compressing objects: 59% (226/383)
+remote: Compressing objects: 60% (230/383)
+remote: Compressing objects: 61% (234/383)
+remote: Compressing objects: 62% (238/383)
+remote: Compressing objects: 63% (242/383)
+remote: Compressing objects: 64% (246/383)
+remote: Compressing objects: 65% (249/383)
+remote: Compressing objects: 66% (253/383)
+remote: Compressing objects: 67% (257/383)
+remote: Compressing objects: 68% (261/383)
+remote: Compressing objects: 69% (265/383)
+remote: Compressing objects: 70% (269/383)
+remote: Compressing objects: 71% (272/383)
+remote: Compressing objects: 72% (276/383)
+remote: Compressing objects: 73% (280/383)
+remote: Compressing objects: 74% (284/383)
+remote: Compressing objects: 75% (288/383)
+remote: Compressing objects: 76% (292/383)
+remote: Compressing objects: 77% (295/383)
+remote: Compressing objects: 78% (299/383)
+remote: Compressing objects: 79% (303/383)
+remote: Compressing objects: 80% (307/383)
+remote: Compressing objects: 81% (311/383)
+remote: Compressing objects: 82% (315/383)
+remote: Compressing objects: 83% (318/383)
+remote: Compressing objects: 84% (322/383)
+remote: Compressing objects: 85% (326/383)
+remote: Compressing objects: 86% (330/383)
+remote: Compressing objects: 87% (334/383)
+remote: Compressing objects: 88% (338/383)
+remote: Compressing objects: 89% (341/383)
+remote: Compressing objects: 90% (345/383)
+remote: Compressing objects: 91% (349/383)
+remote: Compressing objects: 92% (353/383)
+remote: Compressing objects: 93% (357/383)
+remote: Compressing objects: 94% (361/383)
+remote: Compressing objects: 95% (364/383)
+remote: Compressing objects: 96% (368/383)
+remote: Compressing objects: 97% (372/383)
+remote: Compressing objects: 98% (376/383)
+remote: Compressing objects: 99% (380/383)
+remote: Compressing objects: 100% (383/383)
+remote: Compressing objects: 100% (383/383), done.
+[18:22:55]Receiving objects: 0% (1/461)
+Receiving objects: 1% (5/461)
+Receiving objects: 2% (10/461)
+Receiving objects: 3% (14/461)
+Receiving objects: 4% (19/461)
+Receiving objects: 5% (24/461)
+Receiving objects: 6% (28/461)
+Receiving objects: 7% (33/461)
+Receiving objects: 8% (37/461)
+Receiving objects: 9% (42/461)
+Receiving objects: 10% (47/461)
+Receiving objects: 11% (51/461)
+Receiving objects: 12% (56/461)
+Receiving objects: 13% (60/461)
+Receiving objects: 14% (65/461)
+Receiving objects: 15% (70/461)
+Receiving objects: 16% (74/461)
+Receiving objects: 17% (79/461)
+Receiving objects: 18% (83/461)
+Receiving objects: 19% (88/461)
+Receiving objects: 20% (93/461)
+Receiving objects: 21% (97/461)
+Receiving objects: 22% (102/461)
+Receiving objects: 23% (107/461)
+Receiving objects: 24% (111/461)
+Receiving objects: 25% (116/461)
+Receiving objects: 26% (120/461)
+Receiving objects: 27% (125/461)
+Receiving objects: 28% (130/461)
+Receiving objects: 29% (134/461)
+Receiving objects: 30% (139/461)
+Receiving objects: 31% (143/461)
+Receiving objects: 32% (148/461)
+Receiving objects: 33% (153/461)
+Receiving objects: 34% (157/461)
+Receiving objects: 35% (162/461)
+Receiving objects: 36% (166/461)
+Receiving objects: 37% (171/461)
+Receiving objects: 38% (176/461)
+Receiving objects: 39% (180/461)
+Receiving objects: 40% (185/461)
+Receiving objects: 41% (190/461)
+Receiving objects: 42% (194/461)
+Receiving objects: 43% (199/461)
+Receiving objects: 44% (203/461)
+Receiving objects: 45% (208/461)
+Receiving objects: 46% (213/461)
+Receiving objects: 47% (217/461)
+Receiving objects: 48% (222/461)
+Receiving objects: 49% (226/461)
+Receiving objects: 50% (231/461)
+Receiving objects: 51% (236/461)
+Receiving objects: 52% (240/461)
+Receiving objects: 53% (245/461)
+Receiving objects: 54% (249/461)
+Receiving objects: 55% (254/461)
+Receiving objects: 56% (259/461)
+Receiving objects: 57% (263/461)
+Receiving objects: 58% (268/461)
+Receiving objects: 59% (272/461)
+Receiving objects: 60% (277/461)
+Receiving objects: 61% (282/461)
+Receiving objects: 62% (286/461)
+Receiving objects: 63% (291/461)
+remote: Total 461 (delta 68), reused 222 (delta 51), pack-reused 0 (from 0)
+[18:22:55]Receiving objects: 64% (296/461)
+Receiving objects: 65% (300/461)
+Receiving objects: 66% (305/461)
+Receiving objects: 67% (309/461)
+Receiving objects: 68% (314/461)
+Receiving objects: 69% (319/461)
+Receiving objects: 70% (323/461)
+Receiving objects: 71% (328/461)
+Receiving objects: 72% (332/461)
+Receiving objects: 73% (337/461)
+Receiving objects: 74% (342/461)
+Receiving objects: 75% (346/461)
+Receiving objects: 76% (351/461)
+Receiving objects: 77% (355/461)
+Receiving objects: 78% (360/461)
+Receiving objects: 79% (365/461)
+Receiving objects: 80% (369/461)
+Receiving objects: 81% (374/461)
+Receiving objects: 82% (379/461)
+Receiving objects: 83% (383/461)
+Receiving objects: 84% (388/461)
+Receiving objects: 85% (392/461)
+Receiving objects: 86% (397/461)
+Receiving objects: 87% (402/461)
+Receiving objects: 88% (406/461)
+Receiving objects: 89% (411/461)
+Receiving objects: 90% (415/461)
+Receiving objects: 91% (420/461)
+Receiving objects: 92% (425/461)
+Receiving objects: 93% (429/461)
+Receiving objects: 94% (434/461)
+Receiving objects: 95% (438/461)
+Receiving objects: 96% (443/461)
+Receiving objects: 97% (448/461)
+Receiving objects: 98% (452/461)
+Receiving objects: 99% (457/461)
+Receiving objects: 100% (461/461)
+Receiving objects: 100% (461/461), 458.03 KiB | 1.89 MiB/s, done.
+[18:22:55]Resolving deltas: 0% (0/68)
+Resolving deltas: 1% (1/68)
+Resolving deltas: 2% (2/68)
+Resolving deltas: 4% (3/68)
+Resolving deltas: 5% (4/68)
+Resolving deltas: 7% (5/68)
+Resolving deltas: 8% (6/68)
+Resolving deltas: 10% (7/68)
+Resolving deltas: 11% (8/68)
+Resolving deltas: 13% (9/68)
+Resolving deltas: 16% (11/68)
+Resolving deltas: 17% (12/68)
+Resolving deltas: 19% (13/68)
+Resolving deltas: 20% (14/68)
+Resolving deltas: 22% (15/68)
+Resolving deltas: 23% (16/68)
+Resolving deltas: 25% (17/68)
+Resolving deltas: 26% (18/68)
+Resolving deltas: 27% (19/68)
+Resolving deltas: 29% (20/68)
+Resolving deltas: 30% (21/68)
+Resolving deltas: 32% (22/68)
+Resolving deltas: 33% (23/68)
+Resolving deltas: 35% (24/68)
+Resolving deltas: 36% (25/68)
+Resolving deltas: 38% (26/68)
+Resolving deltas: 41% (28/68)
+Resolving deltas: 42% (29/68)
+Resolving deltas: 44% (30/68)
+Resolving deltas: 45% (31/68)
+Resolving deltas: 47% (32/68)
+Resolving deltas: 48% (33/68)
+Resolving deltas: 50% (34/68)
+Resolving deltas: 51% (35/68)
+Resolving deltas: 52% (36/68)
+Resolving deltas: 54% (37/68)
+Resolving deltas: 55% (38/68)
+Resolving deltas: 57% (39/68)
+Resolving deltas: 58% (40/68)
+Resolving deltas: 60% (41/68)
+Resolving deltas: 61% (42/68)
+Resolving deltas: 63% (43/68)
+Resolving deltas: 64% (44/68)
+Resolving deltas: 66% (45/68)
+Resolving deltas: 67% (46/68)
+Resolving deltas: 69% (47/68)
+Resolving deltas: 70% (48/68)
+Resolving deltas: 72% (49/68)
+Resolving deltas: 75% (51/68)
+Resolving deltas: 76% (52/68)
+Resolving deltas: 77% (53/68)
+Resolving deltas: 79% (54/68)
+Resolving deltas: 80% (55/68)
+Resolving deltas: 82% (56/68)
+Resolving deltas: 83% (57/68)
+Resolving deltas: 85% (58/68)
+Resolving deltas: 86% (59/68)
+Resolving deltas: 88% (60/68)
+Resolving deltas: 89% (61/68)
+Resolving deltas: 91% (62/68)
+Resolving deltas: 92% (63/68)
+Resolving deltas: 94% (64/68)
+Resolving deltas: 95% (65/68)
+Resolving deltas: 97% (66/68)
+Resolving deltas: 98% (67/68)
+Resolving deltas: 100% (68/68)
+Resolving deltas: 100% (68/68), done.
+[18:22:57]* (HEAD detached at FETCH_HEAD)
+[18:22:57]master
+[18:22:57]=> Compressing and cleaning up git repository
+[18:22:57]=> Profile not found. Tried ~/.bashrc, ~/.bash_profile, ~/.zprofile, ~/.zshrc, and ~/.profile.
+[18:22:57]=> Create one of them and run this script again
+[18:22:57]OR
+[18:22:57]=> Append the following lines to the correct file yourself:
+[18:22:57]export NVM_DIR="$HOME/.nvm"
+[18:22:57][ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+[18:22:59]=> You currently have modules installed globally with `npm`. These will no
+[18:22:59]=> longer be linked to the active version of Node when you install a new node
+[18:22:59]=> with `nvm`; and they may (depending on how you construct your `$PATH`)
+[18:22:59]=> override the binaries of modules installed with `nvm`:
+[18:22:59]/usr/local/lib
+[18:22:59]+-- @types/node@25.0.3
+[18:22:59]+-- corepack@0.34.5
+[18:22:59]+-- ts-node@10.9.2
+[18:22:59]`-- typescript@5.9.3
+[18:22:59]=> If you wish to uninstall them at a later point (or re-install them under your
+[18:22:59]=> `nvm` Nodes), you can remove them from the system Node as follows:
+[18:22:59]$ nvm use system
+[18:22:59]$ npm uninstall -g a_module
+[18:22:59]=> Installing Node.js version 19.9.0
+[18:23:00]Downloading and installing node v19.9.0...
+[18:23:00]Downloading https://nodejs.org/dist/v19.9.0/node-v19.9.0-linux-x64.tar.xz...
+[18:23:01]#=#=# ##O#-# 0.4%
+######### 13.7%
+####################### 32.6%
+############################################## 65.1%
+####################################################################### 99.1%
+######################################################################## 100.0%
+[18:23:01]Computing checksum with sha256sum
+[18:23:01]Checksums matched!
+[18:23:06]Now using node v19.9.0 (npm v9.6.3)
+[18:23:06]Creating default alias: default -> 19.9.0 (-> v19.9.0)
+[18:23:07]=> Node.js version 19.9.0 has been successfully installed
+[18:23:07]=> Close and reopen your terminal to start using nvm or run the following to use it now:
+[18:23:07]export NVM_DIR="$HOME/.nvm"
+[18:23:07][ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+[18:23:08]Downloading and installing node v20.20.2...
+[18:23:13]Now using node v20.20.2 (npm v10.8.2)
+[18:23:13]Now using node v20.20.2 (npm v10.8.2)
+[18:23:13][start.sh] Using Node v20.20.2
+[18:23:13][start.sh] Installing pnpm...
+[18:23:16]\|/-\|/-\|/-\|/-
+[18:23:16]added 1 package in 3s
+[18:23:16]-
+[18:23:16]-1 package is looking for funding
+[18:23:16]- run `npm fund` for details
+[18:23:16]-npm notice
+[18:23:16]npm notice New major version of npm available! 10.8.2 -> 12.0.1
+[18:23:16]npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.1
+[18:23:16]npm notice To update run: npm install -g npm@12.0.1
+[18:23:16]npm notice
+[18:23:16]-[start.sh] Installing dependencies...
+[18:23:17]Scope: all 6 workspace projects
+[18:23:19]Progress: resolved 0, reused 0, downloaded 1, added 0
+[18:23:20]Progress: resolved 12, reused 0, downloaded 12, added 0
+[18:23:21]Progress: resolved 19, reused 0, downloaded 19, added 0
+[18:23:22]Progress: resolved 22, reused 0, downloaded 22, added 0
+[18:23:23]Progress: resolved 23, reused 0, downloaded 23, added 0
+[18:23:24]Progress: resolved 46, reused 0, downloaded 39, added 0
+[18:23:25]Progress: resolved 105, reused 0, downloaded 89, added 0
+[18:23:26]Progress: resolved 136, reused 0, downloaded 120, added 0
+[18:23:27]Progress: resolved 189, reused 0, downloaded 165, added 0
+[18:23:28]Progress: resolved 229, reused 0, downloaded 203, added 0
+[18:23:30]Progress: resolved 319, reused 0, downloaded 240, added 0
+[18:23:31]Progress: resolved 356, reused 0, downloaded 277, added 0
+[18:23:32]Progress: resolved 388, reused 0, downloaded 291, added 0
+[18:23:33]WARN 3 deprecated subdependencies found: @esbuild-kit/core-utils@3.3.2, @esbuild-kit/esm-loader@2.6.5, prebuild-install@7.1.3
+[18:23:33]Packages: +291
+[18:23:33]Progress: resolved 388, reused 0, downloaded 291, added 1
+[18:23:34]Progress: resolved 388, reused 0, downloaded 291, added 271
+[18:23:34]Progress: resolved 388, reused 0, downloaded 291, added 291, done
+[18:23:35].../node_modules/better-sqlite3 install$ prebuild-install   node-gyp rebuild --release
+[18:23:35].../esbuild@0.28.1/node_modules/esbuild postinstall$ node install.js
+[18:23:35].../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+[18:23:35].../esbuild@0.25.12/node_modules/esbuild postinstall$ node install.js
+[18:23:35].../esbuild@0.18.20/node_modules/esbuild postinstall$ node install.js
+[18:23:40].../esbuild@0.18.20/node_modules/esbuild postinstall: Done
+[18:23:40].../esbuild@0.28.1/node_modules/esbuild postinstall: Done
+[18:23:40].../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+[18:23:40].../esbuild@0.25.12/node_modules/esbuild postinstall: Done
+[18:23:50].../node_modules/better-sqlite3 install: prebuild-install warn install No prebuilt binaries found (target=20.20.2 runtime=node arch=x64 libc= platform=linux)
+[18:23:51].../node_modules/better-sqlite3 install: gyp info it worked if it ends with ok
+[18:23:51].../node_modules/better-sqlite3 install: gyp info using node-gyp@10.3.1
+[18:23:51].../node_modules/better-sqlite3 install: gyp info using node@20.20.2 | linux | x64
+[18:23:51].../node_modules/better-sqlite3 install: gyp info find Python using Python version 3.9.2 found at "/usr/bin/python3"
+[18:24:06].../node_modules/better-sqlite3 install: gyp http GET https://nodejs.org/download/release/v20.20.2/node-v20.20.2-headers.tar.gz
+[18:24:06].../node_modules/better-sqlite3 install: gyp http 200 https://nodejs.org/download/release/v20.20.2/node-v20.20.2-headers.tar.gz
+[18:24:41].../node_modules/better-sqlite3 install: gyp http GET https://nodejs.org/download/release/v20.20.2/SHASUMS256.txt
+[18:24:41].../node_modules/better-sqlite3 install: gyp http 200 https://nodejs.org/download/release/v20.20.2/SHASUMS256.txt
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn /usr/bin/python3
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args [
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '/home/container/.local/lib/node_modules/pnpm/dist/node_modules/node-gyp/gyp/gyp_main.py',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args 'binding.gyp',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '-f',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args 'make',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '-I',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '/home/container/node_modules/.pnpm/better-sqlite3@12.11.1/node_modules/better-sqlite3/build/config.gypi',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '-I',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '/home/container/.local/lib/node_modules/pnpm/dist/node_modules/node-gyp/addon.gypi',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '-I',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '/home/container/.cache/node-gyp/20.20.2/include/node/common.gypi',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '-Dlibrary=shared_library',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '-Dvisibility=default',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '-Dnode_root_dir=/home/container/.cache/node-gyp/20.20.2',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '-Dnode_gyp_dir=/home/container/.local/lib/node_modules/pnpm/dist/node_modules/node-gyp',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '-Dnode_lib_file=/home/container/.cache/node-gyp/20.20.2/<(target_arch)/node.lib',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '-Dmodule_root_dir=/home/container/node_modules/.pnpm/better-sqlite3@12.11.1/node_modules/better-sqlite3',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '-Dnode_engine=v8',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '--depth=.',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '--no-parallel',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '--generator-output',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args 'build',
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args '-Goutput_dir=.'
+[18:24:41].../node_modules/better-sqlite3 install: gyp info spawn args ]
+[18:24:42].../node_modules/better-sqlite3 install: gyp info spawn make
+[18:24:42].../node_modules/better-sqlite3 install: gyp info spawn args [ 'BUILDTYPE=Release', '-C', 'build' ]
+[18:24:42].../node_modules/better-sqlite3 install: make: Entering directory '/home/container/node_modules/.pnpm/better-sqlite3@12.11.1/node_modules/better-sqlite3/build'
+[18:24:42].../node_modules/better-sqlite3 install: TOUCH ba23eeee118cd63e16015df367567cb043fed872.intermediate
+[18:24:42].../node_modules/better-sqlite3 install: ACTION deps_sqlite3_gyp_locate_sqlite3_target_copy_builtin_sqlite3 ba23eeee118cd63e16015df367567cb043fed872.intermediate
+[18:24:42].../node_modules/better-sqlite3 install: TOUCH Release/obj.target/deps/locate_sqlite3.stamp
+[18:24:42].../node_modules/better-sqlite3 install: CC(target) Release/obj.target/sqlite3/gen/sqlite3/sqlite3.o
+[18:24:43]start.sh: line 34: 1410 Killed CI=true pnpm install --no-frozen-lockfile
+[18:24:43]Server marked as offline
+[18:24:43][Wispbyte]: ---------- Detected server process in a crashed state! ----------
+[18:24:43][Wispbyte]: Exit code: 137
+[18:24:43][Wispbyte]: Out of memory: true
+[18:24:44][Wispbyte]: Checking server disk space usage, this could take a few seconds...
+[18:24:44][Wispbyte]: Updating process configuration files...
+[18:24:44][Wispbyte]: Ensuring file permissions are set correctly, this could take a few seconds...
+[18:24:47]Server marked as starting
+ __        ___           _           _       
+ \ \      / (_)___ _ __ | |__  _   _| |_ ___ 
+  \ \ /\ / /| / __| '_ \| '_ \| | | | __/ _ \
+   \ V  V / | \__ \ |_) | |_) | |_| | ||  __/
+    \_/\_/  |_|___/ .__/|_.__/ \__, |\__\___|
+                  |_|          |___/         
+Your server is currently starting! Enjoy using Wispbyte
+[18:24:49][Wispbyte] : Docker image pulled successfully
+[18:24:49]v19.9.0
+[18:24:49]:/home/container$ bash start.sh
+[18:24:49]Server marked as running
+[18:24:49][start.sh] /data not found — using local database at /home/container/bot.db
+[18:24:53]Now using node v20.20.2 (npm v10.8.2)
+[18:24:57]Now using node v20.20.2 (npm v10.8.2)
+[18:24:57][start.sh] Using Node v20.20.2
+[18:24:57][start.sh] Installing pnpm...
