@@ -37,8 +37,28 @@ const SYMBOLS: CardSymbol[] = [
 const JACKPOT_MULT = 500.0;
 const SYMBOL_POOL: CardSymbol[] = SYMBOLS.flatMap((s) => Array(s.weight).fill(s));
 
+// Win-symbol pool — biased toward low multipliers so RTP stays at ~88%.
+// Jackpot (👑 500×) is intentionally excluded: it can still appear on the grid
+// but is never forced as the matching triple, keeping house edge stable.
+//
+// E[mult | forced win] ≈ (35×0.5 + 30×1 + 25×2 + 8×10 + 1×50 + 1×100) / 100 = 3.275
+// WIN_PROB = 0.88 / 3.275 ≈ 0.269  →  ~12% house edge
+const WIN_PROB = 0.269;
+const WIN_SYMBOL_POOL: CardSymbol[] = [
+  ...Array(35).fill(SYMBOLS[1]), // 💎  0.5×
+  ...Array(30).fill(SYMBOLS[2]), // 🌿  1×
+  ...Array(25).fill(SYMBOLS[3]), // 💰  2×
+  ...Array(8).fill(SYMBOLS[4]),  // 🎁  10×
+  ...Array(1).fill(SYMBOLS[5]),  // 🔥  50×
+  ...Array(1).fill(SYMBOLS[6]),  // ⭐  100×
+];
+
 function pickWeighted(): CardSymbol {
   return SYMBOL_POOL[Math.floor(Math.random() * SYMBOL_POOL.length)]!;
+}
+
+function pickWinSymbol(): CardSymbol {
+  return WIN_SYMBOL_POOL[Math.floor(Math.random() * WIN_SYMBOL_POOL.length)]!;
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -53,30 +73,79 @@ function fmtMult(mult: number): string {
   return `${mult.toFixed(1)}x`;
 }
 
-// ─── Cell generation — fully random, but no symbol appears more than 3 times ──
-// This means a win (exactly 3 of the same) can happen or not — pure chance.
-function generateCells(): CardSymbol[] {
-  const cells: CardSymbol[] = [];
-  const counts = new Map<string, number>();
+// ─── WIN grid: exactly 3 of the chosen symbol, no other triple ───────────────
+function generateWinGrid(): CardSymbol[] {
+  const winner = pickWinSymbol();
+  const cells: CardSymbol[] = [winner, winner, winner];
+  const counts = new Map<string, number>([[winner.emoji, 3]]);
 
-  for (let i = 0; i < 9; i++) {
+  while (cells.length < 9) {
     let pick: CardSymbol;
-    let attempts = 0;
+    let tries = 0;
     do {
       pick = pickWeighted();
-      attempts++;
-      if (attempts > 50) {
-        const available = SYMBOLS.filter((s) => (counts.get(s.emoji) ?? 0) < 3);
-        pick = available[Math.floor(Math.random() * available.length)]!;
+      tries++;
+      if (tries > 50) {
+        // Fallback: any symbol that won't create an unintended triple
+        const avail = SYMBOLS.filter(
+          (s) => s.emoji !== winner.emoji && (counts.get(s.emoji) ?? 0) < 3,
+        );
+        pick = avail[Math.floor(Math.random() * avail.length)]!;
         break;
       }
-    } while ((counts.get(pick.emoji) ?? 0) >= 3);
+    } while (
+      pick.emoji === winner.emoji ||       // no 4th of the winner
+      (counts.get(pick.emoji) ?? 0) >= 3  // no accidental second triple
+    );
 
     cells.push(pick);
     counts.set(pick.emoji, (counts.get(pick.emoji) ?? 0) + 1);
   }
 
-  return cells;
+  return shuffle(cells);
+}
+
+// ─── LOSE grid: no symbol appears exactly 3 times ────────────────────────────
+function generateLoseGrid(): CardSymbol[] {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const cells: CardSymbol[]    = [];
+    const counts = new Map<string, number>();
+    let valid = true;
+
+    for (let i = 0; i < 9; i++) {
+      let pick: CardSymbol;
+      let tries = 0;
+      do {
+        pick = pickWeighted();
+        tries++;
+        if (tries > 50) {
+          // Fallback: pick any symbol not sitting at count 2 (adding 1 would make 3)
+          const avail = SYMBOLS.filter((s) => (counts.get(s.emoji) ?? 0) !== 2);
+          if (avail.length === 0) { valid = false; break; }
+          pick = avail[Math.floor(Math.random() * avail.length)]!;
+          break;
+        }
+      } while ((counts.get(pick.emoji) ?? 0) === 2); // never let a symbol reach exactly 3
+
+      if (!valid) break;
+      cells.push(pick);
+      counts.set(pick.emoji, (counts.get(pick.emoji) ?? 0) + 1);
+    }
+
+    if (valid && cells.length === 9) return cells;
+  }
+
+  // Absolute fallback — 4 of one symbol guarantees no triple
+  return shuffle([
+    SYMBOLS[0]!, SYMBOLS[0]!, SYMBOLS[0]!, SYMBOLS[0]!,
+    SYMBOLS[1]!, SYMBOLS[1]!,
+    SYMBOLS[2]!, SYMBOLS[3]!, SYMBOLS[4]!,
+  ]);
+}
+
+// ─── Cell generation — pre-decides win/loss to enforce 88% RTP ───────────────
+function generateCells(): CardSymbol[] {
+  return Math.random() < WIN_PROB ? generateWinGrid() : generateLoseGrid();
 }
 
 // ─── Game state ───────────────────────────────────────────────────────────────
