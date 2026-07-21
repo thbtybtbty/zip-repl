@@ -55,13 +55,12 @@ export function buildMinesPanelEmbed(
   const totalGems  = 25 - game.minesCount;
   const currentWin = Math.floor(game.bet * game.multiplier);
   const nextMult   = calcMinesMultiplier(game.minesCount, game.gemsFound + 1);
-  const nextWin    = Math.floor(game.bet * nextMult);
 
   const color = status === "active" ? COLORS.primary : status === "won" ? COLORS.success : COLORS.danger;
 
   const titles: Record<string, string> = {
-    active: `${BOMB} Mines`,
-    won:    `${GEM} Mines — Cashed Out!`,
+    active: `💎 Mines`,
+    won:    `💎 Mines — Cashed Out!`,
     lost:   `${BOMB} Mines — Bomb Hit!`,
   };
 
@@ -69,14 +68,11 @@ export function buildMinesPanelEmbed(
     .setColor(color)
     .setTitle(titles[status] ?? "Mines")
     .addFields(
-      { name: "💰 Bet",        value: `${formatAmount(game.bet)} gems`,  inline: true },
-      { name: `${BOMB} Mines`, value: `${game.minesCount}`,               inline: true },
-      { name: "\u200b",        value: "\u200b",                           inline: true },
-      { name: "✨ Multiplier", value: formatMult(game.multiplier),         inline: true },
-      { name: "💎 Current",   value: `${formatAmount(currentWin)} gems`, inline: true },
-      ...(status === "active"
-        ? [{ name: "⭐ Next gem", value: `${formatAmount(nextWin)} gems`, inline: true }]
-        : [{ name: "\u200b", value: "\u200b", inline: true }]),
+      { name: "💎 Bet",        value: `\`${formatAmount(game.bet)}\``,                                              inline: false },
+      { name: "✨ Multiplier", value: `\`${formatMult(game.multiplier)} → ${formatMult(nextMult)}\``,               inline: false },
+      { name: "💎 Gems found", value: `\`${game.gemsFound}/${totalGems}\``,                                         inline: false },
+      { name: "💰 Potential",  value: `\`${formatAmount(currentWin)}\``,                                            inline: false },
+      { name: `${BOMB} Bombs`, value: `\`${game.minesCount}\``,                                                     inline: false },
     )
     .setTimestamp();
 }
@@ -99,14 +95,14 @@ export function buildMinesGrid(
         const isGem = cell === "gem";
         btn = new ButtonBuilder()
           .setCustomId(`mines_r_${idx}`)
-          .setLabel(isGem ? GEM : BOMB)
-          .setStyle(isGem ? (isRevealed ? ButtonStyle.Success : ButtonStyle.Secondary) : ButtonStyle.Danger)
+          .setEmoji(isGem ? "💎" : "💣")
+          .setStyle(isGem ? ButtonStyle.Success : ButtonStyle.Danger)
           .setDisabled(true);
       } else {
         btn = new ButtonBuilder()
           .setCustomId(`mines_r_${idx}`)
-          .setLabel("⬜")
-          .setStyle(ButtonStyle.Secondary);
+          .setLabel(" ")
+          .setStyle(ButtonStyle.Primary);
       }
       actionRow.addComponents(btn);
     }
