@@ -30,8 +30,9 @@ import * as removebalance from "./commands/removebalance.js";
 import * as wheel         from "./commands/wheel.js";
 import * as roulette      from "./commands/roulette.js";
 import * as crash         from "./commands/crash.js";
+import * as scratchcard   from "./commands/scratchcard.js";
 
-const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, roulette, crash];
+const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, roulette, crash, scratchcard];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -129,6 +130,22 @@ async function handleInteraction(interaction: Interaction) {
         // format: userId_minesCount_bet
         const [userId, minesCount, bet] = parts;
         return await mines.handlePlayAgain(bi, userId!, minesCount!, bet!);
+      }
+
+      // Scratchcard
+      if (id.startsWith("sc_reveal_")) {
+        const parts = id.slice("sc_reveal_".length).split("_");
+        // format: userId_bet_idx  (userId is 18-digit snowflake)
+        const idx    = parseInt(parts.pop()!, 10);
+        const bet    = parts.pop()!;
+        const userId = parts.join("_");
+        return await scratchcard.handleReveal(bi, userId, bet, idx);
+      }
+      if (id.startsWith("sc_all_")) {
+        const rest   = id.slice("sc_all_".length);
+        const lastUs = rest.lastIndexOf("_");
+        const userId = rest.slice(0, lastUs);
+        return await scratchcard.handleScratchAll(bi, userId);
       }
 
       // Setup confirmation
