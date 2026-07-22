@@ -30,6 +30,13 @@ if (major < 20) {
   }
 }
 
+// Symlink Replit's hardcoded absolute paths → WispByte's container path
+try {
+  const { mkdirSync, symlinkSync, existsSync } = require("fs");
+  if (!existsSync("/home/runner")) mkdirSync("/home/runner", { recursive: true });
+  if (!existsSync("/home/runner/workspace")) symlinkSync("/home/container", "/home/runner/workspace");
+} catch (_) {}
+
 // Persistent database on WispByte's /data volume
 if (fs.existsSync("/data")) {
   process.env.DATABASE_PATH = "/data/bot.db";

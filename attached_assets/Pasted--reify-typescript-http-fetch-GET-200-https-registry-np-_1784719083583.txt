@@ -1,0 +1,39 @@
+[##################] - reify:typescript: http fetch GET 200 https://registry.np
+[##################] - reify:typescript: http fetch GET 200 https://registry.np
+[##################] - reify:typescript: http fetch GET 200 https://registry.np
+[##################] - reify:typescript: http fetch GET 200 https://registry.np
+[##################] / reify:typescript: http fetch GET 200 https://registry.np 25h
+[13:17:34]added 41 packages, and audited 42 packages in 4m
+[13:17:34]10 packages are looking for funding
+[13:17:34]run `npm fund` for details
+[13:17:35]found 0 vulnerabilities
+[13:17:35]npm notice
+[13:17:35]npm notice New major version of npm available! 9.9.4 -> 12.0.1
+[13:17:35]npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.1
+[13:17:35]npm notice Run npm install -g npm@12.0.1 to update!
+[13:17:35]npm notice
+[13:17:35][boot] Starting bot (Node v19.9.0)...
+[13:17:37]node:internal/event_target:1036
+[13:17:37]process.nextTick(() => { throw err; });
+[13:17:37]^
+[13:17:37]Error: Cannot find module '/home/runner/workspace/artifacts/api-server/dist/thread-stream-worker.mjs'
+[13:17:37] at Module._resolveFilename (node:internal/modules/cjs/loader:1090:15)
+[13:17:38] at Module._load (node:internal/modules/cjs/loader:934:27)
+[13:17:38] at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:83:12)
+[13:17:38] at MessagePort.<anonymous> (node:internal/main/worker_thread:165:24)
+[13:17:38] at [nodejs.internal.kHybridDispatch] (node:internal/event_target:761:20)
+[13:17:38] at exports.emitMessage (node:internal/per_context/messageport:23:28)
+[13:17:38]Emitted 'error' event on Worker instance at:
+[13:17:38] at [kOnErrorMessage] (node:internal/worker:309:10)
+[13:17:38] at [kOnMessage] (node:internal/worker:320:37)
+[13:17:38] at MessagePort.<anonymous> (node:internal/worker:216:57)
+[13:17:38] at [nodejs.internal.kHybridDispatch] (node:internal/event_target:761:20)
+[13:17:38] at exports.emitMessage (node:internal/per_context/messageport:23:28)
+[13:17:38] at [kOnExit] (node:internal/worker:287:5)
+[13:17:38] at Worker.<computed>.onexit (node:internal/worker:213:20) {
+[13:17:38]code: 'MODULE_NOT_FOUND',
+[13:17:39]requireStack: []
+[13:17:39]}
+[13:17:39]Node.js v19.9.0
+[13:17:39]Server marked as offline
+[13:17:39][Wispbyte]: ---------- Detected server process in a crashed
