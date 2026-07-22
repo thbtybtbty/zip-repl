@@ -1,0 +1,70 @@
+Your server is currently starting! Enjoy using Wispbyte
+[13:13:49][Wispbyte] : Docker image pulled successfully
+[13:13:50]v19.9.0
+[13:13:50]Server marked as running
+[13:13:50]:/home/container$ node index.js
+[13:13:50][boot] DB → /home/container/artifacts/api-server/bot.db
+[13:13:50][boot] Installing better-sqlite3@11.9.1 (Node v19.9.0)...
+[13:13:55]25l[..................] \ reify: timing arborist:ctor Completed in 1ms
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] / idealTree:container: sill idealTree buildDeps
+[..................] / idealTree:container: sill idealTree buildDeps
+[..................] / idealTree:container: sill idealTree buildDeps
+[..................] / idealTree:container: sill idealTree buildDeps
+[..................] / idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] / idealTree:container: sill idealTree buildDeps
+[..................] / idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] \ idealTree:container: sill idealTree buildDeps
+[..................] - idealTree:container: sill idealTree buildDeps
+[..................] - idealTree:container: sill idealTree buildDeps
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] - idealTree:container: timing idealTree:#root Completed in
+[#########.........] - idealTree:container: timing idealTree:#root Completed in
+[#########.........] | idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] - idealTree:container: timing idealTree:#root Completed in
+[#########.........] - idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] - idealTree:container: timing idealTree:#root Completed in
+[#########.........] - idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] / idealTree:container: timing idealTree:#root Completed in
+[#########.........] | idealTree:container: timing idealTree:#root Completed in
+[#########.........] | idealTree:container: timing idealTree:#root Completed in
+[#########.........] | idealTree:container: timing idealTree:#root Completed in
+[#########.........] | idealTree:container: timing idealTree:#root Completed in
+[#########.........] | idealTree:container: timing idealTree:#root Completed in
+[#########.........] \ reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] - reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] | reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] | reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] | reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] | reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] | reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] | reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] | reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] | reify:@replit/connectors-sdk: sill audit bulk request {
+[#########.........] | reify:@replit/connectors-sdk: sill audit bulk request {
+[##########........] - reify:string_decoder: http fetch GET 200 https://registr
+[###########.......] / reify:node-abi: http fetch GET 200 https://registry.npmj
+[################..] / reify:detect-libc: http fetch GET 200 https://registry.n 25hnpm WARN deprecated prebuild-install@7.1.3: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
