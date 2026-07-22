@@ -3,40 +3,6 @@ const { execSync, spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-// Try to use Node 20 via nvm if we're on an older version
-const major = parseInt(process.version.slice(1));
-if (major < 20) {
-  const nvmDir = process.env.NVM_DIR || path.join(process.env.HOME || "/root", ".nvm");
-  const nvmSh = path.join(nvmDir, "nvm.sh");
-  if (fs.existsSync(nvmSh)) {
-    console.log("[boot] Node " + process.version + " detected, switching to Node 20 via nvm...");
-    try {
-      const node20 = execSync(
-        `bash -c "source ${nvmSh} && nvm install 20 --no-progress && nvm which 20"`,
-        { encoding: "utf8", shell: true }
-      ).trim();
-      if (node20 && fs.existsSync(node20)) {
-        console.log("[boot] Re-exec with " + node20);
-        const child = spawn(node20, [__filename], {
-          stdio: "inherit",
-          env: { ...process.env, _SKIP_NVM_CHECK: "1" },
-        });
-        child.on("exit", (code) => process.exit(code ?? 0));
-        return;
-      }
-    } catch (e) {
-      console.log("[boot] nvm switch failed, continuing with " + process.version);
-    }
-  }
-}
-
-// Symlink Replit's hardcoded absolute paths → WispByte's container path
-try {
-  const { mkdirSync, symlinkSync, existsSync } = require("fs");
-  if (!existsSync("/home/runner")) mkdirSync("/home/runner", { recursive: true });
-  if (!existsSync("/home/runner/workspace")) symlinkSync("/home/container", "/home/runner/workspace");
-} catch (_) {}
-
 // Persistent database on WispByte's /data volume
 if (fs.existsSync("/data")) {
   process.env.DATABASE_PATH = "/data/bot.db";
@@ -47,16 +13,16 @@ if (fs.existsSync("/data")) {
 }
 
 // Pick a compatible better-sqlite3 version based on Node version
+const major = parseInt(process.version.slice(1));
 const bsq3Version = major >= 20 ? "12.11.1" : "11.9.1";
 
 // Install better-sqlite3 if missing or wrong version
-const bsq3 = path.join(__dirname, "node_modules", "better-sqlite3");
-const bsq3Pkg = path.join(bsq3, "package.json");
+const bsq3Pkg = path.join(__dirname, "node_modules", "better-sqlite3", "package.json");
 let installedVersion = null;
 try { installedVersion = require(bsq3Pkg).version; } catch (_) {}
 
 if (installedVersion !== bsq3Version) {
-  console.log("[boot] Installing better-sqlite3@" + bsq3Version + " (Node " + process.version + ")...");
+  console.log("[boot] Installing better-sqlite3@" + bsq3Version + "...");
   execSync(`npm install better-sqlite3@${bsq3Version} --no-save`, {
     stdio: "inherit",
     shell: true,
@@ -65,12 +31,25 @@ if (installedVersion !== bsq3Version) {
   });
 }
 
-// Start the pre-built bot
-const botEntry = path.join(__dirname, "artifacts", "api-server", "dist", "index.mjs");
+// Patch hardcoded Replit path in the built bundle
+const distDir = path.join(__dirname, "artifacts", "api-server", "dist");
+const botEntry = path.join(distDir, "index.mjs");
+const botPatched = path.join(distDir, "index.patched.mjs");
+const REPLIT_PATH = "/home/runner/workspace/artifacts/api-server/dist";
+
+const src = fs.readFileSync(botEntry, "utf8");
+if (src.includes(REPLIT_PATH)) {
+  console.log("[boot] Patching hardcoded paths...");
+  fs.writeFileSync(botPatched, src.replaceAll(REPLIT_PATH, distDir));
+} else {
+  fs.copyFileSync(botEntry, botPatched);
+}
+
+// Start the bot
 console.log("[boot] Starting bot (Node " + process.version + ")...");
-const child = spawn(process.execPath, [botEntry], {
+const child = spawn(process.execPath, [botPatched], {
   stdio: "inherit",
-  cwd: path.dirname(botEntry),
+  cwd: distDir,
   env: process.env,
 });
 child.on("exit", (code) => process.exit(code ?? 0));
