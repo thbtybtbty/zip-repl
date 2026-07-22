@@ -46,6 +46,9 @@ if (src.includes(REPLIT_PATH)) {
 }
 
 // Start the bot
+const hasToken = !!process.env.DISCORD_BOT_TOKEN;
+const hasClient = !!process.env.DISCORD_CLIENT_ID;
+console.log("[boot] DISCORD_BOT_TOKEN set:", hasToken, "| DISCORD_CLIENT_ID set:", hasClient);
 console.log("[boot] Starting bot (Node " + process.version + ")...");
 const child = spawn(process.execPath, [botPatched], {
   stdio: "inherit",
