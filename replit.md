@@ -11,15 +11,27 @@ A Discord gambling bot with a SQLite economy, slash commands, and an Express hea
 - **Build**: esbuild (`artifacts/api-server/build.mjs`)
 - **Monorepo**: pnpm workspaces
 
-## How to run
+## Workflow
 
-The bot starts automatically via the **API Server** workflow:
+- **Replit** = development & testing. Edit TypeScript source here, the **API Server** workflow runs the bot automatically.
+- **WispByte** = production (24/7). The root `index.js` is the WispByte entry point — it loads `.env`, patches hardcoded Replit paths in the compiled bundle, and starts the bot.
+
+### Running on Replit (dev)
+
+The **API Server** workflow starts automatically:
 
 ```
 pnpm --filter @workspace/api-server run dev
 ```
 
-This builds the TypeScript source and starts the bot + HTTP server.
+This builds the TypeScript source (via `artifacts/api-server/build.mjs`) and starts the bot + HTTP server.
+
+### Deploying to WispByte (prod)
+
+1. Make and test your changes on Replit.
+2. Upload the project files to WispByte (excluding `node_modules`, `.cache`, `.npm`).
+3. WispByte runs `node index.js` — which handles `.env` loading, `better-sqlite3` version checks, path patching, and starting the compiled bot.
+4. The database persists at `/data/bot.db` on WispByte's persistent volume.
 
 ## Required secrets
 
