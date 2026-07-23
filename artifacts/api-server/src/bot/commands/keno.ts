@@ -138,19 +138,18 @@ function playAgainRow(userId: string, bet: number, difficulty: string): ActionRo
 function selectionEmbed(state: KenoState): EmbedBuilder {
   const picks = state.picks;
   const mode  = state.difficulty === "hard" ? "Hard" : "Easy";
-  const grid  = renderGrid(picks);
 
   return new EmbedBuilder()
     .setColor(COLORS.primary)
     .setTitle("🎱  Keno")
     .addFields(
-      { name: "💎 Bet",        value: `\`${formatAmount(state.bet)}\``,                       inline: true },
-      { name: "🍀 Mode",       value: `\`${mode}\``,                                          inline: true },
-      { name: "🔢 Numbers",    value: `\`${picks.size}/${PICK_COUNT}\``,                       inline: true },
-      { name: "👑 Top prize",  value: `\`${topPrize(state.difficulty)}x\``,                   inline: true },
+      { name: "💎 Bet",        value: `\`${formatAmount(state.bet)}\``,             inline: true },
+      { name: "🍀 Mode",       value: `\`${mode}\``,                                inline: true },
+      { name: "🔢 Numbers",    value: `\`${picks.size}/${PICK_COUNT}\``,             inline: true },
+      { name: "👑 Top prize",  value: `\`${topPrize(state.difficulty)}x\``,         inline: true },
     )
     .setDescription(
-      `📊 Payouts · ${payoutLine(state.difficulty)}\n\n${grid}\n\n` +
+      `📊 Payouts · ${payoutLine(state.difficulty)}\n\n` +
       (picks.size < PICK_COUNT ? `_Pick **${PICK_COUNT - picks.size}** more number(s) or use ✨ Quick Pick_` : `_Ready! Click 🎲 Draw to play._`),
     )
     .setTimestamp();
@@ -301,7 +300,7 @@ export async function handleQuickPick(interaction: ButtonInteraction): Promise<v
     return void interaction.reply({ content: "❌ No active Keno session for you.", ephemeral: true });
   }
 
-  // Fill remaining picks randomly
+  // Fill remaining picks randomly — user still clicks Draw to see results
   const pool = Array.from({ length: GRID_SIZE }, (_, i) => i + 1).filter((n) => !state.picks.has(n));
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -310,8 +309,10 @@ export async function handleQuickPick(interaction: ButtonInteraction): Promise<v
   const needed = PICK_COUNT - state.picks.size;
   pool.slice(0, needed).forEach((n) => state.picks.add(n));
 
-  // Auto-draw immediately
-  await runDraw(interaction, state);
+  await interaction.update({
+    embeds:     [selectionEmbed(state)],
+    components: [...numberRows(state.picks), controlRow(state.picks, true)],
+  });
 }
 
 // ─── Button: Clear ────────────────────────────────────────────────────────────
