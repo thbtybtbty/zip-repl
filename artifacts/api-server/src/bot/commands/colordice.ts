@@ -229,32 +229,31 @@ export async function handleColorPick(interaction: StringSelectMenuInteraction):
   const pick = interaction.values[0] as DiceColor;
   pendingColorDice.delete(userId);
 
+  // Pre-roll the dice so the last animation frame IS the result
+  const dice    = rollDice();
+  const matches = countMatches(dice, pick);
+  const mult    = getPayout(matches);
+  const payout  = Math.floor(pending.bet * mult);
+
   // ── Step 1: show first rolling frame immediately ──
   await interaction.update({
     embeds:     [rollingEmbed(pending.bet, pick, 0)],
     components: [],
   });
 
-  // ── Step 2: fire several frames with random dice each time ──
+  // ── Step 2: intermediate frames with random dice ──
   const FRAME_MS = 500;
-  for (let frame = 1; frame <= 5; frame++) {
+  for (let frame = 1; frame <= 4; frame++) {
     await new Promise<void>((resolve) => setTimeout(resolve, FRAME_MS));
     try {
       await interaction.editReply({ embeds: [rollingEmbed(pending.bet, pick, frame)] });
     } catch { /* skip if rate-limited */ }
   }
 
-  // ── Step 3: brief pause before reveal ──
-  await new Promise<void>((resolve) => setTimeout(resolve, 300));
+  // ── Step 3: last frame = actual result ──
+  await new Promise<void>((resolve) => setTimeout(resolve, FRAME_MS));
 
-  const dice    = rollDice();
-  const matches = countMatches(dice, pick);
-  const mult    = getPayout(matches);
-  const payout  = Math.floor(pending.bet * mult);
-
-  if (payout > 0) {
-    await addBalance(userId, payout);
-  }
+  if (payout > 0) await addBalance(userId, payout);
   await recordBet(userId, pending.bet, payout - pending.bet);
 
   await interaction.editReply({

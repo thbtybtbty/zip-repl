@@ -18,15 +18,19 @@ const RTP        = 0.925; // 7.5% house edge
 const MULT_MIN   = 1.5;
 const MULT_MAX   = 25;
 
-// ─── Win chance ───────────────────────────────────────────────────────────────
-function winChance(multiplier: number): number {
-  return RTP / multiplier;
+// ─── Win chance (as 0–100 percentage) ────────────────────────────────────────
+function winChancePct(multiplier: number): number {
+  return (RTP / multiplier) * 100;
 }
 
-// ─── Progress bar (win chance visualisation) ──────────────────────────────────
-function buildChanceBar(chance: number): string {
-  const filled = Math.round(chance * 20);
-  return "▰".repeat(filled) + "▱".repeat(20 - filled);
+// ─── Progress bar (win-chance zone visualisation, 20 segments = 0–100) ────────
+function buildChanceBar(chancePct: number, rolledPct: number): string {
+  const winSegments    = Math.round(chancePct / 5);   // how many segments are "safe"
+  const rolledSegment  = Math.min(19, Math.floor(rolledPct / 5)); // which segment the roll landed on
+  return Array.from({ length: 20 }, (_, i) => {
+    if (i === rolledSegment) return "🔸"; // marker showing where the roll landed
+    return i < winSegments ? "▰" : "▱";  // filled = win zone, empty = loss zone
+  }).join("");
 }
 
 // ─── Embeds ───────────────────────────────────────────────────────────────────
@@ -35,37 +39,31 @@ function resultEmbed(
   multiplier: number,
   won:        boolean,
   payout:     number,
+  rolled:     number,  // 0.00 – 99.99
 ): EmbedBuilder {
-  const chance  = winChance(multiplier);
-  const profit  = payout - bet;
+  const chancePct = winChancePct(multiplier);
+  const profit    = payout - bet;
 
-  const color = won
-    ? (payout >= bet ? COLORS.success : COLORS.warning)
-    : COLORS.danger;
-
-  const title = won
-    ? `⬆️  Upgrader — Upgraded! 🎉`
-    : `⬆️  Upgrader — Failed ❌`;
+  const color = won ? COLORS.success : COLORS.danger;
+  const title = won ? `⬆️  Upgrader — Upgraded! 🎉` : `⬆️  Upgrader — Failed ❌`;
 
   const lines: string[] = [
     `💎 **Bet**         \`${formatAmount(bet)}\``,
     `✨ **Multiplier**  \`${multiplier.toFixed(2)}x\``,
-    `📊 **Win chance**  \`${(chance * 100).toFixed(1)}%\``,
-    buildChanceBar(chance),
+    `📊 **Win if roll <** \`${chancePct.toFixed(2)}\``,
+    `🎲 **Rolled**      \`${rolled.toFixed(2)}\`  ${won ? "✅" : "❌"}`,
+    "",
+    buildChanceBar(chancePct, rolled),
     "",
   ];
 
   if (won) {
     lines.push(
-      `✅ **Result**    Win!`,
       `💰 **Payout**   \`${formatAmount(payout)}\``,
       `📈 **Profit**   \`+${formatAmount(profit)}\``,
     );
   } else {
-    lines.push(
-      `❌ **Result**    Loss`,
-      `💸 **Lost**     \`-${formatAmount(bet)}\``,
-    );
+    lines.push(`💸 **Lost**     \`-${formatAmount(bet)}\``);
   }
 
   return new EmbedBuilder()
@@ -117,16 +115,15 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
   await addBalance(interaction.user.id, -amount);
 
-  const chance = winChance(multiplier);
-  const won    = Math.random() < chance;
-  const payout = won ? Math.floor(amount * multiplier) : 0;
+  const rolled    = Math.floor(Math.random() * 10000) / 100; // 0.00 – 99.99
+  const chancePct = winChancePct(multiplier);
+  const won       = rolled < chancePct;
+  const payout    = won ? Math.floor(amount * multiplier) : 0;
 
-  if (won) {
-    await addBalance(interaction.user.id, payout);
-  }
+  if (won) await addBalance(interaction.user.id, payout);
   await recordBet(interaction.user.id, amount, payout - amount);
 
   await interaction.editReply({
-    embeds: [resultEmbed(amount, multiplier, won, payout)],
+    embeds: [resultEmbed(amount, multiplier, won, payout, rolled)],
   });
 }
