@@ -294,16 +294,16 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   };
   activeSessions.set(sessionKey(interaction.user.id), state);
 
-  // Message 1 — embed + control buttons (1 action row, within Discord limit)
+  // Message 1 — embed + 5×5 grid (embed + 5 action rows, within Discord limit)
   const embedMsg = await interaction.editReply({
     embeds:     [selectionEmbed(state)],
-    components: [controlRow(state.picks, false)],
+    components: numberRows(state.picks),
   });
   state.embedMessageId = embedMsg.id;
 
-  // Message 2 — 5×5 number grid (5 action rows, within Discord limit)
+  // Message 2 — control buttons only (1 action row)
   const panelMsg = await interaction.followUp({
-    components: numberRows(state.picks),
+    components: [controlRow(state.picks, false)],
   });
   state.panelMessageId = panelMsg.id;
 }
@@ -320,14 +320,14 @@ async function runDraw(interaction: ButtonInteraction, state: KenoState): Promis
   await recordBet(state.userId, state.bet, payout - state.bet);
   activeSessions.delete(sessionKey(state.userId));
 
-  // Draw button is on the embed message — update it to show result + Play Again
+  // Draw button is on message 2 (controls) — replace with Play Again
   await interaction.update({
-    embeds:     [resultEmbed(state, hits, payout)],
     components: [playAgainRow(state.userId, state.bet, state.difficulty)],
   });
 
-  // Freeze the grid panel in place
-  await editChannelMessage(interaction, state.panelMessageId, {
+  // Freeze message 1 (embed+grid) with result embed + outcome grid
+  await editChannelMessage(interaction, state.embedMessageId, {
+    embeds:     [resultEmbed(state, hits, payout)],
     components: resultNumberRows(state.picks, drawn),
   });
 }
@@ -353,12 +353,14 @@ export async function handleNumber(interaction: ButtonInteraction, n: number): P
 
   const canDraw = state.picks.size === PICK_COUNT;
 
-  // Number button is on the grid panel — update the panel
-  await interaction.update({ components: numberRows(state.picks) });
-
-  // Also refresh the embed to show updated count and enable/disable Draw
-  await editChannelMessage(interaction, state.embedMessageId, {
+  // Number button is on message 1 (embed+grid) — update embed + grid together
+  await interaction.update({
     embeds:     [selectionEmbed(state)],
+    components: numberRows(state.picks),
+  });
+
+  // Also refresh message 2 (controls) to enable/disable Draw
+  await editChannelMessage(interaction, state.panelMessageId, {
     components: [controlRow(state.picks, canDraw)],
   });
 }
@@ -379,14 +381,14 @@ export async function handleQuickPick(interaction: ButtonInteraction): Promise<v
   }
   pool.slice(0, PICK_COUNT).forEach((n) => state.picks.add(n));
 
-  // Quick Pick button is on the embed message — update embed
+  // Quick Pick button is on message 2 (controls) — update controls
   await interaction.update({
-    embeds:     [selectionEmbed(state)],
     components: [controlRow(state.picks, true)],
   });
 
-  // Update the grid panel to reflect newly picked numbers
-  await editChannelMessage(interaction, state.panelMessageId, {
+  // Update message 1 (embed+grid) to reflect newly picked numbers
+  await editChannelMessage(interaction, state.embedMessageId, {
+    embeds:     [selectionEmbed(state)],
     components: numberRows(state.picks),
   });
 }
@@ -400,14 +402,14 @@ export async function handleClear(interaction: ButtonInteraction): Promise<void>
 
   state.picks.clear();
 
-  // Clear button is on the embed message — update embed
+  // Clear button is on message 2 (controls) — update controls
   await interaction.update({
-    embeds:     [selectionEmbed(state)],
     components: [controlRow(state.picks, false)],
   });
 
-  // Reset the grid panel
-  await editChannelMessage(interaction, state.panelMessageId, {
+  // Reset message 1 (embed+grid)
+  await editChannelMessage(interaction, state.embedMessageId, {
+    embeds:     [selectionEmbed(state)],
     components: numberRows(state.picks),
   });
 }
@@ -462,17 +464,19 @@ export async function handlePlayAgain(
   };
   activeSessions.set(sessionKey(interaction.user.id), state);
 
-  // Remove the Play Again button from the old embed (like other games)
+  // Remove the Play Again button from the old controls message
   await interaction.update({ components: [] });
 
-  // Send brand-new messages in the channel — new panel, new embed
+  // Send brand-new messages — message 1: embed+grid, message 2: controls
   const channel  = interaction.channel as TextChannel;
-  const panelMsg = await channel.send({ components: numberRows(state.picks) });
   const embedMsg = await channel.send({
     embeds:     [selectionEmbed(state)],
+    components: numberRows(state.picks),
+  });
+  const panelMsg = await channel.send({
     components: [controlRow(state.picks, false)],
   });
 
-  state.panelMessageId = panelMsg.id;
   state.embedMessageId = embedMsg.id;
+  state.panelMessageId = panelMsg.id;
 }
