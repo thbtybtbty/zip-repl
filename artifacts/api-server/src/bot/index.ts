@@ -7,6 +7,7 @@ import {
   type Interaction,
   type ButtonInteraction,
   type ModalSubmitInteraction,
+  type StringSelectMenuInteraction,
   type GuildMember,
 } from "discord.js";
 import { db, usersTable } from "@workspace/db";
@@ -30,9 +31,12 @@ import * as removebalance from "./commands/removebalance.js";
 import * as wheel         from "./commands/wheel.js";
 import * as roulette      from "./commands/roulette.js";
 import * as crash         from "./commands/crash.js";
-import * as scratchcard   from "./commands/scratchcard.js";
+import * as scratchcard      from "./commands/scratchcard.js";
+import * as chickencrossing  from "./commands/chickencrossing.js";
+import * as colordice        from "./commands/colordice.js";
+import * as upgrader         from "./commands/upgrader.js";
 
-const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, roulette, crash, scratchcard];
+const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, roulette, crash, scratchcard, chickencrossing, colordice, upgrader];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -60,8 +64,11 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "removebalance") return await removebalance.execute(interaction);
       if (name === "wheel")         return await wheel.execute(interaction);
       if (name === "roulette")      return await roulette.execute(interaction);
-      if (name === "crash")         return await crash.execute(interaction);
-      if (name === "scratchcard")   return await scratchcard.execute(interaction);
+      if (name === "crash")            return await crash.execute(interaction);
+      if (name === "scratchcard")      return await scratchcard.execute(interaction);
+      if (name === "chickencrossing")  return await chickencrossing.execute(interaction);
+      if (name === "colordice")        return await colordice.execute(interaction);
+      if (name === "upgrader")         return await upgrader.execute(interaction);
     } catch (err) {
       logger.error({ err, command: name }, "Error executing command");
       const payload = { content: "❌ Something went wrong. Please try again.", ephemeral: true };
@@ -137,6 +144,20 @@ async function handleInteraction(interaction: Interaction) {
         return await mines.handlePlayAgain(bi, userId!, minesCount!, bet!);
       }
 
+      // Chicken Crossing
+      if (id.startsWith("cc_fwd_"))  return await chickencrossing.handleForward(bi);
+      if (id.startsWith("cc_cash_")) return await chickencrossing.handleCashout(bi);
+      if (id.startsWith("pa_cc_")) {
+        const rest = id.slice("pa_cc_".length);
+        // format: userId_difficulty_bet
+        const lastUnderscore  = rest.lastIndexOf("_");
+        const midUnderscore   = rest.lastIndexOf("_", lastUnderscore - 1);
+        const userId          = rest.slice(0, midUnderscore);
+        const difficulty      = rest.slice(midUnderscore + 1, lastUnderscore);
+        const bet             = rest.slice(lastUnderscore + 1);
+        return await chickencrossing.handlePlayAgain(bi, userId, difficulty, bet);
+      }
+
       // Scratchcard
       if (id.startsWith("sc_reveal_")) {
         const parts = id.slice("sc_reveal_".length).split("_");
@@ -175,6 +196,21 @@ async function handleInteraction(interaction: Interaction) {
       logger.error({ err, buttonId: id }, "Error handling button");
       if (!bi.replied && !bi.deferred) {
         await bi.reply({ content: "❌ Something went wrong.", ephemeral: true });
+      }
+    }
+    return;
+  }
+
+  // ── Select menus ──
+  if (interaction.isStringSelectMenu()) {
+    const si = interaction as StringSelectMenuInteraction;
+    const id = si.customId;
+    try {
+      if (id.startsWith("cd_pick_")) return await colordice.handleColorPick(si);
+    } catch (err) {
+      logger.error({ err, selectId: id }, "Error handling select menu");
+      if (!si.replied && !si.deferred) {
+        await si.reply({ content: "❌ Something went wrong.", ephemeral: true });
       }
     }
     return;
