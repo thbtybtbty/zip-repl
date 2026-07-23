@@ -68,13 +68,24 @@ function countMatches(dice: DiceColor[], pick: DiceColor): number {
 }
 
 // ─── Rolling animation embed ──────────────────────────────────────────────────
-function rollingEmbed(bet: number, pick: DiceColor): EmbedBuilder {
-  // Show a random scramble of 6 colored dice
-  const randomDice = Array.from(
+const PROGRESS_BARS = [
+  "▰▱▱▱▱▱▱▱▱▱",
+  "▰▰▰▱▱▱▱▱▱▱",
+  "▰▰▰▰▰▱▱▱▱▱",
+  "▰▰▰▰▰▰▰▱▱▱",
+  "▰▰▰▰▰▰▰▰▰▱",
+  "▰▰▰▰▰▰▰▰▰▰",
+];
+
+function randomDiceRow(): string {
+  return Array.from(
     { length: 6 },
     () => COLOR_EMOJI[COLORS_LIST[Math.floor(Math.random() * COLORS_LIST.length)]!],
   ).join("");
+}
 
+function rollingEmbed(bet: number, pick: DiceColor, frame: number): EmbedBuilder {
+  const bar = PROGRESS_BARS[Math.min(frame, PROGRESS_BARS.length - 1)]!;
   return new EmbedBuilder()
     .setColor(COLORS.primary)
     .setTitle("🎲  Color Dice")
@@ -83,10 +94,10 @@ function rollingEmbed(bet: number, pick: DiceColor): EmbedBuilder {
         `💎 **Bet**  \`${formatAmount(bet)}\``,
         `${COLOR_EMOJI[pick]} **Your pick**  ${pick.charAt(0).toUpperCase() + pick.slice(1)}`,
         "",
-        randomDice,
+        randomDiceRow(),
         "",
         "🕐 **Rolling the dice…**",
-        "▱▱▱▱▱▱▱▱▱▱",
+        bar,
       ].join("\n"),
     )
     .setTimestamp();
@@ -218,14 +229,23 @@ export async function handleColorPick(interaction: StringSelectMenuInteraction):
   const pick = interaction.values[0] as DiceColor;
   pendingColorDice.delete(userId);
 
-  // ── Step 1: show rolling animation ──
+  // ── Step 1: show first rolling frame immediately ──
   await interaction.update({
-    embeds:     [rollingEmbed(pending.bet, pick)],
+    embeds:     [rollingEmbed(pending.bet, pick, 0)],
     components: [],
   });
 
-  // ── Step 2: after 1.5 s, reveal result ──
-  await new Promise<void>((resolve) => setTimeout(resolve, 1500));
+  // ── Step 2: fire several frames with random dice each time ──
+  const FRAME_MS = 350;
+  for (let frame = 1; frame <= 5; frame++) {
+    await new Promise<void>((resolve) => setTimeout(resolve, FRAME_MS));
+    try {
+      await interaction.editReply({ embeds: [rollingEmbed(pending.bet, pick, frame)] });
+    } catch { /* skip if rate-limited */ }
+  }
+
+  // ── Step 3: brief pause before reveal ──
+  await new Promise<void>((resolve) => setTimeout(resolve, 300));
 
   const dice    = rollDice();
   const matches = countMatches(dice, pick);
