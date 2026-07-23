@@ -7,6 +7,8 @@ import {
   type ChatInputCommandInteraction,
   type ButtonInteraction,
   type MessageActionRowComponentBuilder,
+  type TextChannel,
+  type MessageEditOptions,
 } from "discord.js";
 import {
   COLORS,
@@ -19,11 +21,12 @@ import {
 } from "../utils.js";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const GRID_SIZE  = 20;
+const GRID_SIZE  = 25;
 const PICK_COUNT = 6;
 
-const EASY_PAYOUTS: Record<number, number> = { 2: 1.5, 3: 2, 4: 5, 5: 20, 6: 50  };
-const HARD_PAYOUTS: Record<number, number> = { 2: 3,   3: 10, 4: 40, 5: 100, 6: 200 };
+// Easy: 2+ hits pay. Hard: 3+ hits pay (bigger multipliers).
+const EASY_PAYOUTS: Record<number, number> = { 2: 1.5, 3: 2, 4: 5,  5: 20,  6: 50  };
+const HARD_PAYOUTS: Record<number, number> = {         3: 2, 4: 10, 5: 50,  6: 200  };
 
 function getPayouts(difficulty: string) {
   return difficulty === "hard" ? HARD_PAYOUTS : EASY_PAYOUTS;
@@ -39,28 +42,39 @@ function payoutLine(difficulty: string) {
 
 // ─── State ────────────────────────────────────────────────────────────────────
 interface KenoState {
-  userId:     string;
-  bet:        number;
-  difficulty: string;
-  picks:      Set<number>;
+  userId:         string;
+  bet:            number;
+  difficulty:     string;
+  picks:          Set<number>;
+  /** ID of the embed+controls message */
+  embedMessageId: string;
+  /** ID of the 5×5 grid panel message */
+  panelMessageId: string;
+  channelId:      string;
 }
 
 const activeSessions = new Map<string, KenoState>();
 const sessionKey = (userId: string) => `${userId}_keno`;
 
 // ─── Button rows ──────────────────────────────────────────────────────────────
-/** Interactive number grid shown during pick phase. */
+/**
+ * 5×5 interactive grid (25 numbers, 5 rows).
+ * Picked numbers show a ✓ prefix and are blue (Primary).
+ * This panel is sent as its own message so it uses all 5 Discord row slots
+ * while the embed+controls live on a separate message (1 row).
+ */
 function numberRows(picks: Set<number>): ActionRowBuilder<MessageActionRowComponentBuilder>[] {
   const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
-  for (let row = 0; row < 4; row++) {
+  for (let row = 0; row < 5; row++) {
     const ar = new ActionRowBuilder<MessageActionRowComponentBuilder>();
     for (let col = 0; col < 5; col++) {
-      const n = row * 5 + col + 1;
+      const n      = row * 5 + col + 1;
+      const picked = picks.has(n);
       ar.addComponents(
         new ButtonBuilder()
           .setCustomId(`keno_num_${n}`)
-          .setLabel(`${n}`)
-          .setStyle(picks.has(n) ? ButtonStyle.Primary : ButtonStyle.Secondary),
+          .setLabel(picked ? `✓${n}` : `${n}`)
+          .setStyle(picked ? ButtonStyle.Primary : ButtonStyle.Secondary),
       );
     }
     rows.push(ar);
@@ -68,13 +82,13 @@ function numberRows(picks: Set<number>): ActionRowBuilder<MessageActionRowCompon
   return rows;
 }
 
-/** Frozen result grid shown after draw — buttons disabled with result markers. */
+/** Frozen result grid shown after draw. Disabled buttons with outcome markers. */
 function resultNumberRows(
   picks: Set<number>,
   drawn: Set<number>,
 ): ActionRowBuilder<MessageActionRowComponentBuilder>[] {
   const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
-  for (let row = 0; row < 4; row++) {
+  for (let row = 0; row < 5; row++) {
     const ar = new ActionRowBuilder<MessageActionRowComponentBuilder>();
     for (let col = 0; col < 5; col++) {
       const n        = row * 5 + col + 1;
@@ -85,15 +99,15 @@ function resultNumberRows(
       let style: ButtonStyle;
 
       if (isPicked && isDrawn) {
-        // HIT — user picked it and it was drawn
+        // HIT — picked + drawn
         label = `✓${n}`;
         style = ButtonStyle.Success;
       } else if (isDrawn && !isPicked) {
-        // Bot drew it but user didn't pick — mark with ✗
+        // Bot drew it but you didn't pick
         label = `✗${n}`;
         style = ButtonStyle.Danger;
       } else {
-        // Not drawn (whether picked or not) — plain
+        // Not drawn
         label = `${n}`;
         style = ButtonStyle.Secondary;
       }
@@ -111,7 +125,10 @@ function resultNumberRows(
   return rows;
 }
 
-function controlRow(picks: Set<number>, canDraw: boolean): ActionRowBuilder<MessageActionRowComponentBuilder> {
+function controlRow(
+  picks: Set<number>,
+  canDraw: boolean,
+): ActionRowBuilder<MessageActionRowComponentBuilder> {
   return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId("keno_quick")
@@ -130,7 +147,11 @@ function controlRow(picks: Set<number>, canDraw: boolean): ActionRowBuilder<Mess
   );
 }
 
-function playAgainRow(userId: string, bet: number, difficulty: string): ActionRowBuilder<MessageActionRowComponentBuilder> {
+function playAgainRow(
+  userId: string,
+  bet: number,
+  difficulty: string,
+): ActionRowBuilder<MessageActionRowComponentBuilder> {
   return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(`pa_keno_${userId}_${difficulty}_${bet}`)
@@ -142,9 +163,10 @@ function playAgainRow(userId: string, bet: number, difficulty: string): ActionRo
 // ─── Embeds ───────────────────────────────────────────────────────────────────
 function selectionEmbed(state: KenoState): EmbedBuilder {
   const mode = state.difficulty === "hard" ? "Hard" : "Easy";
-  const hint = state.picks.size < PICK_COUNT
-    ? `_Pick **${PICK_COUNT - state.picks.size}** more number(s) or use ✨ Quick Pick_`
-    : `_Ready! Click 🎲 Draw to play._`;
+  const hint =
+    state.picks.size < PICK_COUNT
+      ? `_Pick **${PICK_COUNT - state.picks.size}** more number(s) or use ✨ Quick Pick_`
+      : `_Ready! Click 🎲 Draw to play._`;
 
   return new EmbedBuilder()
     .setColor(COLORS.primary)
@@ -164,15 +186,11 @@ function selectionEmbed(state: KenoState): EmbedBuilder {
     .setTimestamp();
 }
 
-function resultEmbed(
-  state:      KenoState,
-  hits:       number,
-  payout:     number,
-): EmbedBuilder {
+function resultEmbed(state: KenoState, hits: number, payout: number): EmbedBuilder {
   const payouts    = getPayouts(state.difficulty);
   const multiplier = payouts[hits] ?? 0;
   const profit     = payout - state.bet;
-  const won        = hits >= 2 && multiplier > 0;
+  const won        = multiplier > 0;
   const mode       = state.difficulty === "hard" ? "Hard" : "Easy";
 
   const lines = [
@@ -206,10 +224,21 @@ function drawNumbers(): Set<number> {
   return new Set(pool.slice(0, PICK_COUNT));
 }
 
+// ─── Helper: edit any channel message by ID ───────────────────────────────────
+async function editChannelMessage(
+  interaction: ButtonInteraction,
+  messageId: string,
+  data: MessageEditOptions,
+): Promise<void> {
+  const channel = interaction.channel as TextChannel;
+  const msg     = await channel.messages.fetch(messageId);
+  await msg.edit(data);
+}
+
 // ─── Command ──────────────────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
   .setName("keno")
-  .setDescription("Pick numbers and match the draw — big multipliers await!")
+  .setDescription("Pick 6 numbers from 1–25 and match the draw!")
   .addStringOption((o) =>
     o.setName("amount").setDescription("Bet amount (e.g. 1m, 2.5b, 500k)").setRequired(true),
   )
@@ -244,13 +273,29 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
   await addBalance(interaction.user.id, -amount);
 
-  const state: KenoState = { userId: interaction.user.id, bet: amount, difficulty, picks: new Set() };
+  const state: KenoState = {
+    userId:         interaction.user.id,
+    bet:            amount,
+    difficulty,
+    picks:          new Set(),
+    embedMessageId: "",
+    panelMessageId: "",
+    channelId:      interaction.channelId,
+  };
   activeSessions.set(sessionKey(interaction.user.id), state);
 
-  await interaction.editReply({
+  // Message 1 — embed + control buttons (1 action row, within Discord limit)
+  const embedMsg = await interaction.editReply({
     embeds:     [selectionEmbed(state)],
-    components: [...numberRows(state.picks), controlRow(state.picks, false)],
+    components: [controlRow(state.picks, false)],
   });
+  state.embedMessageId = embedMsg.id;
+
+  // Message 2 — 5×5 number grid (5 action rows, within Discord limit)
+  const panelMsg = await interaction.followUp({
+    components: numberRows(state.picks),
+  });
+  state.panelMessageId = panelMsg.id;
 }
 
 // ─── Shared: run the draw ─────────────────────────────────────────────────────
@@ -259,16 +304,21 @@ async function runDraw(interaction: ButtonInteraction, state: KenoState): Promis
   const hits       = [...state.picks].filter((n) => drawn.has(n)).length;
   const payouts    = getPayouts(state.difficulty);
   const multiplier = payouts[hits] ?? 0;
-  const payout     = hits >= 2 ? Math.floor(state.bet * multiplier) : 0;
+  const payout     = multiplier > 0 ? Math.floor(state.bet * multiplier) : 0;
 
   if (payout > 0) await addBalance(state.userId, payout);
   await recordBet(state.userId, state.bet, payout - state.bet);
   activeSessions.delete(sessionKey(state.userId));
 
+  // Draw button is on the embed message — update it to show result + Play Again
   await interaction.update({
     embeds:     [resultEmbed(state, hits, payout)],
-    // Keep the grid buttons (frozen), replace control row with Play Again
-    components: [...resultNumberRows(state.picks, drawn), playAgainRow(state.userId, state.bet, state.difficulty)],
+    components: [playAgainRow(state.userId, state.bet, state.difficulty)],
+  });
+
+  // Freeze the grid panel in place
+  await editChannelMessage(interaction, state.panelMessageId, {
+    components: resultNumberRows(state.picks, drawn),
   });
 }
 
@@ -283,15 +333,23 @@ export async function handleNumber(interaction: ButtonInteraction, n: number): P
     state.picks.delete(n);
   } else {
     if (state.picks.size >= PICK_COUNT) {
-      return void interaction.reply({ content: `❌ You can only pick **${PICK_COUNT}** numbers.`, ephemeral: true });
+      return void interaction.reply({
+        content:   `❌ You can only pick **${PICK_COUNT}** numbers.`,
+        ephemeral: true,
+      });
     }
     state.picks.add(n);
   }
 
   const canDraw = state.picks.size === PICK_COUNT;
-  await interaction.update({
+
+  // Number button is on the grid panel — update the panel
+  await interaction.update({ components: numberRows(state.picks) });
+
+  // Also refresh the embed to show updated count and enable/disable Draw
+  await editChannelMessage(interaction, state.embedMessageId, {
     embeds:     [selectionEmbed(state)],
-    components: [...numberRows(state.picks), controlRow(state.picks, canDraw)],
+    components: [controlRow(state.picks, canDraw)],
   });
 }
 
@@ -302,16 +360,24 @@ export async function handleQuickPick(interaction: ButtonInteraction): Promise<v
     return void interaction.reply({ content: "❌ No active Keno session for you.", ephemeral: true });
   }
 
-  const pool = Array.from({ length: GRID_SIZE }, (_, i) => i + 1).filter((n) => !state.picks.has(n));
+  // Clear all existing picks and choose 6 brand-new random numbers
+  state.picks.clear();
+  const pool = Array.from({ length: GRID_SIZE }, (_, i) => i + 1);
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j]!, pool[i]!];
   }
-  pool.slice(0, PICK_COUNT - state.picks.size).forEach((n) => state.picks.add(n));
+  pool.slice(0, PICK_COUNT).forEach((n) => state.picks.add(n));
 
+  // Quick Pick button is on the embed message — update embed
   await interaction.update({
     embeds:     [selectionEmbed(state)],
-    components: [...numberRows(state.picks), controlRow(state.picks, true)],
+    components: [controlRow(state.picks, true)],
+  });
+
+  // Update the grid panel to reflect newly picked numbers
+  await editChannelMessage(interaction, state.panelMessageId, {
+    components: numberRows(state.picks),
   });
 }
 
@@ -323,9 +389,16 @@ export async function handleClear(interaction: ButtonInteraction): Promise<void>
   }
 
   state.picks.clear();
+
+  // Clear button is on the embed message — update embed
   await interaction.update({
     embeds:     [selectionEmbed(state)],
-    components: [...numberRows(state.picks), controlRow(state.picks, false)],
+    components: [controlRow(state.picks, false)],
+  });
+
+  // Reset the grid panel
+  await editChannelMessage(interaction, state.panelMessageId, {
+    components: numberRows(state.picks),
   });
 }
 
@@ -336,7 +409,10 @@ export async function handleDraw(interaction: ButtonInteraction): Promise<void> 
     return void interaction.reply({ content: "❌ No active Keno session for you.", ephemeral: true });
   }
   if (state.picks.size < PICK_COUNT) {
-    return void interaction.reply({ content: `❌ Pick **${PICK_COUNT}** numbers first.`, ephemeral: true });
+    return void interaction.reply({
+      content:   `❌ Pick **${PICK_COUNT}** numbers first.`,
+      ephemeral: true,
+    });
   }
   await runDraw(interaction, state);
 }
@@ -352,25 +428,41 @@ export async function handlePlayAgain(
     return void interaction.reply({ content: "❌ This is not your game.", ephemeral: true });
   }
 
-  await interaction.deferUpdate();
-
   const bet  = parseInt(betStr, 10);
   const user = await getOrCreateUser(interaction.user.id, interaction.user.username);
 
   if (user.balance < bet) {
-    return void interaction.editReply({
+    await interaction.update({
       embeds:     [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} 💎**.`)],
       components: [],
     });
+    return;
   }
 
   await addBalance(interaction.user.id, -bet);
 
-  const state: KenoState = { userId: interaction.user.id, bet, difficulty, picks: new Set() };
+  const state: KenoState = {
+    userId:         interaction.user.id,
+    bet,
+    difficulty,
+    picks:          new Set(),
+    embedMessageId: "",
+    panelMessageId: "",
+    channelId:      interaction.channelId,
+  };
   activeSessions.set(sessionKey(interaction.user.id), state);
 
-  await interaction.editReply({
+  // Remove the Play Again button from the old embed (like other games)
+  await interaction.update({ components: [] });
+
+  // Send brand-new messages in the channel — new panel, new embed
+  const channel  = interaction.channel as TextChannel;
+  const panelMsg = await channel.send({ components: numberRows(state.picks) });
+  const embedMsg = await channel.send({
     embeds:     [selectionEmbed(state)],
-    components: [...numberRows(state.picks), controlRow(state.picks, false)],
+    components: [controlRow(state.picks, false)],
   });
+
+  state.panelMessageId = panelMsg.id;
+  state.embedMessageId = embedMsg.id;
 }
