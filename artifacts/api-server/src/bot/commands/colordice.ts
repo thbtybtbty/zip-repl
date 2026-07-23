@@ -236,7 +236,7 @@ export async function handleColorPick(interaction: StringSelectMenuInteraction):
   });
 
   // ── Step 2: fire several frames with random dice each time ──
-  const FRAME_MS = 350;
+  const FRAME_MS = 500;
   for (let frame = 1; frame <= 5; frame++) {
     await new Promise<void>((resolve) => setTimeout(resolve, FRAME_MS));
     try {
