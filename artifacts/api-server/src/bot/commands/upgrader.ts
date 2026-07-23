@@ -14,63 +14,85 @@ import {
 } from "../utils.js";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const RTP        = 0.925; // 7.5% house edge
-const MULT_MIN   = 1.5;
-const MULT_MAX   = 25;
+const RTP      = 0.925; // 7.5% house edge
+const MULT_MIN = 1.5;
+const MULT_MAX = 25;
 
-// ─── Win chance (as 0–100 percentage) ────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function winChancePct(multiplier: number): number {
   return (RTP / multiplier) * 100;
 }
 
-// ─── Progress bar (win-chance zone visualisation, 20 segments = 0–100) ────────
-function buildChanceBar(chancePct: number, rolledPct: number): string {
-  const winSegments    = Math.round(chancePct / 5);   // how many segments are "safe"
-  const rolledSegment  = Math.min(19, Math.floor(rolledPct / 5)); // which segment the roll landed on
-  return Array.from({ length: 20 }, (_, i) => {
-    if (i === rolledSegment) return "🔸"; // marker showing where the roll landed
-    return i < winSegments ? "▰" : "▱";  // filled = win zone, empty = loss zone
+/**
+ * 24-block colour bar.
+ * 🟦 = win zone  ⬛ = loss zone  🟩 = roll landed here (win)  🟥 = roll landed here (loss)
+ */
+function buildBar(chancePct: number, rolled: number, won: boolean): string {
+  const SEGS    = 24;
+  const winSegs = Math.round((chancePct / 100) * SEGS);
+  const rollSeg = Math.min(SEGS - 1, Math.floor((rolled / 100) * SEGS));
+
+  return Array.from({ length: SEGS }, (_, i) => {
+    if (i === rollSeg) return won ? "🟩" : "🟥";
+    return i < winSegs ? "🟦" : "⬛";
   }).join("");
 }
 
-// ─── Embeds ───────────────────────────────────────────────────────────────────
+// ─── Embed ────────────────────────────────────────────────────────────────────
 function resultEmbed(
   bet:        number,
   multiplier: number,
   won:        boolean,
   payout:     number,
-  rolled:     number,  // 0.00 – 99.99
+  rolled:     number, // 0.00 – 99.99
 ): EmbedBuilder {
   const chancePct = winChancePct(multiplier);
   const profit    = payout - bet;
 
-  const color = won ? COLORS.success : COLORS.danger;
-  const title = won ? `⬆️  Upgrader — Upgraded! 🎉` : `⬆️  Upgrader — Failed ❌`;
+  // ── Hero line: the roll comparison ──
+  const symbol  = won ? "✅" : "❌";
+  const verdict = won ? "**WIN**" : "**LOSS**";
+  const heroLine = won
+    ? `${symbol}  \`${rolled.toFixed(2)}\` rolled  \`<\`  \`${chancePct.toFixed(2)}\` needed  →  ${verdict}`
+    : `${symbol}  \`${rolled.toFixed(2)}\` rolled  \`≥\`  \`${chancePct.toFixed(2)}\` needed  →  ${verdict}`;
 
-  const lines: string[] = [
-    `💎 **Bet**         \`${formatAmount(bet)}\``,
-    `✨ **Multiplier**  \`${multiplier.toFixed(2)}x\``,
-    `📊 **Win if roll <** \`${chancePct.toFixed(2)}\``,
-    `🎲 **Rolled**      \`${rolled.toFixed(2)}\`  ${won ? "✅" : "❌"}`,
-    "",
-    buildChanceBar(chancePct, rolled),
-    "",
-  ];
+  // ── Bar legend ──
+  const legendLine = `\`◀ WIN ${chancePct.toFixed(1).padStart(5)}%  ${"─".repeat(8)}  ${(100 - chancePct).toFixed(1).padEnd(5)}% LOSS ▶\``;
+
+  const embed = new EmbedBuilder()
+    .setColor(won ? COLORS.success : COLORS.danger)
+    .setTitle("⬆️  Upgrader")
+    .setDescription(
+      [
+        heroLine,
+        "",
+        buildBar(chancePct, rolled, won),
+        legendLine,
+      ].join("\n"),
+    )
+    .addFields(
+      { name: "💎  Bet",        value: `\`${formatAmount(bet)}\``,              inline: true },
+      { name: "✨  Multiplier", value: `\`${multiplier.toFixed(2)}×\``,         inline: true },
+      { name: "📊  Win Chance", value: `\`${chancePct.toFixed(2)}%\``,          inline: true },
+    );
 
   if (won) {
-    lines.push(
-      `💰 **Payout**   \`${formatAmount(payout)}\``,
-      `📈 **Profit**   \`+${formatAmount(profit)}\``,
+    embed.addFields(
+      { name: "💰  Payout", value: `\`${formatAmount(payout)}\``,   inline: true },
+      { name: "📈  Profit", value: `\`+${formatAmount(profit)}\``,  inline: true },
+      { name: "\u200b",     value: "\u200b",                         inline: true },
     );
   } else {
-    lines.push(`💸 **Lost**     \`-${formatAmount(bet)}\``);
+    embed.addFields(
+      { name: "💸  Lost", value: `\`-${formatAmount(bet)}\``, inline: true },
+    );
   }
 
-  return new EmbedBuilder()
-    .setColor(color)
-    .setTitle(title)
-    .setDescription(lines.join("\n"))
+  embed
+    .setFooter({ text: "House edge 7.5%  •  /upgrader" })
     .setTimestamp();
+
+  return embed;
 }
 
 // ─── Command ──────────────────────────────────────────────────────────────────
