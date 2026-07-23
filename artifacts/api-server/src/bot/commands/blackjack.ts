@@ -193,7 +193,8 @@ function playAgainRow(userId: string, bet: number, disabled = false): ActionRowB
 // 7.5% of player wins are silently flipped to dealer wins.
 // Payouts remain full — the edge is in outcome probability, not payout size.
 function applyHouseEdge(status: GameStatus): GameStatus {
-  if (status === "player_win" || status === "dealer_bust" || status === "blackjack") {
+  // dealer_bust is excluded — the bust is visible on screen so it can't be silently flipped
+  if (status === "player_win" || status === "blackjack") {
     if (Math.random() < 0.075) return "dealer_win";
   }
   return status;

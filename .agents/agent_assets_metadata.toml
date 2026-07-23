@@ -42,3 +42,9 @@ id = "39NG4SDUknnQJICwjOqzi"
 uri = "file://attached_assets/wispbyte-full-updated-v3.tar.gz"
 type = "unspecified"
 title = "WispByte full archive v3 — BJ + coinflip + colordice + min bet"
+
+[[outputs]]
+id = "yaPJfXLJPBSzXxoiCuQvY"
+uri = "file://attached_assets/wispbyte-bj-bustfix.tar.gz"
+type = "unspecified"
+title = "WispByte — blackjack dealer bust fix"
