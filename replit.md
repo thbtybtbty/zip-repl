@@ -1,38 +1,40 @@
 # PS99 GemSpin Bet — Discord Gambling Bot
 
-A Discord gambling bot with an Express API backend.
+A Discord gambling bot with a SQLite economy, slash commands, and an Express health-check endpoint.
 
 ## Stack
-- **Runtime:** Node.js 20, TypeScript, pnpm monorepo
-- **Bot:** discord.js v14 with 19 slash commands
-- **API:** Express 5 with pino logging
-- **Database:** SQLite (better-sqlite3 + drizzle-orm), stored at `artifacts/api-server/bot.db`
 
-## Running the project
+- **Runtime**: Node.js (ESM)
+- **Discord**: discord.js v14
+- **Database**: SQLite via better-sqlite3 + Drizzle ORM (`artifacts/api-server/bot.db`)
+- **HTTP**: Express v5 (health-check at `/api`)
+- **Build**: esbuild (`artifacts/api-server/build.mjs`)
+- **Monorepo**: pnpm workspaces
 
-The bot is in `artifacts/api-server`. Start it with the **API Server** workflow.
+## How to run
+
+The bot starts automatically via the **API Server** workflow:
 
 ```
-pnpm install          # install all workspace deps
-pnpm --filter @workspace/api-server run dev   # build + start
+pnpm --filter @workspace/api-server run dev
 ```
+
+This builds the TypeScript source and starts the bot + HTTP server.
 
 ## Required secrets
 
-| Secret | Description |
-|--------|-------------|
-| `DISCORD_BOT_TOKEN` | Bot token from Discord Developer Portal |
+| Key | Where to get it |
+|-----|----------------|
+| `DISCORD_BOT_TOKEN` | Discord Developer Portal → your app → Bot → Token |
+| `DISCORD_CLIENT_ID` | Discord Developer Portal → your app → Application ID (set as env var) |
+| `SESSION_SECRET` | Any long random string |
 
-## Environment variables (already set in .replit)
+## Games / commands
 
-| Variable | Value |
-|----------|-------|
-| `DISCORD_CLIENT_ID` | `1528108960534630481` |
+mines, towers, rps, coinflip, blackjack, wheel, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, balance, tip, deposit, withdraw, setup, addbalance, removebalance
 
-## Config
+## Server config
 
-`artifacts/api-server/server-config.json` holds Discord channel IDs for deposits, withdrawals, and requests, plus the Roblox username.
+`artifacts/api-server/server-config.json` holds channel IDs for deposit/withdraw/request and the Roblox username used for trade verification.
 
 ## User preferences
-
-- Keep the existing monorepo structure and stack.
