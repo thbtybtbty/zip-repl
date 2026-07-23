@@ -19,28 +19,25 @@ import {
 } from "../utils.js";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const GRID_SIZE  = 20;  // numbers 1-20 (5 action rows: 4 number rows + 1 control row)
-const PICK_COUNT = 6;   // player picks 6, bot draws 6
+const GRID_SIZE  = 20;
+const PICK_COUNT = 6;
 
-const EASY_PAYOUTS: Record<number, number> = { 2: 1.5, 3: 2, 4: 5, 5: 20, 6: 50 };
+const EASY_PAYOUTS: Record<number, number> = { 2: 1.5, 3: 2, 4: 5, 5: 20, 6: 50  };
 const HARD_PAYOUTS: Record<number, number> = { 2: 3,   3: 10, 4: 40, 5: 100, 6: 200 };
 
 function getPayouts(difficulty: string) {
   return difficulty === "hard" ? HARD_PAYOUTS : EASY_PAYOUTS;
 }
-
-function topPrize(difficulty: string): number {
-  const p = getPayouts(difficulty);
-  return Math.max(...Object.values(p));
+function topPrize(difficulty: string) {
+  return Math.max(...Object.values(getPayouts(difficulty)));
 }
-
-function payoutLine(difficulty: string): string {
+function payoutLine(difficulty: string) {
   return Object.entries(getPayouts(difficulty))
-    .map(([hits, mult]) => `**${hits}** hits → **${mult}x**`)
+    .map(([h, m]) => `**${h}** hits → **${m}x**`)
     .join(" · ");
 }
 
-// ─── In-memory game state ─────────────────────────────────────────────────────
+// ─── State ────────────────────────────────────────────────────────────────────
 interface KenoState {
   userId:     string;
   bet:        number;
@@ -49,56 +46,64 @@ interface KenoState {
 }
 
 const activeSessions = new Map<string, KenoState>();
-
-// key: `${userId}_keno`
-function sessionKey(userId: string) { return `${userId}_keno`; }
-
-// ─── Grid rendering ───────────────────────────────────────────────────────────
-type CellState = "none" | "picked" | "hit" | "miss" | "drawn";
-
-function renderGrid(
-  picks: Set<number>,
-  drawn?: Set<number>,
-): string {
-  const rows: string[] = [];
-  for (let row = 0; row < 4; row++) {
-    const cells: string[] = [];
-    for (let col = 0; col < 5; col++) {
-      const n = row * 5 + col + 1;
-      const isPicked = picks.has(n);
-      const isDrawn  = drawn ? drawn.has(n) : false;
-
-      let cell: string;
-      const label = n < 10 ? ` ${n}` : `${n}`;
-
-      if (drawn) {
-        if (isPicked && isDrawn)  cell = `✅\`${label}\``; // hit
-        else if (isPicked)        cell = `❌\`${label}\``; // miss (picked, not drawn)
-        else if (isDrawn)         cell = `🔵\`${label}\``; // drawn, not picked
-        else                      cell = `⬛\`${label}\``; // neither
-      } else {
-        cell = isPicked ? `🟦\`${label}\`` : `⬛\`${label}\``;
-      }
-      cells.push(cell);
-    }
-    rows.push(cells.join(" "));
-  }
-  return rows.join("\n");
-}
+const sessionKey = (userId: string) => `${userId}_keno`;
 
 // ─── Button rows ──────────────────────────────────────────────────────────────
+/** Interactive number grid shown during pick phase. */
 function numberRows(picks: Set<number>): ActionRowBuilder<MessageActionRowComponentBuilder>[] {
   const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
   for (let row = 0; row < 4; row++) {
     const ar = new ActionRowBuilder<MessageActionRowComponentBuilder>();
     for (let col = 0; col < 5; col++) {
       const n = row * 5 + col + 1;
-      const selected = picks.has(n);
       ar.addComponents(
         new ButtonBuilder()
           .setCustomId(`keno_num_${n}`)
           .setLabel(`${n}`)
-          .setStyle(selected ? ButtonStyle.Primary : ButtonStyle.Secondary),
+          .setStyle(picks.has(n) ? ButtonStyle.Primary : ButtonStyle.Secondary),
+      );
+    }
+    rows.push(ar);
+  }
+  return rows;
+}
+
+/** Frozen result grid shown after draw — buttons disabled with result markers. */
+function resultNumberRows(
+  picks: Set<number>,
+  drawn: Set<number>,
+): ActionRowBuilder<MessageActionRowComponentBuilder>[] {
+  const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
+  for (let row = 0; row < 4; row++) {
+    const ar = new ActionRowBuilder<MessageActionRowComponentBuilder>();
+    for (let col = 0; col < 5; col++) {
+      const n        = row * 5 + col + 1;
+      const isPicked = picks.has(n);
+      const isDrawn  = drawn.has(n);
+
+      let label: string;
+      let style: ButtonStyle;
+
+      if (isPicked && isDrawn) {
+        // HIT — user picked it and it was drawn
+        label = `✓${n}`;
+        style = ButtonStyle.Success;
+      } else if (isDrawn && !isPicked) {
+        // Bot drew it but user didn't pick — mark with ✗
+        label = `✗${n}`;
+        style = ButtonStyle.Danger;
+      } else {
+        // Not drawn (whether picked or not) — plain
+        label = `${n}`;
+        style = ButtonStyle.Secondary;
+      }
+
+      ar.addComponents(
+        new ButtonBuilder()
+          .setCustomId(`keno_done_${n}`)
+          .setLabel(label)
+          .setStyle(style)
+          .setDisabled(true),
       );
     }
     rows.push(ar);
@@ -134,57 +139,60 @@ function playAgainRow(userId: string, bet: number, difficulty: string): ActionRo
   );
 }
 
-// ─── Embed builders ───────────────────────────────────────────────────────────
+// ─── Embeds ───────────────────────────────────────────────────────────────────
 function selectionEmbed(state: KenoState): EmbedBuilder {
-  const picks = state.picks;
-  const mode  = state.difficulty === "hard" ? "Hard" : "Easy";
+  const mode = state.difficulty === "hard" ? "Hard" : "Easy";
+  const hint = state.picks.size < PICK_COUNT
+    ? `_Pick **${PICK_COUNT - state.picks.size}** more number(s) or use ✨ Quick Pick_`
+    : `_Ready! Click 🎲 Draw to play._`;
 
   return new EmbedBuilder()
     .setColor(COLORS.primary)
     .setTitle("🎱  Keno")
-    .addFields(
-      { name: "💎 Bet",        value: `\`${formatAmount(state.bet)}\``,             inline: true },
-      { name: "🍀 Mode",       value: `\`${mode}\``,                                inline: true },
-      { name: "🔢 Numbers",    value: `\`${picks.size}/${PICK_COUNT}\``,             inline: true },
-      { name: "👑 Top prize",  value: `\`${topPrize(state.difficulty)}x\``,         inline: true },
-    )
     .setDescription(
-      `📊 Payouts · ${payoutLine(state.difficulty)}\n\n` +
-      (picks.size < PICK_COUNT ? `_Pick **${PICK_COUNT - picks.size}** more number(s) or use ✨ Quick Pick_` : `_Ready! Click 🎲 Draw to play._`),
+      [
+        `💎 **Bet**         \`${formatAmount(state.bet)}\``,
+        `🍀 **Mode**        \`${mode}\``,
+        `🔢 **Numbers**     \`${state.picks.size}/${PICK_COUNT}\``,
+        `👑 **Top prize**   \`${topPrize(state.difficulty)}x\``,
+        ``,
+        `📊 Payouts · ${payoutLine(state.difficulty)}`,
+        ``,
+        hint,
+      ].join("\n"),
     )
     .setTimestamp();
 }
 
 function resultEmbed(
   state:      KenoState,
-  drawn:      Set<number>,
   hits:       number,
   payout:     number,
 ): EmbedBuilder {
-  const payouts     = getPayouts(state.difficulty);
-  const multiplier  = payouts[hits] ?? 0;
-  const profit      = payout - state.bet;
-  const won         = hits >= 2 && multiplier > 0;
-  const mode        = state.difficulty === "hard" ? "Hard" : "Easy";
-  const grid        = renderGrid(state.picks, drawn);
-  const drawnList   = [...drawn].sort((a, b) => a - b).join(", ");
+  const payouts    = getPayouts(state.difficulty);
+  const multiplier = payouts[hits] ?? 0;
+  const profit     = payout - state.bet;
+  const won        = hits >= 2 && multiplier > 0;
+  const mode       = state.difficulty === "hard" ? "Hard" : "Easy";
+
+  const lines = [
+    `💎 **Bet**         \`${formatAmount(state.bet)}\``,
+    `🍀 **Mode**        \`${mode}\``,
+    `🎯 **Hits**        \`${hits}/${PICK_COUNT}\``,
+  ];
+
+  if (won) {
+    lines.push(
+      `✨ **Multiplier**  \`${multiplier}x\``,
+      `💰 **Payout**     \`${formatAmount(payout)}\``,
+      `📈 **Profit**     \`+${formatAmount(profit)}\``,
+    );
+  }
 
   return new EmbedBuilder()
     .setColor(won ? COLORS.success : COLORS.danger)
     .setTitle(won ? "🎱  Keno — YOU WON" : "🎱  Keno — No Win")
-    .addFields(
-      { name: "💎 Bet",         value: `\`${formatAmount(state.bet)}\``,                  inline: true },
-      { name: "🍀 Mode",        value: `\`${mode}\``,                                     inline: true },
-      { name: "🎯 Hits",        value: `\`${hits}/${PICK_COUNT}\``,                       inline: true },
-      ...(won ? [
-        { name: "✨ Multiplier",  value: `\`${multiplier}x\``,                             inline: true },
-        { name: "💰 Payout",     value: `\`${formatAmount(payout)}\``,                    inline: true },
-        { name: "📈 Profit",     value: `\`+${formatAmount(profit)}\``,                   inline: true },
-      ] : []),
-    )
-    .setDescription(
-      `**Winning numbers** ${drawnList}\n\n${grid}`,
-    )
+    .setDescription(lines.join("\n"))
     .setTimestamp();
 }
 
@@ -198,7 +206,7 @@ function drawNumbers(): Set<number> {
   return new Set(pool.slice(0, PICK_COUNT));
 }
 
-// ─── Command definition ───────────────────────────────────────────────────────
+// ─── Command ──────────────────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
   .setName("keno")
   .setDescription("Pick numbers and match the draw — big multipliers await!")
@@ -211,8 +219,8 @@ export const data = new SlashCommandBuilder()
       .setDescription("Easy (max 50x) or Hard (max 200x)")
       .setRequired(true)
       .addChoices(
-        { name: "🍀 Easy  — max 50x",   value: "easy" },
-        { name: "🔥 Hard  — max 200x",  value: "hard" },
+        { name: "🍀 Easy  — max 50x",  value: "easy" },
+        { name: "🔥 Hard  — max 200x", value: "hard" },
       ),
   );
 
@@ -234,12 +242,10 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     });
   }
 
-  // Deduct bet
   await addBalance(interaction.user.id, -amount);
 
-  const key   = sessionKey(interaction.user.id);
   const state: KenoState = { userId: interaction.user.id, bet: amount, difficulty, picks: new Set() };
-  activeSessions.set(key, state);
+  activeSessions.set(sessionKey(interaction.user.id), state);
 
   await interaction.editReply({
     embeds:     [selectionEmbed(state)],
@@ -257,20 +263,18 @@ async function runDraw(interaction: ButtonInteraction, state: KenoState): Promis
 
   if (payout > 0) await addBalance(state.userId, payout);
   await recordBet(state.userId, state.bet, payout - state.bet);
-
   activeSessions.delete(sessionKey(state.userId));
 
   await interaction.update({
-    embeds:     [resultEmbed(state, drawn, hits, payout)],
-    components: [playAgainRow(state.userId, state.bet, state.difficulty)],
+    embeds:     [resultEmbed(state, hits, payout)],
+    // Keep the grid buttons (frozen), replace control row with Play Again
+    components: [...resultNumberRows(state.picks, drawn), playAgainRow(state.userId, state.bet, state.difficulty)],
   });
 }
 
 // ─── Button: Toggle number ────────────────────────────────────────────────────
 export async function handleNumber(interaction: ButtonInteraction, n: number): Promise<void> {
-  const key   = sessionKey(interaction.user.id);
-  const state = activeSessions.get(key);
-
+  const state = activeSessions.get(sessionKey(interaction.user.id));
   if (!state || state.userId !== interaction.user.id) {
     return void interaction.reply({ content: "❌ No active Keno session for you.", ephemeral: true });
   }
@@ -293,21 +297,17 @@ export async function handleNumber(interaction: ButtonInteraction, n: number): P
 
 // ─── Button: Quick Pick ───────────────────────────────────────────────────────
 export async function handleQuickPick(interaction: ButtonInteraction): Promise<void> {
-  const key   = sessionKey(interaction.user.id);
-  const state = activeSessions.get(key);
-
+  const state = activeSessions.get(sessionKey(interaction.user.id));
   if (!state || state.userId !== interaction.user.id) {
     return void interaction.reply({ content: "❌ No active Keno session for you.", ephemeral: true });
   }
 
-  // Fill remaining picks randomly — user still clicks Draw to see results
   const pool = Array.from({ length: GRID_SIZE }, (_, i) => i + 1).filter((n) => !state.picks.has(n));
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j]!, pool[i]!];
   }
-  const needed = PICK_COUNT - state.picks.size;
-  pool.slice(0, needed).forEach((n) => state.picks.add(n));
+  pool.slice(0, PICK_COUNT - state.picks.size).forEach((n) => state.picks.add(n));
 
   await interaction.update({
     embeds:     [selectionEmbed(state)],
@@ -317,9 +317,7 @@ export async function handleQuickPick(interaction: ButtonInteraction): Promise<v
 
 // ─── Button: Clear ────────────────────────────────────────────────────────────
 export async function handleClear(interaction: ButtonInteraction): Promise<void> {
-  const key   = sessionKey(interaction.user.id);
-  const state = activeSessions.get(key);
-
+  const state = activeSessions.get(sessionKey(interaction.user.id));
   if (!state || state.userId !== interaction.user.id) {
     return void interaction.reply({ content: "❌ No active Keno session for you.", ephemeral: true });
   }
@@ -331,22 +329,15 @@ export async function handleClear(interaction: ButtonInteraction): Promise<void>
   });
 }
 
-// ─── Button: Draw ────────────────────────────────────────────────────────────
+// ─── Button: Draw ─────────────────────────────────────────────────────────────
 export async function handleDraw(interaction: ButtonInteraction): Promise<void> {
-  const key   = sessionKey(interaction.user.id);
-  const state = activeSessions.get(key);
-
+  const state = activeSessions.get(sessionKey(interaction.user.id));
   if (!state || state.userId !== interaction.user.id) {
     return void interaction.reply({ content: "❌ No active Keno session for you.", ephemeral: true });
   }
-
   if (state.picks.size < PICK_COUNT) {
-    return void interaction.reply({
-      content: `❌ You need to pick **${PICK_COUNT}** numbers first.`,
-      ephemeral: true,
-    });
+    return void interaction.reply({ content: `❌ Pick **${PICK_COUNT}** numbers first.`, ephemeral: true });
   }
-
   await runDraw(interaction, state);
 }
 
@@ -375,9 +366,8 @@ export async function handlePlayAgain(
 
   await addBalance(interaction.user.id, -bet);
 
-  const key   = sessionKey(interaction.user.id);
   const state: KenoState = { userId: interaction.user.id, bet, difficulty, picks: new Set() };
-  activeSessions.set(key, state);
+  activeSessions.set(sessionKey(interaction.user.id), state);
 
   await interaction.editReply({
     embeds:     [selectionEmbed(state)],
