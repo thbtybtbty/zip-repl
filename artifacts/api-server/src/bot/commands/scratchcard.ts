@@ -337,8 +337,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const amountStr = interaction.options.getString("amount", true);
   const amount    = parseAmount(amountStr);
 
-  if (!amount || amount <= 0)
-    return interaction.editReply({ embeds: [errorEmbed("Invalid amount. Try `1m`, `2.5b`, `500k`.")] });
+  if (!amount || amount < 1_000_000)
+    return interaction.editReply({ embeds: [errorEmbed("Minimum bet is **1m gems**. Try `1m`, `2.5b`, `500k`.")] });
 
   const user = await getOrCreateUser(interaction.user.id, interaction.user.username);
   if (user.balance < amount)

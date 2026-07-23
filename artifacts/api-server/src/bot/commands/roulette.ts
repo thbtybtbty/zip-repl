@@ -164,8 +164,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const numOpt    = interaction.options.getString("number", false)?.trim() ?? null;
   const amount    = parseAmount(amountStr);
 
-  if (!amount || amount <= 0)
-    return interaction.editReply({ embeds: [errorEmbed("Invalid amount. Try `1m`, `2.5b`, `500k`.")] });
+  if (!amount || amount < 1_000_000)
+    return interaction.editReply({ embeds: [errorEmbed("Minimum bet is **1m gems**. Try `1m`, `2.5b`, `500k`.")] });
 
   if (bet === "straight") {
     const valid =

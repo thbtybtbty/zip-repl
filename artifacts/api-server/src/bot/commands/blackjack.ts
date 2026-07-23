@@ -115,17 +115,16 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
   const dealerScore = showDealerFull ? `**${dv}**${dv > 21 ? "  💥 BUST" : ""}` : "**?**";
 
   const bet        = game.bet * (game.doubled ? 2 : 1);
-  const winPayout  = bet;
-  const bjPayout   = Math.floor(game.bet * 1.5);
+  const bjReturn   = game.bet + Math.floor(game.bet * 1.5); // 3:2 → stake + 1.5× profit
 
   const statusMeta: Record<GameStatus, { color: number; title: string; footer: string }> = {
     active:       { color: COLORS.primary, title: "🃏  Blackjack",               footer: "Hit, stand, or double down?" },
-    player_bust:  { color: COLORS.danger,  title: "🃏  Blackjack — Bust!",       footer: `Lost ${formatAmount(bet)} gems` },
-    dealer_bust:  { color: COLORS.success, title: "🃏  Blackjack — You Win!",    footer: `Dealer busted · +${formatAmount(winPayout)} gems` },
-    player_win:   { color: COLORS.success, title: "🃏  Blackjack — You Win!",    footer: `+${formatAmount(winPayout)} gems` },
-    dealer_win:   { color: COLORS.danger,  title: "🃏  Blackjack — Dealer Wins", footer: `Lost ${formatAmount(bet)} gems` },
-    push:         { color: COLORS.warning, title: "🃏  Blackjack — Push",        footer: "Tie — bet returned" },
-    blackjack:    { color: COLORS.gold,    title: "🃏  Blackjack! 🎉",           footer: `Blackjack! · +${formatAmount(bjPayout)} gems` },
+    player_bust:  { color: COLORS.danger,  title: "🃏  Blackjack — Bust!",       footer: `Bet: ${formatAmount(bet)} · Return: 0` },
+    dealer_bust:  { color: COLORS.success, title: "🃏  Blackjack — You Win!",    footer: `Bet: ${formatAmount(bet)} · Return: ${formatAmount(bet * 2)}` },
+    player_win:   { color: COLORS.success, title: "🃏  Blackjack — You Win!",    footer: `Bet: ${formatAmount(bet)} · Return: ${formatAmount(bet * 2)}` },
+    dealer_win:   { color: COLORS.danger,  title: "🃏  Blackjack — Dealer Wins", footer: `Bet: ${formatAmount(bet)} · Return: 0` },
+    push:         { color: COLORS.warning, title: "🃏  Blackjack — Push",        footer: `Bet: ${formatAmount(bet)} · Return: ${formatAmount(bet)}` },
+    blackjack:    { color: COLORS.gold,    title: "🃏  Blackjack! 🎉",           footer: `Bet: ${formatAmount(game.bet)} · Return: ${formatAmount(bjReturn)}` },
   };
 
   const meta = statusMeta[status];
@@ -267,8 +266,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const amountStr = interaction.options.getString("amount", true);
   const amount    = parseAmount(amountStr);
 
-  if (!amount || amount <= 0) {
-    return interaction.editReply({ embeds: [errorEmbed("Invalid amount. Try `1m`, `2.5b`, `500k`.")] });
+  if (!amount || amount < 1_000_000) {
+    return interaction.editReply({ embeds: [errorEmbed("Minimum bet is **1m gems**. Try `1m`, `2.5b`, `500k`.")] });
   }
   if (activeBlackjackGames.has(interaction.user.id)) {
     return interaction.editReply({ embeds: [errorEmbed("You already have an active Blackjack game!")] });
@@ -306,13 +305,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     if (playerBJ && dealerBJ) {
       status = "push";
-      payout = 0;
+      payout = amount; // return stake
     } else if (playerBJ) {
       status = applyHouseEdge("blackjack");
-      payout = status === "blackjack" ? Math.floor(amount * 1.5) : -amount;
+      payout = status === "blackjack" ? amount + Math.floor(amount * 1.5) : 0;
     } else {
       status = "dealer_win";
-      payout = -amount;
+      payout = 0; // stake already deducted above
     }
 
     await addBalance(interaction.user.id, payout);
@@ -474,13 +473,13 @@ export async function handlePlayAgain(interaction: ButtonInteraction, userId: st
 
     if (playerBJ && dealerBJ) {
       status = "push";
-      payout = 0;
+      payout = bet; // return stake
     } else if (playerBJ) {
       status = applyHouseEdge("blackjack");
-      payout = status === "blackjack" ? Math.floor(bet * 1.5) : -bet;
+      payout = status === "blackjack" ? bet + Math.floor(bet * 1.5) : 0;
     } else {
       status = "dealer_win";
-      payout = -bet;
+      payout = 0; // stake already deducted above
     }
 
     await addBalance(userId, payout);

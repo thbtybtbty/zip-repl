@@ -75,7 +75,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   // Parse amount
   const amount = parseAmount(amountStr);
-  if (!amount || amount <= 0) {
+  if (!amount || amount < 1_000_000) {
     return interaction.editReply({
       embeds: [
         errorEmbed("Invalid amount. Use formats like `1m`, `2.5b`, `500k`."),

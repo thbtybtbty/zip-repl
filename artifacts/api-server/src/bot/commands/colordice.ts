@@ -195,8 +195,8 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   const betStr = interaction.options.getString("bet", true);
   const bet    = parseAmount(betStr);
 
-  if (!bet || bet < 1) {
-    return void interaction.reply({ embeds: [errorEmbed("Invalid bet amount.")], flags: MessageFlags.Ephemeral });
+  if (!bet || bet < 1_000_000) {
+    return void interaction.reply({ embeds: [errorEmbed("Minimum bet is **1m gems**.")], flags: MessageFlags.Ephemeral });
   }
 
   await interaction.deferReply();

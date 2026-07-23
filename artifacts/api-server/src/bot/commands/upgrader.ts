@@ -96,7 +96,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   const multiplier = interaction.options.getNumber("multiplier", true);
 
   const amount = parseAmount(amountStr);
-  if (!amount || amount < 1) {
+  if (!amount || amount < 1_000_000) {
     return void interaction.editReply({ embeds: [errorEmbed("Invalid amount. Try `1m`, `2.5b`, `500k`.")] });
   }
 

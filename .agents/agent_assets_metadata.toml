@@ -30,3 +30,9 @@ id = "9mvStWARTdOptBeYd1t9a"
 uri = "file://attached_assets/wispbyte-full-updated-2026-07-23.tar.gz"
 type = "unspecified"
 title = "WispByte complete archive — all files updated"
+
+[[outputs]]
+id = "bswzb8hgWTvefGvgpyXhY"
+uri = "file://attached_assets/wispbyte-full-updated-v2.tar.gz"
+type = "unspecified"
+title = "WispByte full archive — min bet + BJ fixes"

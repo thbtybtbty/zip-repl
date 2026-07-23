@@ -44,7 +44,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const choice    = interaction.options.getString("choice", true);
   const amount    = parseAmount(amountStr);
 
-  if (!amount || amount <= 0) {
+  if (!amount || amount < 1_000_000) {
     return interaction.editReply({
       embeds: [errorEmbed("Invalid amount. Try `1m`, `2.5b`, `500k`.")],
     });
