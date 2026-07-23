@@ -82,7 +82,13 @@ function numberRows(picks: Set<number>): ActionRowBuilder<MessageActionRowCompon
   return rows;
 }
 
-/** Frozen result grid shown after draw. Disabled buttons with outcome markers. */
+/** Frozen result grid shown after draw. Disabled buttons with outcome markers.
+ *  ✓ = your pick  |  ✗ = not your pick
+ *  green  = your pick AND drawn (hit)
+ *  blue   = your pick but NOT drawn (miss)
+ *  red    = drawn but you didn't pick it
+ *  gray   = not picked, not drawn
+ */
 function resultNumberRows(
   picks: Set<number>,
   drawn: Set<number>,
@@ -99,16 +105,20 @@ function resultNumberRows(
       let style: ButtonStyle;
 
       if (isPicked && isDrawn) {
-        // HIT — picked + drawn
+        // Your pick, and drawn — HIT
         label = `✓${n}`;
         style = ButtonStyle.Success;
-      } else if (isDrawn && !isPicked) {
-        // Bot drew it but you didn't pick
+      } else if (isPicked && !isDrawn) {
+        // Your pick, but not drawn — missed
+        label = `✓${n}`;
+        style = ButtonStyle.Primary;
+      } else if (!isPicked && isDrawn) {
+        // Drawn but you didn't pick it
         label = `✗${n}`;
         style = ButtonStyle.Danger;
       } else {
-        // Not drawn
-        label = `${n}`;
+        // Not picked, not drawn
+        label = `✗${n}`;
         style = ButtonStyle.Secondary;
       }
 
@@ -173,10 +183,10 @@ function selectionEmbed(state: KenoState): EmbedBuilder {
     .setTitle("🎱  Keno")
     .setDescription(
       [
-        `💎 **Bet**         \`${formatAmount(state.bet)}\``,
-        `🍀 **Mode**        \`${mode}\``,
-        `🔢 **Numbers**     \`${state.picks.size}/${PICK_COUNT}\``,
-        `👑 **Top prize**   \`${topPrize(state.difficulty)}x\``,
+        `💎 **Bet**  \`${formatAmount(state.bet)}\``,
+        `🍀 **Mode**  \`${mode}\``,
+        `🔢 **Numbers**  \`${state.picks.size}/${PICK_COUNT}\``,
+        `👑 **Top prize**  \`${topPrize(state.difficulty)}x\``,
         ``,
         `📊 Payouts · ${payoutLine(state.difficulty)}`,
         ``,
@@ -194,16 +204,16 @@ function resultEmbed(state: KenoState, hits: number, payout: number): EmbedBuild
   const mode       = state.difficulty === "hard" ? "Hard" : "Easy";
 
   const lines = [
-    `💎 **Bet**         \`${formatAmount(state.bet)}\``,
-    `🍀 **Mode**        \`${mode}\``,
-    `🎯 **Hits**        \`${hits}/${PICK_COUNT}\``,
+    `💎 **Bet**  \`${formatAmount(state.bet)}\``,
+    `🍀 **Mode**  \`${mode}\``,
+    `🎯 **Hits**  \`${hits}/${PICK_COUNT}\``,
   ];
 
   if (won) {
     lines.push(
       `✨ **Multiplier**  \`${multiplier}x\``,
-      `💰 **Payout**     \`${formatAmount(payout)}\``,
-      `📈 **Profit**     \`+${formatAmount(profit)}\``,
+      `💰 **Payout**  \`${formatAmount(payout)}\``,
+      `📈 **Profit**  \`+${formatAmount(profit)}\``,
     );
   }
 
