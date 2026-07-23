@@ -67,6 +67,31 @@ function countMatches(dice: DiceColor[], pick: DiceColor): number {
   return dice.filter((d) => d === pick).length;
 }
 
+// ─── Rolling animation embed ──────────────────────────────────────────────────
+function rollingEmbed(bet: number, pick: DiceColor): EmbedBuilder {
+  // Show a random scramble of 6 colored dice
+  const randomDice = Array.from(
+    { length: 6 },
+    () => COLOR_EMOJI[COLORS_LIST[Math.floor(Math.random() * COLORS_LIST.length)]!],
+  ).join("");
+
+  return new EmbedBuilder()
+    .setColor(COLORS.primary)
+    .setTitle("🎲  Color Dice")
+    .setDescription(
+      [
+        `💎 **Bet**  \`${formatAmount(bet)}\``,
+        `${COLOR_EMOJI[pick]} **Your pick**  ${pick.charAt(0).toUpperCase() + pick.slice(1)}`,
+        "",
+        randomDice,
+        "",
+        "🕐 **Rolling the dice…**",
+        "▱▱▱▱▱▱▱▱▱▱",
+      ].join("\n"),
+    )
+    .setTimestamp();
+}
+
 // ─── Embeds ───────────────────────────────────────────────────────────────────
 function payoutEmbed(bet: number): EmbedBuilder {
   const payoutLines = PAYOUT_TABLE.map(([matches, mult]) => {
@@ -183,7 +208,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
 // ─── Select: color picked ─────────────────────────────────────────────────────
 export async function handleColorPick(interaction: StringSelectMenuInteraction): Promise<void> {
-  const userId = interaction.user.id;
+  const userId  = interaction.user.id;
   const pending = pendingColorDice.get(userId);
 
   if (!pending) {
@@ -192,6 +217,15 @@ export async function handleColorPick(interaction: StringSelectMenuInteraction):
 
   const pick = interaction.values[0] as DiceColor;
   pendingColorDice.delete(userId);
+
+  // ── Step 1: show rolling animation ──
+  await interaction.update({
+    embeds:     [rollingEmbed(pending.bet, pick)],
+    components: [],
+  });
+
+  // ── Step 2: after 1.5 s, reveal result ──
+  await new Promise<void>((resolve) => setTimeout(resolve, 1500));
 
   const dice    = rollDice();
   const matches = countMatches(dice, pick);
@@ -203,7 +237,7 @@ export async function handleColorPick(interaction: StringSelectMenuInteraction):
   }
   await recordBet(userId, pending.bet, payout - pending.bet);
 
-  await interaction.update({
+  await interaction.editReply({
     embeds:     [resultEmbed(pending.bet, pick, dice, matches, mult, payout)],
     components: [],
   });
