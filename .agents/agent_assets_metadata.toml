@@ -18,3 +18,9 @@ id = "13_IhfP4BMSdgMmmm80w8"
 uri = "file://wispbyte-final.zip"
 type = "unspecified"
 title = "WispByte Final Upload v4 (1.1 MB)"
+
+[[outputs]]
+id = "Y9_wAJQE73iu3frODG2BX"
+uri = "file://attached_assets/wispbyte-updated-2026-07-23.tar.gz"
+type = "unspecified"
+title = "WispByte updated archive (colordice + upgrader + chickencrossing fix)"
