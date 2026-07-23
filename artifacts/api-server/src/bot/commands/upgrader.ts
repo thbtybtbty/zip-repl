@@ -14,66 +14,63 @@ import {
 } from "../utils.js";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const RTP        = 0.925; // 7.5% house edge
-const MULT_MIN   = 1.5;
-const MULT_MAX   = 25;
+const RTP      = 0.925; // 7.5% house edge
+const MULT_MIN = 1.5;
+const MULT_MAX = 25;
 
-// ─── Win chance (as 0–100 percentage) ────────────────────────────────────────
 function winChancePct(multiplier: number): number {
   return (RTP / multiplier) * 100;
 }
 
-// ─── Progress bar (win-chance zone visualisation, 20 segments = 0–100) ────────
-function buildChanceBar(chancePct: number, rolledPct: number): string {
-  const winSegments    = Math.round(chancePct / 5);   // how many segments are "safe"
-  const rolledSegment  = Math.min(19, Math.floor(rolledPct / 5)); // which segment the roll landed on
-  return Array.from({ length: 20 }, (_, i) => {
-    if (i === rolledSegment) return "🔸"; // marker showing where the roll landed
-    return i < winSegments ? "▰" : "▱";  // filled = win zone, empty = loss zone
-  }).join("");
-}
-
-// ─── Embeds ───────────────────────────────────────────────────────────────────
+// ─── Result embed (matching photo style) ─────────────────────────────────────
 function resultEmbed(
   bet:        number,
   multiplier: number,
   won:        boolean,
   payout:     number,
-  rolled:     number,  // 0.00 – 99.99
+  rolled:     number,
 ): EmbedBuilder {
   const chancePct = winChancePct(multiplier);
   const profit    = payout - bet;
 
-  const color = won ? COLORS.success : COLORS.danger;
-  const title = won ? `⬆️  Upgrader — Upgraded! 🎉` : `⬆️  Upgrader — Failed ❌`;
+  const title = won
+    ? "▲  Upgrader"
+    : "▲  Upgrader";
+
+  const outcome = won
+    ? "🏆 **YOU WON**"
+    : "💀 **YOU LOST**";
+
+  const rollVerdict = won
+    ? `Roll landed at \`${rolled.toFixed(2)}\` — under the \`${chancePct.toFixed(2)}%\` threshold. **Upgrade successful!**`
+    : `Roll landed at \`${rolled.toFixed(2)}\` — over the \`${chancePct.toFixed(2)}%\` threshold. **Upgrade failed.**`;
 
   const lines: string[] = [
-    `💎 **Bet**         \`${formatAmount(bet)}\``,
-    `✨ **Multiplier**  \`${multiplier.toFixed(2)}x\``,
-    `📊 **Win if roll <** \`${chancePct.toFixed(2)}\``,
-    `🎲 **Rolled**      \`${rolled.toFixed(2)}\`  ${won ? "✅" : "❌"}`,
+    outcome,
     "",
-    buildChanceBar(chancePct, rolled),
+    `💎 **Bet**           \`${formatAmount(bet)}\``,
+    `✨ **Multiplier**    \`${multiplier.toFixed(2)}x\` (\`${formatAmount(payout > 0 ? payout : Math.floor(bet * multiplier))}\`)`,
+    `🍀 **Roll**          \`${rolled.toFixed(2)}\``,
+    `🍀 **Win chance**    \`${chancePct.toFixed(2)}%\``,
     "",
+    `Roll \`${rolled.toFixed(2)}\` → Threshold \`${chancePct.toFixed(2)}%\``,
+    "",
+    `> ${rollVerdict}`,
   ];
 
   if (won) {
-    lines.push(
-      `💰 **Payout**   \`${formatAmount(payout)}\``,
-      `📈 **Profit**   \`+${formatAmount(profit)}\``,
-    );
-  } else {
-    lines.push(`💸 **Lost**     \`-${formatAmount(bet)}\``);
+    lines.push("", `💰 **Payout**  \`${formatAmount(payout)}\``);
+    lines.push(`📈 **Profit**   \`+${formatAmount(profit)}\``);
   }
 
   return new EmbedBuilder()
-    .setColor(color)
+    .setColor(won ? COLORS.success : COLORS.danger)
     .setTitle(title)
     .setDescription(lines.join("\n"))
     .setTimestamp();
 }
 
-// ─── Command ──────────────────────────────────────────────────────────────────
+// ─── Command definition ───────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
   .setName("upgrader")
   .setDescription("Upgrade your gems — higher multiplier = lower win chance")
@@ -94,10 +91,10 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
   const amountStr  = interaction.options.getString("amount", true);
   const multiplier = interaction.options.getNumber("multiplier", true);
+  const amount     = parseAmount(amountStr);
 
-  const amount = parseAmount(amountStr);
   if (!amount || amount < 1_000_000) {
-    return void interaction.editReply({ embeds: [errorEmbed("Invalid amount. Try `1m`, `2.5b`, `500k`.")] });
+    return void interaction.editReply({ embeds: [errorEmbed("Minimum bet is **1M gems**. Try `1m`, `2.5b`, `500k`.")] });
   }
 
   if (multiplier < MULT_MIN || multiplier > MULT_MAX) {
@@ -115,7 +112,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
   await addBalance(interaction.user.id, -amount);
 
-  const rolled    = Math.floor(Math.random() * 10000) / 100; // 0.00 – 99.99
+  const rolled    = Math.floor(Math.random() * 10000) / 100; // 0.00–99.99
   const chancePct = winChancePct(multiplier);
   const won       = rolled < chancePct;
   const payout    = won ? Math.floor(amount * multiplier) : 0;

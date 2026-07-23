@@ -13,7 +13,6 @@ import { COLORS, errorEmbed } from "../utils.js";
 import { isAdmin, getServerConfig, saveServerConfig, type ServerConfig } from "../botConfig.js";
 
 // ─── Pending configs waiting for Re-setup confirmation ───────────────────────
-// Key: original interaction ID  Value: config the user wants to apply
 const pendingSetups = new Map<string, ServerConfig>();
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -25,6 +24,7 @@ function configEmbed(cfg: ServerConfig, title: string, color: number): EmbedBuil
       { name: "📥 Deposit Channel",  value: `<#${cfg.depositChannelId}>`,  inline: true },
       { name: "📤 Withdraw Channel", value: `<#${cfg.withdrawChannelId}>`, inline: true },
       { name: "📋 Request Channel",  value: `<#${cfg.requestChannelId}>`,  inline: true },
+      { name: "🪙 Flip Channel",     value: `<#${cfg.flipChannelId}>`,     inline: true },
       { name: "🎮 Roblox User",      value: cfg.robloxUser,                inline: true },
     )
     .setTimestamp();
@@ -48,7 +48,7 @@ function confirmRow(interactionId: string): ActionRowBuilder<MessageActionRowCom
 // ─── Slash command definition ─────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
   .setName("setup")
-  .setDescription("(Admin) Configure the deposit/withdraw system")
+  .setDescription("(Admin) Configure the deposit/withdraw/flip system")
   .addChannelOption((opt) =>
     opt
       .setName("deposit_channel")
@@ -67,6 +67,13 @@ export const data = new SlashCommandBuilder()
     opt
       .setName("request_channel")
       .setDescription("Channel where Accept / Deny buttons appear for all requests")
+      .addChannelTypes(ChannelType.GuildText)
+      .setRequired(true),
+  )
+  .addChannelOption((opt) =>
+    opt
+      .setName("flip_channel")
+      .setDescription("Channel where /flip challenges are posted")
       .addChannelTypes(ChannelType.GuildText)
       .setRequired(true),
   )
@@ -90,12 +97,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const depositCh  = interaction.options.getChannel("deposit_channel",  true);
   const withdrawCh = interaction.options.getChannel("withdraw_channel",  true);
   const requestCh  = interaction.options.getChannel("request_channel",   true);
+  const flipCh     = interaction.options.getChannel("flip_channel",      true);
   const robloxUser = interaction.options.getString("roblox_user",        true);
 
   const newCfg: ServerConfig = {
     depositChannelId:  depositCh.id,
     withdrawChannelId: withdrawCh.id,
     requestChannelId:  requestCh.id,
+    flipChannelId:     flipCh.id,
     robloxUser,
   };
 
@@ -111,14 +120,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   // ── Already configured — ask for confirmation ──
   pendingSetups.set(interaction.id, newCfg);
-
-  // Auto-remove after 5 minutes to prevent memory leaks
   setTimeout(() => pendingSetups.delete(interaction.id), 5 * 60 * 1000);
 
   const embed = new EmbedBuilder()
     .setColor(COLORS.warning)
     .setTitle("⚠️  Setup Already Configured")
-    .setDescription("The bot is already set up. Do you want to overwrite the existing configuration with the new values?")
+    .setDescription("The bot is already set up. Do you want to overwrite the existing configuration?")
     .addFields(
       {
         name: "Current configuration",
@@ -126,6 +133,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
           `📥 Deposit: <#${existing.depositChannelId}>`,
           `📤 Withdraw: <#${existing.withdrawChannelId}>`,
           `📋 Requests: <#${existing.requestChannelId}>`,
+          `🪙 Flip: <#${existing.flipChannelId ?? "not set"}>`,
           `🎮 Roblox: \`${existing.robloxUser}\``,
         ].join("\n"),
         inline: true,
@@ -136,6 +144,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
           `📥 Deposit: <#${newCfg.depositChannelId}>`,
           `📤 Withdraw: <#${newCfg.withdrawChannelId}>`,
           `📋 Requests: <#${newCfg.requestChannelId}>`,
+          `🪙 Flip: <#${newCfg.flipChannelId}>`,
           `🎮 Roblox: \`${newCfg.robloxUser}\``,
         ].join("\n"),
         inline: true,

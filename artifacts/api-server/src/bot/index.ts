@@ -35,8 +35,10 @@ import * as scratchcard      from "./commands/scratchcard.js";
 import * as chickencrossing  from "./commands/chickencrossing.js";
 import * as colordice        from "./commands/colordice.js";
 import * as upgrader         from "./commands/upgrader.js";
+import * as keno             from "./commands/keno.js";
+import * as flip             from "./commands/flip.js";
 
-const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, roulette, crash, scratchcard, chickencrossing, colordice, upgrader];
+const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -69,6 +71,8 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "chickencrossing")  return await chickencrossing.execute(interaction);
       if (name === "colordice")        return await colordice.execute(interaction);
       if (name === "upgrader")         return await upgrader.execute(interaction);
+      if (name === "keno")             return await keno.execute(interaction);
+      if (name === "flip")             return await flip.execute(interaction);
     } catch (err) {
       logger.error({ err, command: name }, "Error executing command");
       const payload = { content: "❌ Something went wrong. Please try again.", ephemeral: true };
@@ -133,13 +137,11 @@ async function handleInteraction(interaction: Interaction) {
       }
       if (id.startsWith("pa_towers_")) {
         const parts = id.slice("pa_towers_".length).split("_");
-        // format: userId_difficulty_bet  (userId is 18-digit snowflake, no underscores)
         const [userId, difficulty, bet] = parts;
         return await towers.handlePlayAgain(bi, userId!, difficulty!, bet!);
       }
       if (id.startsWith("pa_mines_")) {
         const parts = id.slice("pa_mines_".length).split("_");
-        // format: userId_minesCount_bet
         const [userId, minesCount, bet] = parts;
         return await mines.handlePlayAgain(bi, userId!, minesCount!, bet!);
       }
@@ -149,7 +151,6 @@ async function handleInteraction(interaction: Interaction) {
       if (id.startsWith("cc_cash_")) return await chickencrossing.handleCashout(bi);
       if (id.startsWith("pa_cc_")) {
         const rest = id.slice("pa_cc_".length);
-        // format: userId_difficulty_bet
         const lastUnderscore  = rest.lastIndexOf("_");
         const midUnderscore   = rest.lastIndexOf("_", lastUnderscore - 1);
         const userId          = rest.slice(0, midUnderscore);
@@ -192,6 +193,29 @@ async function handleInteraction(interaction: Interaction) {
       if (id.startsWith("rembalnc_enter_"))  return await removebalance.handleEnter(bi, id.slice("rembalnc_enter_".length));
       if (id.startsWith("rembalnc_cancel_")) return await removebalance.handleCancelBtn(bi, id.slice("rembalnc_cancel_".length));
 
+      // Keno — number toggle
+      if (id.startsWith("keno_num_")) {
+        const n = parseInt(id.slice("keno_num_".length), 10);
+        return await keno.handleNumber(bi, n);
+      }
+      if (id === "keno_quick") return await keno.handleQuickPick(bi);
+      if (id === "keno_clear") return await keno.handleClear(bi);
+      if (id === "keno_draw")  return await keno.handleDraw(bi);
+      if (id.startsWith("pa_keno_")) {
+        // format: pa_keno_<userId>_<difficulty>_<bet>
+        const rest       = id.slice("pa_keno_".length);
+        const lastUs     = rest.lastIndexOf("_");
+        const midUs      = rest.lastIndexOf("_", lastUs - 1);
+        const userId     = rest.slice(0, midUs);
+        const difficulty = rest.slice(midUs + 1, lastUs);
+        const bet        = rest.slice(lastUs + 1);
+        return await keno.handlePlayAgain(bi, userId, difficulty, bet);
+      }
+
+      // Flip
+      if (id.startsWith("flip_join_")) return await flip.handleJoin(bi, id.slice("flip_join_".length));
+      if (id.startsWith("flip_bot_"))  return await flip.handleCallBot(bi, id.slice("flip_bot_".length));
+
     } catch (err) {
       logger.error({ err, buttonId: id }, "Error handling button");
       if (!bi.replied && !bi.deferred) {
@@ -222,23 +246,18 @@ async function handleInteraction(interaction: Interaction) {
     const id = mi.customId;
 
     try {
-      // Deposit: mod denied with reason
       if (id.startsWith("dep_notapprove_modal_"))
         return await deposit.handleNotApproveModal(mi, id.slice("dep_notapprove_modal_".length));
 
-      // Withdraw: mod approved with note
       if (id.startsWith("with_approve_modal_"))
         return await withdraw.handleApproveModal(mi, id.slice("with_approve_modal_".length));
 
-      // Withdraw: mod disapproved with reason
       if (id.startsWith("with_disapprove_modal_"))
         return await withdraw.handleDisapproveModal(mi, id.slice("with_disapprove_modal_".length));
 
-      // Add balance: admin entered amount + reason
       if (id.startsWith("addbalnc_modal_"))
         return await addbalance.handleModal(mi, id.slice("addbalnc_modal_".length));
 
-      // Remove balance: admin entered amount + reason
       if (id.startsWith("rembalnc_modal_"))
         return await removebalance.handleModal(mi, id.slice("rembalnc_modal_".length));
 
@@ -258,7 +277,6 @@ async function handleNewMember(member: GuildMember) {
   const userId   = member.id;
   const username = member.user.username;
 
-  // Check if this user already has a record (left and rejoined)
   const existing = await db
     .select({ id: usersTable.id })
     .from(usersTable)
@@ -270,7 +288,6 @@ async function handleNewMember(member: GuildMember) {
     return;
   }
 
-  // Brand-new user: create their account with the welcome bonus
   await db.insert(usersTable).values({
     id: userId,
     username,
@@ -279,7 +296,6 @@ async function handleNewMember(member: GuildMember) {
 
   logger.info({ userId, username, bonus: WELCOME_BONUS }, "New member joined — welcome bonus awarded");
 
-  // DM the user so they know
   try {
     await member.send(
       `👋 Welcome to the server! You've received a **${formatAmount(WELCOME_BONUS)}** welcome bonus. Use \`/balance\` to check your balance!`,
@@ -304,14 +320,12 @@ export async function startBot() {
   client.once(Events.ClientReady, async (c) => {
     logger.info({ tag: c.user.tag }, "Discord bot ready");
 
-    // Clear global commands (no duplicates)
     try {
       await rest.put(Routes.applicationCommands(clientId), { body: [] });
     } catch (err) {
       logger.error({ err }, "Failed to clear global commands");
     }
 
-    // Register guild commands (instant propagation)
     const guilds = [...c.guilds.cache.values()];
     await Promise.all(
       guilds.map(async (guild) => {

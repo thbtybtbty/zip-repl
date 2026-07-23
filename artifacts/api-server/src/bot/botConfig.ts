@@ -6,6 +6,7 @@ export interface ServerConfig {
   depositChannelId:  string;
   withdrawChannelId: string;
   requestChannelId:  string;
+  flipChannelId:     string;
   robloxUser:        string;
 }
 
