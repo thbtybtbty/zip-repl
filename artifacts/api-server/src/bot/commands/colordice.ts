@@ -120,7 +120,7 @@ function payoutEmbed(bet: number): EmbedBuilder {
         "**Payout table**",
         payoutLines,
         "",
-        "✨ *Six dice roll — stack matches on your color to climb the multiplier*",
+        "✨ *Six dice roll*",
       ].join("\n"),
     )
     .setTimestamp();
@@ -177,7 +177,7 @@ function buildColorSelect(userId: string): ActionRowBuilder<MessageActionRowComp
 // ─── Command ──────────────────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
   .setName("colordice")
-  .setDescription("Roll six colored dice — match your color to multiply your bet!")
+  .setDescription("Six dice roll")
   .addStringOption((o) =>
     o.setName("bet").setDescription("Bet amount (e.g. 1m, 2.5b, 500k)").setRequired(true),
   );

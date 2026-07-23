@@ -117,21 +117,21 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
   const bet        = game.bet * (game.doubled ? 2 : 1);
   const bjReturn   = game.bet + Math.floor(game.bet * 1.5); // 3:2 → stake + 1.5× profit
 
-  const statusMeta: Record<GameStatus, { color: number; title: string; footer: string }> = {
-    active:       { color: COLORS.primary, title: "🃏  Blackjack",               footer: "Hit, stand, or double down?" },
-    player_bust:  { color: COLORS.danger,  title: "🃏  Blackjack — Bust!",       footer: `Bet: ${formatAmount(bet)} · Return: 0` },
-    dealer_bust:  { color: COLORS.success, title: "🃏  Blackjack — You Win!",    footer: `Bet: ${formatAmount(bet)} · Return: ${formatAmount(bet * 2)}` },
-    player_win:   { color: COLORS.success, title: "🃏  Blackjack — You Win!",    footer: `Bet: ${formatAmount(bet)} · Return: ${formatAmount(bet * 2)}` },
-    dealer_win:   { color: COLORS.danger,  title: "🃏  Blackjack — Dealer Wins", footer: `Bet: ${formatAmount(bet)} · Return: 0` },
-    push:         { color: COLORS.warning, title: "🃏  Blackjack — Push",        footer: `Bet: ${formatAmount(bet)} · Return: ${formatAmount(bet)}` },
-    blackjack:    { color: COLORS.gold,    title: "🃏  Blackjack! 🎉",           footer: `Bet: ${formatAmount(game.bet)} · Return: ${formatAmount(bjReturn)}` },
+  const statusMeta: Record<GameStatus, { color: number; title: string; returnVal: string | null }> = {
+    active:       { color: COLORS.primary, title: "🃏  Blackjack",               returnVal: null },
+    player_bust:  { color: COLORS.danger,  title: "🃏  Blackjack — Bust!",       returnVal: "0" },
+    dealer_bust:  { color: COLORS.success, title: "🃏  Blackjack — You Win!",    returnVal: formatAmount(bet * 2) },
+    player_win:   { color: COLORS.success, title: "🃏  Blackjack — You Win!",    returnVal: formatAmount(bet * 2) },
+    dealer_win:   { color: COLORS.danger,  title: "🃏  Blackjack — Dealer Wins", returnVal: "0" },
+    push:         { color: COLORS.warning, title: "🃏  Blackjack — Push",        returnVal: formatAmount(bet) },
+    blackjack:    { color: COLORS.gold,    title: "🃏  Blackjack! 🎉",           returnVal: formatAmount(bjReturn) },
   };
 
   const meta = statusMeta[status];
 
   const statsLines = [
-    `💎 **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
-    status !== "active" ? `${meta.footer}` : ``,
+    `💎 **Bet**     \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
+    meta.returnVal !== null ? `💎 **Return**  \`${meta.returnVal}\`` : ``,
   ].filter(Boolean).join("\n");
 
   return new EmbedBuilder()

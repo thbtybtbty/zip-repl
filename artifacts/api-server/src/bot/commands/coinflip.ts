@@ -46,7 +46,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   if (!amount || amount < 1_000_000) {
     return interaction.editReply({
-      embeds: [errorEmbed("Invalid amount. Try `1m`, `2.5b`, `500k`.")],
+      embeds: [errorEmbed("Minimum bet is **1M gems**. Try `1m`, `2.5b`, `500k`.")],
     });
   }
 
@@ -74,8 +74,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         `🪙 **Result**     \`${SIDE_DISPLAY[result]!}\``,
         `💎 **Bet**        \`${formatAmount(amount)}\``,
         won
-          ? `🎉 **Won**        \`+${formatAmount(amount)}\``
-          : `💀 **Lost**       \`-${formatAmount(amount)}\``,
+          ? `🎉 **Return**     \`${formatAmount(amount * 2)}\``
+          : `🔴 **Return**     \`0\``,
       ].join("\n"),
     )
     .setTimestamp();
