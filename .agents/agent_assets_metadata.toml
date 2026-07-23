@@ -54,3 +54,9 @@ id = "hLrKwNv34g4u1jfI-8hR8"
 uri = "file://attached_assets/wispbyte-update.tar.gz"
 type = "unspecified"
 title = "wispbyte-update.tar.gz"
+
+[[outputs]]
+id = "9iBcA9kA0A1YaMGwe9m1l"
+uri = "file://wispbyte-dist-update.zip"
+type = "unspecified"
+title = "WispByte dist update"

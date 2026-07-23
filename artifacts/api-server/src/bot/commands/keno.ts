@@ -445,7 +445,7 @@ export async function handlePlayAgain(
 
   if (user.balance < bet) {
     await interaction.update({
-      embeds:     [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} 💎**.`)],
+      content:    `❌ Insufficient balance. You have **${formatAmount(user.balance)} 💎**.`,
       components: [],
     });
     return;
@@ -464,8 +464,8 @@ export async function handlePlayAgain(
   };
   activeSessions.set(sessionKey(interaction.user.id), state);
 
-  // Remove the Play Again button from the old controls message
-  await interaction.update({ components: [] });
+  // Clear the Play Again button — use a zero-width space so the message isn't empty
+  await interaction.update({ content: '\u200b', components: [] });
 
   // Send brand-new messages — message 1: embed+grid, message 2: controls
   const channel  = interaction.channel as TextChannel;
