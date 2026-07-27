@@ -132,3 +132,9 @@ id = "JwDkdO8uJ6k1x0qkPIuS_"
 uri = "file://attached_assets/gemspin-bot-v2-wispbyte.tar.gz"
 type = "unspecified"
 title = "GemSpin Bot V2 — WispByte Package (mines + flip update)"
+
+[[outputs]]
+id = "-dw7ldCLfhvuVmr3gwgQn"
+uri = "file://wispbyte-dist.zip"
+type = "unspecified"
+title = "WispByte Package — /flip side display"

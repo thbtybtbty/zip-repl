@@ -43,19 +43,23 @@ function challengeEmbed(
   bet:            number,
   status:         "open" | "expired",
 ): EmbedBuilder {
-  const open   = status === "open";
-  const winner = Math.floor(bet * PAYOUT_MULT);
+  const open     = status === "open";
+  const winner   = Math.floor(bet * PAYOUT_MULT);
+  const joinerSide: "Heads" | "Tails" = challengerSide === "Heads" ? "Tails" : "Heads";
 
   const lines = open
     ? [
         `**${challengerName}** is looking for a coin flip duel!`,
         ``,
-        `${SIDE_ICON[challengerSide]} **${challengerName}** chose  \`${challengerSide}\``,
+        `┌─────────────────────────────────┐`,
+        `│  ${SIDE_ICON[challengerSide]} **${challengerName}**  →  \`${challengerSide}\``,
+        `│  ${SIDE_ICON[joinerSide]} **You (joiner)**  →  \`${joinerSide}\``,
+        `└─────────────────────────────────┘`,
         ``,
         `💎 **Bet**     \`${formatAmount(bet)}\``,
         `💰 **Winner**  \`${formatAmount(winner)}\``,
         ``,
-        `Click **Join** to take the other side, or **Call Bot** to face the house.`,
+        `Click **Join** to play as \`${joinerSide}\`, or **Call Bot** to face the house.`,
       ]
     : [`❌  This challenge has expired.`];
 
