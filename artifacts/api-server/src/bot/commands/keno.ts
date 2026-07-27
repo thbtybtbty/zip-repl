@@ -317,7 +317,7 @@ async function runDraw(interaction: ButtonInteraction, state: KenoState): Promis
   const payout     = multiplier > 0 ? Math.floor(state.bet * multiplier) : 0;
 
   if (payout > 0) await addBalance(state.userId, payout);
-  await recordBet(state.userId, state.bet, payout - state.bet);
+  await recordBet(state.userId, state.bet, payout - state.bet, "keno");
   activeSessions.delete(sessionKey(state.userId));
 
   // Draw button is on message 2 (controls) — replace with Play Again

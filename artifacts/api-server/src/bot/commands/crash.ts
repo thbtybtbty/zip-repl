@@ -113,11 +113,8 @@ function cashedEmbed(mult: number, bet: number, crashPoint: number): EmbedBuilde
         `## ${mult.toFixed(2)}×  *(crashed at ${crashPoint.toFixed(2)}×)*`,
         ``,
         `💎 **Bet**     \`${formatAmount(bet)}\``,
-        `💵 **Return**  \`${formatAmount(winnings)}\``,
-        winnings > bet
-          ? `🎉 **Profit**  \`+${formatAmount(winnings - bet)}\``
-          : ``,
-      ].filter(Boolean).join("\n"),
+        `💰 **Payout**  \`${formatAmount(winnings)}\``,
+      ].join("\n"),
     )
     .setTimestamp();
 }
@@ -167,7 +164,7 @@ function launchCrash(userId: string, bet: number, gameMessage: Message): string 
         clearInterval(session.timer);
         session.status = "crashed";
         activeSessions.delete(sessionId);
-        await recordBet(userId, bet, -bet);
+        await recordBet(userId, bet, -bet, "crash");
         try {
           await session.gameMessage.edit({
             embeds:     [crashedEmbed(crashPoint, bet)],
@@ -256,7 +253,7 @@ export async function handleCashout(interaction: ButtonInteraction, sessionId: s
   const winnings = Math.floor(session.bet * mult);
 
   await addBalance(session.userId, winnings);
-  await recordBet(session.userId, session.bet, winnings - session.bet);
+  await recordBet(session.userId, session.bet, winnings - session.bet, "crash");
 
   await interaction.update({
     embeds:     [cashedEmbed(mult, session.bet, session.crashPoint)],

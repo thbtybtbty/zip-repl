@@ -15,6 +15,7 @@ import {
 } from "discord.js";
 import { COLORS, formatAmount, getOrCreateUser, addBalance, errorEmbed } from "../utils.js";
 import { isAdmin } from "../botConfig.js";
+import { db, betLogTable } from "@workspace/db";
 
 // ─── Pending sessions (userId of admin → target user info) ───────────────────
 interface PendingSession {
@@ -169,6 +170,14 @@ export async function handleModal(interaction: ModalSubmitInteraction, sessionId
 
   pendingSessions.delete(sessionId);
   const newBalance = await addBalance(session.targetUserId, amount);
+
+  // Log as admin-grant so economy stats can deduct it from house profit
+  await db.insert(betLogTable).values({
+    userId:   session.targetUserId,
+    command:  "admin-grant",
+    bet:      amount,
+    netDelta: -amount,
+  });
 
   await interaction.editReply({
     embeds: [

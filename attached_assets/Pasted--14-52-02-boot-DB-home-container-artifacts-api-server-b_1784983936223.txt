@@ -1,0 +1,43 @@
+[14:52:02][boot] DB → /home/container/artifacts/api-server/bot.db
+[14:52:02][boot] Patching hardcoded paths...
+[14:52:02][boot] DISCORD_BOT_TOKEN set: true | DISCORD_CLIENT_ID set: true
+[14:52:02][boot] Starting bot (Node v19.9.0)...
+[14:52:03]/home/container/node_modules/bindings/bindings.js:126
+[14:52:03]err = new Error(
+[14:52:03]^
+[14:52:03]Error: Could not locate the bindings file. Tried:
+[14:52:03]→ /home/container/node_modules/better-sqlite3/build/better_sqlite3.node
+[14:52:03]→ /home/container/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+[14:52:03]→ /home/container/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+[14:52:03]→ /home/container/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+[14:52:03]→ /home/container/node_modules/better-sqlite3/Debug/better_sqlite3.node
+[14:52:03]→ /home/container/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+[14:52:03]→ /home/container/node_modules/better-sqlite3/Release/better_sqlite3.node
+[14:52:03]→ /home/container/node_modules/better-sqlite3/build/default/better_sqlite3.node
+[14:52:03]→ /home/container/node_modules/better-sqlite3/compiled/19.9.0/linux/x64/better_sqlite3.node
+[14:52:03]→ /home/container/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+[14:52:03]→ /home/container/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+[14:52:03]→ /home/container/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+[14:52:03]→ /home/container/node_modules/better-sqlite3/lib/binding/node-v111-linux-x64/better_sqlite3.node
+[14:52:03]at bindings (/home/container/node_modules/bindings/bindings.js:126:9)
+[14:52:03]at new Database (/home/container/node_modules/better-sqlite3/lib/database.js:48:64)
+[14:52:03]at file:///home/container/artifacts/api-server/dist/index.patched.mjs:124828:14
+[14:52:03] at ModuleJob.run (node:internal/modules/esm/module_job:193:25) {
+[14:52:03]tries: [
+[14:52:03]'/home/container/node_modules/better-sqlite3/build/better_sqlite3.node',
+[14:52:03]'/home/container/node_modules/better-sqlite3/build/Debug/better_sqlite3.node',
+[14:52:03]'/home/container/node_modules/better-sqlite3/build/Release/better_sqlite3.node',
+[14:52:03]'/home/container/node_modules/better-sqlite3/out/Debug/better_sqlite3.node',
+[14:52:03]'/home/container/node_modules/better-sqlite3/Debug/better_sqlite3.node',
+[14:52:03]'/home/container/node_modules/better-sqlite3/out/Release/better_sqlite3.node',
+[14:52:03]'/home/container/node_modules/better-sqlite3/Release/better_sqlite3.node',
+[14:52:03]'/home/container/node_modules/better-sqlite3/build/default/better_sqlite3.node',
+[14:52:03]'/home/container/node_modules/better-sqlite3/compiled/19.9.0/linux/x64/better_sqlite3.node',
+[14:52:03]'/home/container/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node',
+[14:52:03]'/home/container/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node',
+[14:52:03]'/home/container/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node',
+[14:52:03]'/home/container/node_modules/better-sqlite3/lib/binding/node-v111-linux-x64/better_sqlite3.node'
+[14:52:03]]
+[14:52:03]}
+[14:52:03]Node.js v19.9.0
+[14:52:03]Server marked as offline

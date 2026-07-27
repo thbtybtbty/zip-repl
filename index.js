@@ -31,14 +31,22 @@ if (fs.existsSync("/data")) {
 const major = parseInt(process.version.slice(1));
 const bsq3Version = major >= 20 ? "12.11.1" : "11.9.1";
 
-// Install better-sqlite3 if missing or wrong version
-const bsq3Pkg = path.join(__dirname, "node_modules", "better-sqlite3", "package.json");
+// Check both the installed version AND whether the native binary was actually compiled
+const bsq3Pkg    = path.join(__dirname, "node_modules", "better-sqlite3", "package.json");
+const bsq3Binding = path.join(__dirname, "node_modules", "better-sqlite3", "build", "Release", "better_sqlite3.node");
 let installedVersion = null;
 try { installedVersion = require(bsq3Pkg).version; } catch (_) {}
+const bindingExists = fs.existsSync(bsq3Binding);
 
-if (installedVersion !== bsq3Version) {
-  console.log("[boot] Installing better-sqlite3@" + bsq3Version + "...");
-  execSync(`npm install better-sqlite3@${bsq3Version} --no-save`, {
+if (installedVersion !== bsq3Version || !bindingExists) {
+  // Remove any broken/partial install so npm can place a fresh copy
+  const bsq3Dir = path.join(__dirname, "node_modules", "better-sqlite3");
+  if (fs.existsSync(bsq3Dir)) {
+    console.log("[boot] Removing old better-sqlite3 install...");
+    execSync(`rm -rf "${bsq3Dir}"`, { stdio: "inherit", shell: true });
+  }
+  console.log("[boot] Installing better-sqlite3@" + bsq3Version + " (build from source)...");
+  execSync(`npm install better-sqlite3@${bsq3Version} --no-save --build-from-source`, {
     stdio: "inherit",
     shell: true,
     env: { ...process.env, npm_config_libc: "glibc" },

@@ -23,8 +23,8 @@ import {
 // ─── Segments ─────────────────────────────────────────────────────────────────
 interface Segment { emoji: string; label: string; mult: number; weight: number; color: number }
 
-// Weights tuned for 7.5% house edge:
-// Σ(weight × mult) / Σ(weight) = 80.5 / 87 ≈ 0.9253 → RTP 92.47%
+// Weights tuned for a 7.5% house edge:
+// Σ(weight × mult) / Σ(weight) = 80.5 / 87 ≈ 0.9253 → RTP 92.53%
 const SEGMENTS: Segment[] = [
   { emoji: "💀", label: "0x",   mult: 0,   weight: 40, color: COLORS.dark    },
   { emoji: "🔴", label: "0.5×", mult: 0.5, weight: 26, color: COLORS.danger  },
@@ -37,8 +37,35 @@ const SEGMENTS: Segment[] = [
   { emoji: "💎", label: "25×",  mult: 25,  weight:  1, color: COLORS.gold    },
 ];
 
-// Weighted pool — each segment appears proportional to its weight
-const POOL: Segment[] = SEGMENTS.flatMap((s) => Array(s.weight).fill(s));
+// Build the weighted pool without grouping identical segments together.
+//
+// The old grouped pool made a result near the 0x block render as five 0x
+// entries in a row during the animation. The counts stay exactly the same,
+// so the odds and house edge are unchanged; only the visual order changes.
+function buildPool(): Segment[] {
+  const remaining = SEGMENTS.map((segment) => ({ segment, count: segment.weight }));
+  const pool: Segment[] = [];
+  let previous: Segment | undefined;
+
+  while (pool.length < SEGMENTS.reduce((total, segment) => total + segment.weight, 0)) {
+    const available = remaining
+      .filter(({ count, segment }) => count > 0 && segment !== previous)
+      .sort((a, b) => b.count - a.count);
+    const next = available[0];
+
+    // The largest group is never more than half of the pool, so a different
+    // segment is always available while there are entries left to place.
+    if (!next) throw new Error("Unable to build a varied Wheel pool");
+
+    pool.push(next.segment);
+    next.count -= 1;
+    previous = next.segment;
+  }
+
+  return pool;
+}
+
+const POOL = buildPool();
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -85,7 +112,7 @@ async function runSpin(
   await addBalance(userId, -bet);
   const winnings = Math.floor(bet * result.mult);
   if (winnings > 0) await addBalance(userId, winnings);
-  await recordBet(userId, bet, winnings - bet);
+  await recordBet(userId, bet, winnings - bet, "wheel");
   const oddsText = `${((result.weight / POOL.length) * 100).toFixed(1)}%`;
 
   // Animation frames
@@ -127,7 +154,7 @@ async function runSpin(
     `💎 **Bet**        \`${formatAmount(bet)}\``,
     `🎯 **Multiplier** \`${result.label}\``,
     `📊 **Odds**       \`${oddsText}\``,
-    `💵 **Return**     \`${formatAmount(winnings)}\``,
+    `💰 **Payout**     \`${formatAmount(winnings)}\``,
   ].join("\n");
 
   await editFn({

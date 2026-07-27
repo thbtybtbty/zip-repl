@@ -28,32 +28,41 @@ const WIN_CHANCE  = 0.475; // vs bot: 47.5% win chance so EV ≈ 0.475*1.9 - 1 =
 interface FlipChallenge {
   challengerId:   string;
   challengerName: string;
+  challengerSide: "Heads" | "Tails";
   bet:            number;
-  channelMsgId:   string; // message ID in flip channel
+  channelMsgId:   string;
   createdAt:      number;
 }
 
-const pendingFlips = new Map<string, FlipChallenge>(); // key = challengerId
+const pendingFlips = new Map<string, FlipChallenge>();
 
 // ─── Embed builders ───────────────────────────────────────────────────────────
 function challengeEmbed(
   challengerName: string,
+  challengerSide: "Heads" | "Tails",
   bet:            number,
   status:         "open" | "expired",
 ): EmbedBuilder {
-  const open = status === "open";
+  const open   = status === "open";
+  const winner = Math.floor(bet * PAYOUT_MULT);
+
+  const lines = open
+    ? [
+        `**${challengerName}** is looking for a coin flip duel!`,
+        ``,
+        `${SIDE_ICON[challengerSide]} **${challengerName}** chose  \`${challengerSide}\``,
+        ``,
+        `💎 **Bet**     \`${formatAmount(bet)}\``,
+        `💰 **Winner**  \`${formatAmount(winner)}\``,
+        ``,
+        `Click **Join** to take the other side, or **Call Bot** to face the house.`,
+      ]
+    : [`❌  This challenge has expired.`];
+
   return new EmbedBuilder()
     .setColor(open ? COLORS.gold : COLORS.dark)
     .setTitle("🪙  Flip Challenge")
-    .setDescription(
-      open
-        ? `**${challengerName}** is challenging someone to a coin flip!\n\nWinner takes **${formatAmount(Math.floor(bet * PAYOUT_MULT))}** gems.\n\nClick **Join** to play them, or **Call Bot** to play against the house.`
-        : `This challenge has expired.`,
-    )
-    .addFields(
-      { name: "💎 Bet",     value: `\`${formatAmount(bet)}\``,                        inline: true },
-      { name: "💰 Payout",  value: `\`${formatAmount(Math.floor(bet * PAYOUT_MULT))}\``, inline: true },
-    )
+    .setDescription(lines.join("\n"))
     .setTimestamp();
 }
 
@@ -72,22 +81,27 @@ function challengeRow(challengerId: string): ActionRowBuilder<MessageActionRowCo
   );
 }
 
-function resultEmbed(
-  title:       string,
-  winner:      string,
-  loser:       string,
-  bet:         number,
-  payout:      number,
-  result:      string,
+const SIDE_ICON: Record<"Heads" | "Tails", string> = { Heads: "🟡", Tails: "⚪" };
+
+function pvpResultEmbed(
+  winner: string, loser: string,
+  winnerSide: "Heads" | "Tails", loserSide: "Heads" | "Tails",
+  coinResult: "Heads" | "Tails",
+  bet: number, payout: number,
 ): EmbedBuilder {
   return new EmbedBuilder()
     .setColor(COLORS.gold)
-    .setTitle(`🪙  ${title}`)
-    .setDescription(`**${winner}** won the flip against **${loser}**!\n\n🎲 **Result:** ${result}`)
-    .addFields(
-      { name: "💎 Bet each",  value: `\`${formatAmount(bet)}\``,    inline: true },
-      { name: "💰 Winner gets", value: `\`${formatAmount(payout)}\``, inline: true },
-    )
+    .setTitle("🪙  Flip — Player vs Player")
+    .setDescription([
+      `${SIDE_ICON[winnerSide]} **${winner}**  \`${winnerSide}\`   vs   \`${loserSide}\`  **${loser}** ${SIDE_ICON[loserSide]}`,
+      ``,
+      `🎲 **Coin landed**   \`${coinResult}\``,
+      ``,
+      `> 🏆 **${winner}** wins the flip!`,
+      ``,
+      `💎 **Bet each**    \`${formatAmount(bet)}\``,
+      `💰 **Winner gets** \`${formatAmount(payout)}\``,
+    ].join("\n"))
     .setTimestamp();
 }
 
@@ -97,6 +111,15 @@ export const data = new SlashCommandBuilder()
   .setDescription("Challenge another player to a coin flip — 1.9× payout to the winner!")
   .addStringOption((o) =>
     o.setName("amount").setDescription("Your bet (e.g. 1m, 2.5b, 500k)").setRequired(true),
+  )
+  .addStringOption((o) =>
+    o.setName("side")
+      .setDescription("Your side of the coin")
+      .setRequired(true)
+      .addChoices(
+        { name: "🟡 Heads", value: "Heads" },
+        { name: "⚪ Tails", value: "Tails" },
+      ),
   );
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -109,8 +132,9 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     });
   }
 
-  const amountStr = interaction.options.getString("amount", true);
-  const amount    = parseAmount(amountStr);
+  const amountStr     = interaction.options.getString("amount", true);
+  const challengerSide = interaction.options.getString("side", true) as "Heads" | "Tails";
+  const amount         = parseAmount(amountStr);
 
   if (!amount || amount < 1_000_000) {
     return void interaction.editReply({ embeds: [errorEmbed("Minimum bet is **1M gems**.")] });
@@ -123,47 +147,44 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     });
   }
 
-  // Check for existing open challenge
   if (pendingFlips.has(interaction.user.id)) {
     return void interaction.editReply({
       embeds: [errorEmbed("You already have an open flip challenge. Wait for it to be accepted or expire.")],
     });
   }
 
-  // Deduct bet from challenger
   await addBalance(interaction.user.id, -amount);
 
-  // Post to flip channel
   const guild   = interaction.guild!;
   const channel = await guild.channels.fetch(cfg.flipChannelId).catch(() => null) as TextChannel | null;
   if (!channel) {
-    await addBalance(interaction.user.id, amount); // refund
+    await addBalance(interaction.user.id, amount);
     return void interaction.editReply({
       embeds: [errorEmbed("Flip channel not found. Ask an admin to re-run `/setup`.")],
     });
   }
 
   const msg = await channel.send({
-    embeds:     [challengeEmbed(interaction.user.username, amount, "open")],
+    embeds:     [challengeEmbed(interaction.user.username, challengerSide, amount, "open")],
     components: [challengeRow(interaction.user.id)],
   });
 
   const challenge: FlipChallenge = {
     challengerId:   interaction.user.id,
     challengerName: interaction.user.username,
+    challengerSide,
     bet:            amount,
     channelMsgId:   msg.id,
     createdAt:      Date.now(),
   };
   pendingFlips.set(interaction.user.id, challenge);
 
-  // Auto-expire after 10 minutes
   setTimeout(async () => {
     const still = pendingFlips.get(interaction.user.id);
     if (still && still.channelMsgId === msg.id) {
       pendingFlips.delete(interaction.user.id);
-      await addBalance(interaction.user.id, amount); // refund
-      await msg.edit({ embeds: [challengeEmbed(interaction.user.username, amount, "expired")], components: [] }).catch(() => null);
+      await addBalance(interaction.user.id, amount);
+      await msg.edit({ embeds: [challengeEmbed(interaction.user.username, challengerSide, amount, "expired")], components: [] }).catch(() => null);
     }
   }, 10 * 60 * 1000);
 
@@ -197,29 +218,30 @@ export async function handleJoin(interaction: ButtonInteraction, challengerId: s
     });
   }
 
-  // Deduct joiner's bet
   await addBalance(interaction.user.id, -challenge.bet);
 
-  // Flip
-  const challengerWins = Math.random() < 0.5;
+  // Challenger already picked their side; joiner automatically gets the other
+  const challengerSide: "Heads" | "Tails" = challenge.challengerSide;
+  const joinerSide: "Heads" | "Tails"     = challengerSide === "Heads" ? "Tails" : "Heads";
+  const coinResult: "Heads" | "Tails"     = Math.random() < 0.5 ? "Heads" : "Tails";
+  const challengerWins = challengerSide === coinResult;
+
   const winnerId   = challengerWins ? challengerId : interaction.user.id;
-  const loserId    = challengerWins ? interaction.user.id : challengerId;
-  const winnerName = challengerWins ? challenge.challengerName : interaction.user.username;
   const loserName  = challengerWins ? interaction.user.username : challenge.challengerName;
-  const payout     = Math.floor(challenge.bet * PAYOUT_MULT * 2); // 2 bets in the pot, winner gets 1.9× their bet from total
-  const winnerPayout = Math.floor(challenge.bet * PAYOUT_MULT + challenge.bet); // their stake back + 0.9× opponent's bet
-  // Simpler: winner gets (bet * 2 * 0.95) — total pot with 5% house cut
-  const totalPot = challenge.bet * 2;
+  const winnerName = challengerWins ? challenge.challengerName  : interaction.user.username;
+  const winnerSide = challengerWins ? challengerSide : joinerSide;
+  const loserSide  = challengerWins ? joinerSide     : challengerSide;
+  const totalPot   = challenge.bet * 2;
   const winnerGets = Math.floor(totalPot * 0.95);
 
   await addBalance(winnerId, winnerGets);
-  await recordBet(challengerId,       challenge.bet, challengerWins ? winnerGets - challenge.bet : -challenge.bet);
-  await recordBet(interaction.user.id, challenge.bet, challengerWins ? -challenge.bet : winnerGets - challenge.bet);
+  await recordBet(challengerId,        challenge.bet, challengerWins ? winnerGets - challenge.bet : -challenge.bet, "flip");
+  await recordBet(interaction.user.id, challenge.bet, challengerWins ? -challenge.bet : winnerGets - challenge.bet, "flip");
 
   pendingFlips.delete(challengerId);
 
   await interaction.editReply({
-    embeds:     [resultEmbed("Flip Result", winnerName, loserName, challenge.bet, winnerGets, "🪙 Heads")],
+    embeds:     [pvpResultEmbed(winnerName, loserName, winnerSide, loserSide, coinResult, challenge.bet, winnerGets)],
     components: [],
   });
 }
@@ -233,29 +255,39 @@ export async function handleCallBot(interaction: ButtonInteraction, challengerId
     return void interaction.editReply({ embeds: [challengeEmbed("?", 0, "expired")], components: [] });
   }
 
-  // Only the challenger can call bot
   if (interaction.user.id !== challengerId) {
     return void interaction.followUp({ content: "❌ Only the challenger can call the bot.", ephemeral: true });
   }
 
-  // Flip vs bot
   const won    = Math.random() < WIN_CHANCE;
-  const payout = won ? Math.floor(challenge.bet * PAYOUT_MULT) : 0;
+  const payout = Math.floor(challenge.bet * PAYOUT_MULT); // 1.9× the bet
 
-  if (won) await addBalance(challengerId, payout + challenge.bet); // return stake + winnings
-  // If lost, bet was already deducted at challenge creation
-  await recordBet(challengerId, challenge.bet, won ? payout : -challenge.bet);
+  // Use the side the challenger already chose; bot takes the other
+  const playerSide: "Heads" | "Tails" = challenge.challengerSide;
+  const botSide: "Heads" | "Tails"    = playerSide === "Heads" ? "Tails" : "Heads";
+  // Force coin result to match win/loss outcome
+  const coinResult: "Heads" | "Tails" = won ? playerSide : botSide;
+
+  // Fix: bet was already deducted in execute(); on win just add the 1.9× payout back
+  if (won) await addBalance(challengerId, payout);
+  await recordBet(challengerId, challenge.bet, won ? payout - challenge.bet : -challenge.bet, "flip");
 
   pendingFlips.delete(challengerId);
 
+  const profit = won ? payout - challenge.bet : -challenge.bet;
+
   const embed = new EmbedBuilder()
     .setColor(won ? COLORS.success : COLORS.danger)
-    .setTitle(`🪙  Flip vs Bot — ${won ? "YOU WON! 🎉" : "You Lost"}`)
-    .addFields(
-      { name: "💎 Bet",     value: `\`${formatAmount(challenge.bet)}\``,                              inline: true },
-      { name: "💰 Payout",  value: `\`${won ? formatAmount(payout + challenge.bet) : "0"}\``,         inline: true },
-      { name: "📈 Profit",  value: `\`${won ? `+${formatAmount(payout)}` : `-${formatAmount(challenge.bet)}`}\``, inline: true },
-    )
+    .setTitle(won ? "🪙  Flip vs Bot — You Win! 🎉" : "🪙  Flip vs Bot — You Lost")
+    .setDescription([
+      `${SIDE_ICON[playerSide]} **You**  \`${playerSide}\`   vs   \`${botSide}\`  **Bot** 🤖`,
+      ``,
+      `🎲 **Coin landed**  \`${coinResult}\``,
+      ``,
+      `💎 **Bet**     \`${formatAmount(challenge.bet)}\``,
+      `💰 **Payout**  \`${won ? formatAmount(payout) : "0"}\``,
+      `📈 **Profit**  \`${profit >= 0 ? "+" : ""}${formatAmount(Math.abs(profit))}\``,
+    ].join("\n"))
     .setTimestamp();
 
   await interaction.editReply({ embeds: [embed], components: [] });

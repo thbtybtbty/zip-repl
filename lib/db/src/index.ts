@@ -44,6 +44,28 @@ export function initDb(): void {
       key   TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS bet_log (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id    TEXT    NOT NULL,
+      command    TEXT    NOT NULL,
+      bet        INTEGER NOT NULL,
+      net_delta  INTEGER NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+
+    CREATE TABLE IF NOT EXISTS invite_log (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      inviter_id          TEXT    NOT NULL,
+      invited_id          TEXT    NOT NULL,
+      invite_code         TEXT    NOT NULL,
+      verified            INTEGER NOT NULL DEFAULT 0,
+      rewarded            INTEGER NOT NULL DEFAULT 0,
+      left_server         INTEGER NOT NULL DEFAULT 0,
+      joined_at           INTEGER NOT NULL DEFAULT (unixepoch()),
+      verified_at         INTEGER,
+      account_created_at  INTEGER NOT NULL
+    );
   `);
 
   // Migrations — safe to run every boot; ALTER TABLE is a no-op if column exists
@@ -52,6 +74,7 @@ export function initDb(): void {
     `ALTER TABLE users ADD COLUMN withdrawn INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN wagered   INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN profit    INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE bet_log ADD COLUMN admin_bet INTEGER NOT NULL DEFAULT 0`,
   ];
   for (const stmt of migrations) {
     try { sqlite.exec(stmt); } catch { /* column already exists — ignore */ }

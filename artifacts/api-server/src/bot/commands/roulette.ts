@@ -192,7 +192,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await addBalance(interaction.user.id, -amount);
   const { won, payout } = evaluateBet(bet, numOpt, result);
   if (won) await addBalance(interaction.user.id, amount + amount * payout);
-  await recordBet(interaction.user.id, amount, won ? amount * payout : -amount);
+  await recordBet(interaction.user.id, amount, won ? amount * payout : -amount, "roulette");
 
   const winningPockets: Record<BetType, number> = {
     red: 18, black: 18, odd: 18, even: 18, low: 18, high: 18,
@@ -228,9 +228,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     `🎲 **Bet**    \`${betName}\``,
     `💸 **Stake**  \`${formatAmount(amount)}\``,
     `📊 **Odds**   \`${oddsText}  ·  ${PAYOUT_DISPLAY[bet]}\``,
-    won
-      ? `🎉 **Won**    \`+${formatAmount(winAmount)}\``
-      : `💀 **Lost**   \`-${formatAmount(amount)}\``,
+    `💰 **Payout**  \`${won ? formatAmount(amount + winAmount) : "0"}\``,
   ].join("\n");
 
   await interaction.editReply({

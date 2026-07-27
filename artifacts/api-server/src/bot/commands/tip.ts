@@ -8,6 +8,7 @@ import {
   formatAmount,
   getOrCreateUser,
   addBalance,
+  logTip,
   errorEmbed,
 } from "../utils.js";
 
@@ -76,6 +77,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     addBalance(interaction.user.id, -amount),
     addBalance(target.id, amount),
   ]);
+  await logTip(interaction.user.id, target.id, amount);
 
   await interaction.editReply({
     content: `<@${interaction.user.id}> tipped **${formatAmount(amount)} gems** ${GEM} to <@${target.id}>!`,

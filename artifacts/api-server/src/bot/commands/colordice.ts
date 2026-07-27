@@ -254,7 +254,7 @@ export async function handleColorPick(interaction: StringSelectMenuInteraction):
   await new Promise<void>((resolve) => setTimeout(resolve, FRAME_MS));
 
   if (payout > 0) await addBalance(userId, payout);
-  await recordBet(userId, pending.bet, payout - pending.bet);
+  await recordBet(userId, pending.bet, payout - pending.bet, "colordice");
 
   await interaction.editReply({
     embeds:     [resultEmbed(pending.bet, pick, dice, matches, mult, payout)],

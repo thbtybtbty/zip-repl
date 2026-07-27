@@ -1,0 +1,196 @@
+Create a new gambling command called **/slots** for my existing Discord.js TypeScript gambling bot.
+
+The code **must match the architecture and coding style** of my existing commands (wheel, upgrader, chickencrossing, colordice).
+
+## Command
+
+Use SlashCommandBuilder.
+
+Command name:
+
+* slots
+
+Required option:
+
+* amount (string)
+  Examples:
+* 500k
+* 1m
+* 2.5b
+
+Use the existing utility functions already available in my project:
+
+* parseAmount()
+* formatAmount()
+* getOrCreateUser()
+* addBalance()
+* recordBet()
+* errorEmbed()
+* COLORS
+
+Do NOT recreate these functions.
+
+---
+
+## Economy
+
+The slot machine must have:
+
+* RTP: **85%**
+* House Edge: **15%**
+
+The probabilities must be designed around the RTP.
+
+Do NOT simply make every symbol equally likely.
+
+Instead, use weighted probabilities so the long-term RTP is approximately 85%.
+
+The expected return over hundreds of thousands of spins should be close to 85%.
+
+---
+
+## Symbols
+
+Use these emojis:
+
+🍒
+🍋
+🍉
+🍇
+💎
+⭐
+7️⃣
+
+Generate 3 reels.
+
+Use weighted symbol probabilities.
+
+Rare symbols should pay much more.
+
+Common symbols should appear much more frequently.
+
+---
+
+## Payout Table
+
+7️⃣ 7️⃣ 7️⃣ = 25x
+
+💎 💎 💎 = 12x
+
+⭐ ⭐ ⭐ = 8x
+
+🍇 🍇 🍇 = 5x
+
+🍉 🍉 🍉 = 4x
+
+🍋 🍋 🍋 = 3x
+
+🍒 🍒 🍒 = 2x
+
+Exactly two matching symbols = 1.2x
+
+Everything else loses.
+
+Balance the probabilities so the overall RTP remains approximately 85%.
+
+---
+
+## Game Flow
+
+1. Parse the amount.
+2. Validate the bet.
+3. Get the user.
+4. Check balance.ho
+5. Remove the bet.
+6. Show a rolling animation by editing the message about 6 times over roughly 3 seconds.
+7. Final frame displays the actual reels.
+8. Calculate payout.
+9. If payout > 0:
+
+   * addBalance(userId, payout)
+10. Always call:
+
+* recordBet(userId, bet, payout - bet)
+
+---
+
+## Embeds
+
+Rolling embed:
+
+🎰 Slots
+
+Display:
+
+💎 Bet
+
+🎰 Rolling...
+
+Random spinning reels
+
+Progress animation
+
+Final embed:
+
+🎰 Slots
+
+Display:
+
+💎 Bet
+
+🎰 Final Reels
+
+✨ Multiplier
+
+💰 Payout
+
+📈 Profit (if won)
+
+📉 Loss (if lost)
+
+Use:
+
+Green = profit
+
+Yellow = partial return
+
+Red = loss
+
+Include timestamps.
+
+---
+
+## Buttons
+
+Add a
+
+🔄 Play Again
+
+button.
+
+It should automatically replay Slots using the same bet.
+
+Implement the button handler exactly like Chicken Crossing.
+
+---
+
+## Code Quality
+
+Use async/await.
+
+Use TypeScript.
+
+Reuse my existing utilities.
+
+Do not duplicate code already present in my project.
+
+Keep the code consistent with the style of the existing gambling commands.
+
+Return a complete **slots.ts** file.
+
+After that, provide the modifications required in the main bot file to:
+
+* Import slots.ts
+* Register the slash command
+* Handle the Play Again button
+* Integrate it without breaking existing commands.

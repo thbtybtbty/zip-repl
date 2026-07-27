@@ -8,12 +8,13 @@ import {
   type ButtonInteraction,
   type ModalSubmitInteraction,
   type StringSelectMenuInteraction,
+  type UserSelectMenuInteraction,
   type GuildMember,
 } from "discord.js";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
-import { addBalance, formatAmount } from "./utils.js";
+import { formatAmount } from "./utils.js";
 
 // ─── Commands ─────────────────────────────────────────────────────────────────
 import * as balance       from "./commands/balance.js";
@@ -29,6 +30,8 @@ import * as withdraw      from "./commands/withdraw.js";
 import * as addbalance    from "./commands/addbalance.js";
 import * as removebalance from "./commands/removebalance.js";
 import * as wheel         from "./commands/wheel.js";
+import * as slots         from "./commands/slots.js";
+import * as hilo          from "./commands/hilo.js";
 import * as roulette      from "./commands/roulette.js";
 import * as crash         from "./commands/crash.js";
 import * as scratchcard      from "./commands/scratchcard.js";
@@ -37,13 +40,32 @@ import * as colordice        from "./commands/colordice.js";
 import * as upgrader         from "./commands/upgrader.js";
 import * as keno             from "./commands/keno.js";
 import * as flip             from "./commands/flip.js";
+import * as leaderboard      from "./commands/leaderboard.js";
+import * as history         from "./commands/history.js";
+import * as resetstats      from "./commands/resetstats.js";
+import * as simulate        from "./commands/simulate.js";
+import * as freeze          from "./commands/freeze.js";
+import * as gamedisable     from "./commands/gamedisable.js";
+import * as stats           from "./commands/stats.js";
+import * as economy         from "./commands/economy.js";
+import * as addadminperms   from "./commands/addadminperms.js";
+import { isFrozen, isGameDisabled } from "./botState.js";
 
-const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip];
+// ─── Gambling commands (checked for freeze + disable) ─────────────────────────
+const GAMBLING_COMMANDS = new Set([
+  "mines","towers","rps","coinflip","blackjack","wheel","slots","roulette",
+  "crash","scratchcard","chickencrossing","colordice","upgrader","keno","flip","hilo",
+]);
+
+const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+  ],
 });
 
 // ─── Interaction routing ──────────────────────────────────────────────────────
@@ -54,6 +76,22 @@ async function handleInteraction(interaction: Interaction) {
     try {
       if (name === "balance")       return await balance.execute(interaction);
       if (name === "tip")           return await tip.execute(interaction);
+      // ── Freeze / disabled guard for gambling commands ──
+      if (GAMBLING_COMMANDS.has(name)) {
+        if (isFrozen(interaction.user.id)) {
+          return interaction.reply({
+            embeds: [{ color: 0xed4245, description: "❌  You are **frozen** and cannot gamble or withdraw. Contact an admin." }],
+            ephemeral: true,
+          });
+        }
+        if (isGameDisabled(name)) {
+          return interaction.reply({
+            embeds: [{ color: 0xed4245, description: `❌  **${name.charAt(0).toUpperCase() + name.slice(1)}** is currently disabled. Try again later.` }],
+            ephemeral: true,
+          });
+        }
+      }
+
       if (name === "mines")         return await mines.execute(interaction);
       if (name === "towers")        return await towers.execute(interaction);
       if (name === "rps")           return await rps.execute(interaction);
@@ -61,10 +99,20 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "blackjack")     return await blackjack.execute(interaction);
       if (name === "setup")         return await setup.execute(interaction);
       if (name === "deposit")       return await deposit.execute(interaction);
-      if (name === "withdraw")      return await withdraw.execute(interaction);
+      if (name === "withdraw") {
+        if (isFrozen(interaction.user.id)) {
+          return interaction.reply({
+            embeds: [{ color: 0xed4245, description: "❌  You are **frozen** and cannot withdraw. Contact an admin." }],
+            ephemeral: true,
+          });
+        }
+        return await withdraw.execute(interaction);
+      }
       if (name === "addbalance")    return await addbalance.execute(interaction);
       if (name === "removebalance") return await removebalance.execute(interaction);
       if (name === "wheel")         return await wheel.execute(interaction);
+      if (name === "slots")         return await slots.execute(interaction);
+      if (name === "hilo")          return await hilo.execute(interaction);
       if (name === "roulette")      return await roulette.execute(interaction);
       if (name === "crash")            return await crash.execute(interaction);
       if (name === "scratchcard")      return await scratchcard.execute(interaction);
@@ -73,6 +121,15 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "upgrader")         return await upgrader.execute(interaction);
       if (name === "keno")             return await keno.execute(interaction);
       if (name === "flip")             return await flip.execute(interaction);
+      if (name === "leaderboard")      return await leaderboard.execute(interaction);
+      if (name === "history")          return await history.execute(interaction);
+      if (name === "resetstats")       return await resetstats.execute(interaction);
+      if (name === "simulate")         return await simulate.execute(interaction);
+      if (name === "freeze")           return await freeze.execute(interaction);
+      if (name === "game")             return await gamedisable.execute(interaction);
+      if (name === "stats")            return await stats.execute(interaction);
+      if (name === "economy")          return await economy.execute(interaction);
+      if (name === "addadminperms")    return await addadminperms.execute(interaction);
     } catch (err) {
       logger.error({ err, command: name }, "Error executing command");
       const payload = { content: "❌ Something went wrong. Please try again.", ephemeral: true };
@@ -130,6 +187,25 @@ async function handleInteraction(interaction: Interaction) {
       if (id.startsWith("pa_wheel_")) {
         const [userId, bet] = id.slice("pa_wheel_".length).split("_");
         return await wheel.handlePlayAgain(bi, userId!, bet!);
+      }
+      if (id.startsWith("pa_slots_")) {
+        const [userId, bet] = id.slice("pa_slots_".length).split("_");
+        return await slots.handlePlayAgain(bi, userId!, bet!);
+      }
+      if (id.startsWith("slots_payouts_")) {
+        return await slots.handlePayouts(bi, id.slice("slots_payouts_".length));
+      }
+      if (id.startsWith("hilo_higher_")) return await hilo.handleGuess(bi, "higher");
+      if (id.startsWith("hilo_lower_"))  return await hilo.handleGuess(bi, "lower");
+      if (id.startsWith("hilo_cashout_")) return await hilo.handleCashout(bi);
+      if (id.startsWith("pa_hilo_")) {
+        const rest = id.slice("pa_hilo_".length);
+        const lastUnderscore = rest.lastIndexOf("_");
+        return await hilo.handlePlayAgain(
+          bi,
+          rest.slice(0, lastUnderscore),
+          rest.slice(lastUnderscore + 1),
+        );
       }
       if (id.startsWith("pa_crash_")) {
         const [userId, bet] = id.slice("pa_crash_".length).split("_");
@@ -202,7 +278,6 @@ async function handleInteraction(interaction: Interaction) {
       if (id === "keno_clear") return await keno.handleClear(bi);
       if (id === "keno_draw")  return await keno.handleDraw(bi);
       if (id.startsWith("pa_keno_")) {
-        // format: pa_keno_<userId>_<difficulty>_<bet>
         const rest       = id.slice("pa_keno_".length);
         const lastUs     = rest.lastIndexOf("_");
         const midUs      = rest.lastIndexOf("_", lastUs - 1);
@@ -216,6 +291,42 @@ async function handleInteraction(interaction: Interaction) {
       if (id.startsWith("flip_join_")) return await flip.handleJoin(bi, id.slice("flip_join_".length));
       if (id.startsWith("flip_bot_"))  return await flip.handleCallBot(bi, id.slice("flip_bot_".length));
 
+      // History pagination
+      if (id.startsWith("hist_prev_") || id.startsWith("hist_next_")) {
+        const isNext = id.startsWith("hist_next_");
+        const data   = id.slice(isNext ? "hist_next_".length : "hist_prev_".length);
+        const parts  = data.split("_");
+        const page   = parseInt(parts.pop()!, 10);
+        const filter = parts.pop()!;
+        const uid    = parts.join("_");
+        return await history.handlePage(bi, uid, filter, isNext ? page + 1 : page - 1);
+      }
+
+      // Reset stats
+      if (id.startsWith("rs_apply_"))  return await resetstats.handleApply(bi, id.slice("rs_apply_".length));
+      if (id.startsWith("rs_cancel_")) return await resetstats.handleCancel(bi, id.slice("rs_cancel_".length));
+
+      // Stats pagination
+      if (id.startsWith("stats_prev_") || id.startsWith("stats_next_")) {
+        const isNext = id.startsWith("stats_next_");
+        const rest   = id.slice(isNext ? "stats_next_".length : "stats_prev_".length);
+        const lastUs = rest.lastIndexOf("_");
+        const filter = rest.slice(0, lastUs);
+        const page   = parseInt(rest.slice(lastUs + 1), 10);
+        return await stats.handlePage(bi, filter, isNext ? page + 1 : page - 1);
+      }
+
+      // Admin perms
+      if (id === "aap_add")    return await addadminperms.handleAdd(bi);
+      if (id === "aap_remove") return await addadminperms.handleRemove(bi);
+      if (id === "aap_cancel") return await addadminperms.handleCancel(bi);
+
+      // Balance — Advanced Stats
+      if (id.startsWith("bal_adv_")) {
+        const userId = id.slice("bal_adv_".length);
+        return await balance.handleAdvancedStats(bi, userId);
+      }
+
     } catch (err) {
       logger.error({ err, buttonId: id }, "Error handling button");
       if (!bi.replied && !bi.deferred) {
@@ -225,12 +336,30 @@ async function handleInteraction(interaction: Interaction) {
     return;
   }
 
-  // ── Select menus ──
+  // ── User-select menus ──
+  if (interaction.isUserSelectMenu()) {
+    const si = interaction as UserSelectMenuInteraction;
+    try {
+      if (si.customId === "aap_user_select") return await addadminperms.handleUserSelect(si);
+    } catch (err) {
+      logger.error({ err, selectId: si.customId }, "Error handling user select menu");
+      if (!si.replied && !si.deferred) {
+        await si.reply({ content: "❌ Something went wrong.", ephemeral: true });
+      }
+    }
+    return;
+  }
+
+  // ── String-select menus ──
   if (interaction.isStringSelectMenu()) {
     const si = interaction as StringSelectMenuInteraction;
     const id = si.customId;
     try {
-      if (id.startsWith("cd_pick_")) return await colordice.handleColorPick(si);
+      if (id.startsWith("cd_pick_"))           return await colordice.handleColorPick(si);
+      if (id.startsWith("rs_pick_"))           return await resetstats.handlePick(si, id.slice("rs_pick_".length));
+      if (id === "freeze_unfreeze_select")     return await freeze.handleUnfreezeSelect(si);
+      if (id === "game_enable_select")         return await gamedisable.handleEnableSelect(si);
+      if (id === "aap_remove_select")          return await addadminperms.handleRemoveSelect(si);
     } catch (err) {
       logger.error({ err, selectId: id }, "Error handling select menu");
       if (!si.replied && !si.deferred) {
@@ -261,6 +390,9 @@ async function handleInteraction(interaction: Interaction) {
       if (id.startsWith("rembalnc_modal_"))
         return await removebalance.handleModal(mi, id.slice("rembalnc_modal_".length));
 
+      if (id.startsWith("rs_modal_"))
+        return await resetstats.handleModal(mi, id.slice("rs_modal_".length));
+
     } catch (err) {
       logger.error({ err, modalId: id }, "Error handling modal");
       if (!mi.replied && !mi.deferred) {
@@ -277,6 +409,7 @@ async function handleNewMember(member: GuildMember) {
   const userId   = member.id;
   const username = member.user.username;
 
+  // ── Welcome bonus (only for first-time joins) ─────────────────────────────
   const existing = await db
     .select({ id: usersTable.id })
     .from(usersTable)
@@ -301,7 +434,7 @@ async function handleNewMember(member: GuildMember) {
       `👋 Welcome to the server! You've received a **${formatAmount(WELCOME_BONUS)}** welcome bonus. Use \`/balance\` to check your balance!`,
     );
   } catch {
-    // User may have DMs disabled — not a critical failure
+    // User may have DMs disabled
   }
 }
 
@@ -327,6 +460,7 @@ export async function startBot() {
     }
 
     const guilds = [...c.guilds.cache.values()];
+
     await Promise.all(
       guilds.map(async (guild) => {
         try {

@@ -16,18 +16,30 @@ import { isAdmin, getServerConfig, saveServerConfig, type ServerConfig } from ".
 const pendingSetups = new Map<string, ServerConfig>();
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+function ch(id: string | undefined) { return id ? `<#${id}>` : "`Not set`"; }
+
 function configEmbed(cfg: ServerConfig, title: string, color: number): EmbedBuilder {
   return new EmbedBuilder()
     .setColor(color)
     .setTitle(title)
     .addFields(
-      { name: "📥 Deposit Channel",  value: `<#${cfg.depositChannelId}>`,  inline: true },
-      { name: "📤 Withdraw Channel", value: `<#${cfg.withdrawChannelId}>`, inline: true },
-      { name: "📋 Request Channel",  value: `<#${cfg.requestChannelId}>`,  inline: true },
-      { name: "🪙 Flip Channel",     value: `<#${cfg.flipChannelId}>`,     inline: true },
-      { name: "🎮 Roblox User",      value: cfg.robloxUser,                inline: true },
+      { name: "📥 Deposit Channel",  value: ch(cfg.depositChannelId),  inline: true },
+      { name: "📤 Withdraw Channel", value: ch(cfg.withdrawChannelId), inline: true },
+      { name: "📋 Request Channel",  value: ch(cfg.requestChannelId),  inline: true },
+      { name: "🪙 Flip Channel",     value: ch(cfg.flipChannelId),     inline: true },
+      { name: "🎮 Roblox User",      value: `\`${cfg.robloxUser}\``,  inline: true },
     )
     .setTimestamp();
+}
+
+function cfgSummary(cfg: ServerConfig): string {
+  return [
+    `📥 Deposit: ${ch(cfg.depositChannelId)}`,
+    `📤 Withdraw: ${ch(cfg.withdrawChannelId)}`,
+    `📋 Requests: ${ch(cfg.requestChannelId)}`,
+    `🪙 Flip: ${ch(cfg.flipChannelId)}`,
+    `🎮 Roblox: \`${cfg.robloxUser}\``,
+  ].join("\n");
 }
 
 function confirmRow(interactionId: string): ActionRowBuilder<MessageActionRowComponentBuilder> {
@@ -48,41 +60,28 @@ function confirmRow(interactionId: string): ActionRowBuilder<MessageActionRowCom
 // ─── Slash command definition ─────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
   .setName("setup")
-  .setDescription("(Admin) Configure the deposit/withdraw/flip system")
+  .setDescription("(Admin) Configure the bot — deposit/withdraw, invites, and roles")
+  // ── Existing options ──
   .addChannelOption((opt) =>
-    opt
-      .setName("deposit_channel")
-      .setDescription("Channel where deposit requests appear")
-      .addChannelTypes(ChannelType.GuildText)
-      .setRequired(true),
+    opt.setName("deposit_channel").setDescription("Channel where deposit requests appear")
+      .addChannelTypes(ChannelType.GuildText).setRequired(true),
   )
   .addChannelOption((opt) =>
-    opt
-      .setName("withdraw_channel")
-      .setDescription("Channel where withdraw requests appear")
-      .addChannelTypes(ChannelType.GuildText)
-      .setRequired(true),
+    opt.setName("withdraw_channel").setDescription("Channel where withdraw requests appear")
+      .addChannelTypes(ChannelType.GuildText).setRequired(true),
   )
   .addChannelOption((opt) =>
-    opt
-      .setName("request_channel")
-      .setDescription("Channel where Accept / Deny buttons appear for all requests")
-      .addChannelTypes(ChannelType.GuildText)
-      .setRequired(true),
+    opt.setName("request_channel").setDescription("Channel where Accept/Deny buttons appear")
+      .addChannelTypes(ChannelType.GuildText).setRequired(true),
   )
   .addChannelOption((opt) =>
-    opt
-      .setName("flip_channel")
-      .setDescription("Channel where /flip challenges are posted")
-      .addChannelTypes(ChannelType.GuildText)
-      .setRequired(true),
+    opt.setName("flip_channel").setDescription("Channel where /flip challenges are posted")
+      .addChannelTypes(ChannelType.GuildText).setRequired(true),
   )
   .addStringOption((opt) =>
-    opt
-      .setName("roblox_user")
-      .setDescription("Roblox username players send gems to when depositing")
+    opt.setName("roblox_user").setDescription("Roblox username players send gems to when depositing")
       .setRequired(true),
-  );
+  )
 
 // ─── Execute ──────────────────────────────────────────────────────────────────
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -95,10 +94,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
 
   const depositCh  = interaction.options.getChannel("deposit_channel",  true);
-  const withdrawCh = interaction.options.getChannel("withdraw_channel",  true);
-  const requestCh  = interaction.options.getChannel("request_channel",   true);
-  const flipCh     = interaction.options.getChannel("flip_channel",      true);
-  const robloxUser = interaction.options.getString("roblox_user",        true);
+  const withdrawCh = interaction.options.getChannel("withdraw_channel", true);
+  const requestCh  = interaction.options.getChannel("request_channel",  true);
+  const flipCh     = interaction.options.getChannel("flip_channel",     true);
+  const robloxUser = interaction.options.getString("roblox_user",       true);
 
   const newCfg: ServerConfig = {
     depositChannelId:  depositCh.id,
@@ -127,28 +126,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     .setTitle("⚠️  Setup Already Configured")
     .setDescription("The bot is already set up. Do you want to overwrite the existing configuration?")
     .addFields(
-      {
-        name: "Current configuration",
-        value: [
-          `📥 Deposit: <#${existing.depositChannelId}>`,
-          `📤 Withdraw: <#${existing.withdrawChannelId}>`,
-          `📋 Requests: <#${existing.requestChannelId}>`,
-          `🪙 Flip: <#${existing.flipChannelId ?? "not set"}>`,
-          `🎮 Roblox: \`${existing.robloxUser}\``,
-        ].join("\n"),
-        inline: true,
-      },
-      {
-        name: "New configuration",
-        value: [
-          `📥 Deposit: <#${newCfg.depositChannelId}>`,
-          `📤 Withdraw: <#${newCfg.withdrawChannelId}>`,
-          `📋 Requests: <#${newCfg.requestChannelId}>`,
-          `🪙 Flip: <#${newCfg.flipChannelId}>`,
-          `🎮 Roblox: \`${newCfg.robloxUser}\``,
-        ].join("\n"),
-        inline: true,
-      },
+      { name: "Current configuration", value: cfgSummary(existing), inline: true },
+      { name: "New configuration",     value: cfgSummary(newCfg),   inline: true },
     )
     .setTimestamp();
 

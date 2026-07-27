@@ -1,0 +1,255 @@
+Create a new game command called **/hilo**
+
+The implementation MUST match the architecture  style of my existing commands:
+
+---
+
+# Slash Command
+
+Create:
+
+/hilo
+
+Required option:
+
+amount (string)
+
+Examples:
+
+* 1,000,000
+* 10m
+* 2.5b
+
+---
+
+# Economy
+
+Target RTP:
+
+90%
+
+House Edge:
+
+10%
+
+Balance the multipliers around a 90% RTP.
+
+Do NOT hardcode random payouts.
+
+The long-term expected return should be approximately 90%.
+
+---
+
+# Gameplay
+
+Use a standard 52-card deck.
+
+Ranks:
+
+2
+3
+4
+5
+6
+7
+8
+9
+10
+J
+Q
+K
+A
+
+Ace is the highest card.
+
+Suits are cosmetic only.
+
+Display cards using Unicode playing card emojis when possible.
+
+---
+
+# Starting Game
+
+Player bets.
+
+Random starting card is drawn.
+
+Example:
+
+Current Card
+
+🂩 9
+
+Buttons:
+
+⬆️ Higher
+
+⬇️ Lower
+
+💰 Cash Out
+
+---
+
+# Guess Logic
+
+If player guesses correctly:
+
+Draw a new card.
+
+Increase multiplier.
+
+Update embed.
+
+Allow another guess.
+
+If player guesses incorrectly:
+
+Lose the bet.
+
+End the game.
+
+Disable all buttons.
+
+---
+
+# Tie Rule
+
+If the next card has the same value:
+
+Treat it as a loss.
+
+---
+
+# Multipliers
+
+Design a multiplier progression that results in approximately a 90% RTP.
+
+Example progression (adjust if needed):
+
+Correct Guess 1 → 1.20x
+
+Correct Guess 2 → 1.45x
+
+Correct Guess 3 → 1.80x
+
+Correct Guess 4 → 2.30x
+
+Correct Guess 5 → 3.00x
+
+Correct Guess 6 → 4.00x
+
+Correct Guess 7 → 5.40x
+
+Correct Guess 8 → 7.20x
+
+Correct Guess 9 → 9.80x
+
+Correct Guess 10 → 13.50x
+
+Continue increasing reasonably.
+
+The progression should feel rewarding while maintaining the target RTP.
+
+---
+
+# Cash Out
+
+At any time the player may press
+
+💰 Cash Out
+
+The player receives:
+
+bet × currentMultiplier
+
+---
+
+# Embeds
+
+During the game:
+
+🃏 Hi-Lo
+
+Display:
+
+Current Card
+
+Current Multiplier
+
+Current Cash Out
+
+Correct Guesses
+
+Bet
+
+Footer:
+
+Choose Higher or Lower.
+
+---
+
+If player wins:
+
+Green embed.
+
+Show:
+
+Previous card
+
+New card
+
+Multiplier
+
+Payout
+
+Profit
+
+---
+
+If player loses:
+
+Red embed.
+
+Show:
+
+Previous card
+
+New card
+
+Loss
+
+Correct guesses achieved
+
+---
+
+# Buttons
+
+⬆️ Higher
+
+⬇️ Lower
+
+💰 Cash Out
+
+After the game finishes:
+
+Disable the gameplay buttons.
+
+Show:
+
+🔄 Play Again
+
+Play Again should automatically start a new Hi-Lo game with the same bet.
+
+dont modify unrelaated commands
+
+---
+
+#
+
+---
+
+#
+
+---
+
+#

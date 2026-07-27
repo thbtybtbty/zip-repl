@@ -189,7 +189,7 @@ async function settleGame(game: ScratchGame): Promise<void> {
   const win      = checkWin(game.cells);
   const winnings = win.winner ? Math.floor(game.bet * win.symbol!.mult) : 0;
   if (winnings > 0) await addBalance(game.userId, winnings);
-  await recordBet(game.userId, game.bet, winnings - game.bet);
+  await recordBet(game.userId, game.bet, winnings - game.bet, "scratchcard");
 }
 
 // ─── Components ───────────────────────────────────────────────────────────────
@@ -288,7 +288,7 @@ function buildResultEmbed(game: ScratchGame): EmbedBuilder {
       [
         `💎 **Bet**         \`${formatAmount(game.bet)}\``,
         `✨ **Best Match**  ${win.winner ? `\`${win.symbol!.emoji} ${fmtMult(win.symbol!.mult)}\`` : "`None`"}`,
-        `💰 **Winnings**   \`${winnings > 0 ? formatAmount(winnings) : "0"}\``,
+        `💰 **Payout**     \`${winnings > 0 ? formatAmount(winnings) : "0"}\``,
         ``,
         resultLine,
       ].join("\n"),

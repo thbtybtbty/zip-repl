@@ -25,4 +25,4 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
-DISCORD_CLIENT_ID = "1528108960534630481"
+DISCORD_CLIENT_ID = "1530170782175465546"

@@ -100,8 +100,35 @@ function handStr(hand: Card[]): string {
   return hand.map(cardStr).join("  ");
 }
 
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 // ─── UI builders ───────────────────────────────────────────────────────────────
 type GameStatus = "active" | "player_bust" | "dealer_bust" | "player_win" | "dealer_win" | "push" | "blackjack";
+
+/** Embed shown during animated dealer reveal — partial dealer hand, no outcome yet. */
+function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): EmbedBuilder {
+  const pv   = handValue(game.playerHand);
+  const dv   = handValue(shownDealerCards);
+  const bet  = game.bet * (game.doubled ? 2 : 1);
+  const more = shownDealerCards.length < game.dealerHand.length;
+
+  return new EmbedBuilder()
+    .setColor(COLORS.primary)
+    .setTitle("🃏  Blackjack")
+    .setDescription(
+      [
+        `\`${"⠀".repeat(40)}\``,
+        `**Dealer**  **${dv}**${more ? " ..." : ""}`,
+        `\`${handStr(shownDealerCards)}\``,
+        ``,
+        `**Your Hand**  **${pv}**`,
+        `\`${handStr(game.playerHand)}\``,
+        ``,
+        `💎 **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
+      ].join("\n"),
+    )
+    .setTimestamp();
+}
 
 function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
   const pv = handValue(game.playerHand);
@@ -115,23 +142,22 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
   const dealerScore = showDealerFull ? `**${dv}**${dv > 21 ? "  💥 BUST" : ""}` : "**?**";
 
   const bet        = game.bet * (game.doubled ? 2 : 1);
-  const bjReturn   = game.bet + Math.floor(game.bet * 1.5); // 3:2 → stake + 1.5× profit
 
-  const statusMeta: Record<GameStatus, { color: number; title: string; returnVal: string | null }> = {
-    active:       { color: COLORS.primary, title: "🃏  Blackjack",               returnVal: null },
-    player_bust:  { color: COLORS.danger,  title: "🃏  Blackjack — Bust!",       returnVal: "0" },
-    dealer_bust:  { color: COLORS.success, title: "🃏  Blackjack — You Win!",    returnVal: formatAmount(bet * 2) },
-    player_win:   { color: COLORS.success, title: "🃏  Blackjack — You Win!",    returnVal: formatAmount(bet * 2) },
-    dealer_win:   { color: COLORS.danger,  title: "🃏  Blackjack — Dealer Wins", returnVal: "0" },
-    push:         { color: COLORS.warning, title: "🃏  Blackjack — Push",        returnVal: formatAmount(bet) },
-    blackjack:    { color: COLORS.gold,    title: "🃏  Blackjack! 🎉",           returnVal: formatAmount(bjReturn) },
+  const statusMeta: Record<GameStatus, { color: number; title: string; payoutStr: string | null }> = {
+    active:       { color: COLORS.primary, title: "🃏  Blackjack",               payoutStr: null },
+    player_bust:  { color: COLORS.danger,  title: "🃏  Blackjack — Bust!",       payoutStr: `0` },
+    dealer_bust:  { color: COLORS.success, title: "🃏  Blackjack — You Win!",    payoutStr: formatAmount(bet * 2) },
+    player_win:   { color: COLORS.success, title: "🃏  Blackjack — You Win!",    payoutStr: formatAmount(bet * 2) },
+    dealer_win:   { color: COLORS.danger,  title: "🃏  Blackjack — Dealer Wins", payoutStr: `0` },
+    push:         { color: COLORS.warning, title: "🃏  Blackjack — Push",        payoutStr: formatAmount(bet) },
+    blackjack:    { color: COLORS.gold,    title: "🃏  Blackjack! 🎉",           payoutStr: formatAmount(game.bet + Math.floor(game.bet * 1.5)) },
   };
 
   const meta = statusMeta[status];
 
   const statsLines = [
     `💎 **Bet**     \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
-    meta.returnVal !== null ? `💎 **Return**  \`${meta.returnVal}\`` : ``,
+    meta.payoutStr !== null ? `💰 **Payout**  \`${meta.payoutStr}\`` : ``,
   ].filter(Boolean).join("\n");
 
   return new EmbedBuilder()
@@ -139,6 +165,7 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
     .setTitle(meta.title)
     .setDescription(
       [
+        `\`${"⠀".repeat(40)}\``,
         `**Dealer**  ${dealerScore}`,
         dealerDisplay,
         ``,
@@ -189,16 +216,6 @@ function playAgainRow(userId: string, bet: number, disabled = false): ActionRowB
   );
 }
 
-// ─── House edge ────────────────────────────────────────────────────────────────
-// 7.5% of player wins are silently flipped to dealer wins.
-// Payouts remain full — the edge is in outcome probability, not payout size.
-function applyHouseEdge(status: GameStatus): GameStatus {
-  // dealer_bust is excluded — the bust is visible on screen so it can't be silently flipped
-  if (status === "player_win" || status === "blackjack") {
-    if (Math.random() < 0.075) return "dealer_win";
-  }
-  return status;
-}
 
 // ─── Dealer play ───────────────────────────────────────────────────────────────
 function dealerPlay(game: BlackjackGame): void {
@@ -215,38 +232,53 @@ async function resolveGame(
 ): Promise<void> {
   activeBlackjackGames.delete(game.userId);
 
-  // Apply hidden house edge: 7.5% of wins become dealer wins
-  status = applyHouseEdge(status);
 
-  // The bet was already deducted from the player's balance when the game started.
-  // For doubled games, the extra bet was deducted in handleDouble.
-  // So `payout` here is the gross amount to ADD BACK (stake + profit).
-  // `netDelta` is the true profit/loss for recordBet stats.
   const multiplier = game.doubled ? 2 : 1;
   const totalStake = game.bet * multiplier;
-  let payout   = 0; // gross return (added to balance)
-  let netDelta = 0; // net profit/loss (for stats)
+  let payout   = 0;
+  let netDelta = 0;
 
   if (status === "blackjack") {
-    // 3:2 payout — stake back + 1.5× profit
     const bjProfit = Math.floor(game.bet * 1.5);
     payout   = game.bet + bjProfit;
     netDelta = bjProfit;
   } else if (status === "player_win" || status === "dealer_bust") {
-    payout   = totalStake * 2; // stake back + equal profit
+    payout   = totalStake * 2;
     netDelta = totalStake;
   } else if (status === "push") {
-    payout   = totalStake; // stake returned, no profit
+    payout   = totalStake;
     netDelta = 0;
   } else {
-    // loss — stake already gone, nothing to add back
     payout   = 0;
     netDelta = -totalStake;
   }
 
   await addBalance(game.userId, payout);
-  await recordBet(game.userId, totalStake, netDelta);
+  await recordBet(game.userId, totalStake, netDelta, "blackjack");
 
+  // ─── Animated dealer reveal (skipped if player already busted) ───────────
+  if (status !== "player_bust") {
+    const all = game.dealerHand;
+
+    // Step 1: flip the hidden card — show both initial cards
+    await interaction.editReply({
+      embeds:     [buildEmbedAnimating(game, all.slice(0, 2))],
+      components: buildComponents(game, true),
+    });
+
+    // Step 2: reveal each extra card drawn by the dealer, one at a time
+    for (let i = 2; i < all.length; i++) {
+      await sleep(700);
+      await interaction.editReply({
+        embeds:     [buildEmbedAnimating(game, all.slice(0, i + 1))],
+        components: buildComponents(game, true),
+      });
+    }
+
+    await sleep(700);
+  }
+
+  // Final result with Play Again
   await interaction.editReply({
     embeds:     [buildEmbed(game, status)],
     components: [...buildComponents(game, true), playAgainRow(game.userId, game.bet)],
@@ -308,8 +340,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       status = "push";
       payout = amount; // return stake
     } else if (playerBJ) {
-      status = applyHouseEdge("blackjack");
-      payout = status === "blackjack" ? amount + Math.floor(amount * 1.5) : 0;
+      status = "blackjack";
+      payout = amount + Math.floor(amount * 1.5);
     } else {
       status = "dealer_win";
       payout = 0; // stake already deducted above
@@ -476,8 +508,8 @@ export async function handlePlayAgain(interaction: ButtonInteraction, userId: st
       status = "push";
       payout = bet; // return stake
     } else if (playerBJ) {
-      status = applyHouseEdge("blackjack");
-      payout = status === "blackjack" ? bet + Math.floor(bet * 1.5) : 0;
+      status = "blackjack";
+      payout = bet + Math.floor(bet * 1.5);
     } else {
       status = "dealer_win";
       payout = 0; // stake already deducted above

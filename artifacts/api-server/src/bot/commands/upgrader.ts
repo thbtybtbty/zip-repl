@@ -22,7 +22,27 @@ function winChancePct(multiplier: number): number {
   return (RTP / multiplier) * 100;
 }
 
-// ─── Result embed (matching photo style) ─────────────────────────────────────
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+// ─── Countdown embed ─────────────────────────────────────────────────────────
+function countdownEmbed(bet: number, multiplier: number, seconds: number): EmbedBuilder {
+  const chancePct = winChancePct(multiplier);
+  const filled    = 3 - seconds;
+  const dots      = ["●", "●", "●"].map((_, i) => i < filled ? "●" : "·").join("  ");
+  return new EmbedBuilder()
+    .setColor(COLORS.primary)
+    .setTitle("▲  Upgrader")
+    .setDescription([
+      `⏳  **Result in ${seconds}…**   \`${dots}\``,
+      ``,
+      `💎 **Bet**  \`${formatAmount(bet)}\``,
+      `✨ **Multiplier**  \`${multiplier.toFixed(2)}x\``,
+      `🍀 **Win chance**  \`${chancePct.toFixed(2)}%\``,
+    ].join("\n"))
+    .setTimestamp();
+}
+
+// ─── Result embed ─────────────────────────────────────────────────────────────
 function resultEmbed(
   bet:        number,
   multiplier: number,
@@ -33,13 +53,7 @@ function resultEmbed(
   const chancePct = winChancePct(multiplier);
   const profit    = payout - bet;
 
-  const title = won
-    ? "▲  Upgrader"
-    : "▲  Upgrader";
-
-  const outcome = won
-    ? "🏆 **YOU WON**"
-    : "💀 **YOU LOST**";
+  const outcome = won ? "🏆 **YOU WON**" : "💀 **YOU LOST**";
 
   const rollVerdict = won
     ? `Roll landed at \`${rolled.toFixed(2)}\` — under the \`${chancePct.toFixed(2)}%\` threshold. **Upgrade successful!**`
@@ -47,25 +61,23 @@ function resultEmbed(
 
   const lines: string[] = [
     outcome,
-    "",
-    `💎 **Bet**           \`${formatAmount(bet)}\``,
-    `✨ **Multiplier**    \`${multiplier.toFixed(2)}x\` (\`${formatAmount(payout > 0 ? payout : Math.floor(bet * multiplier))}\`)`,
-    `🍀 **Roll**          \`${rolled.toFixed(2)}\``,
-    `🍀 **Win chance**    \`${chancePct.toFixed(2)}%\``,
-    "",
-    `Roll \`${rolled.toFixed(2)}\` → Threshold \`${chancePct.toFixed(2)}%\``,
-    "",
+    ``,
+    `💎 **Bet**  \`${formatAmount(bet)}\``,
+    `✨ **Multiplier**  \`${multiplier.toFixed(2)}x\` (\`${formatAmount(payout > 0 ? payout : Math.floor(bet * multiplier))}\`)`,
+    `🍀 **Roll**  \`${rolled.toFixed(2)}\``,
+    `🍀 **Win chance**  \`${chancePct.toFixed(2)}%\``,
+    ``,
     `> ${rollVerdict}`,
   ];
 
   if (won) {
-    lines.push("", `💰 **Payout**  \`${formatAmount(payout)}\``);
-    lines.push(`📈 **Profit**   \`+${formatAmount(profit)}\``);
+    lines.push(``, `💰 **Payout**  \`${formatAmount(payout)}\``);
+    lines.push(`📈 **Profit**  \`+${formatAmount(profit)}\``);
   }
 
   return new EmbedBuilder()
     .setColor(won ? COLORS.success : COLORS.danger)
-    .setTitle(title)
+    .setTitle("▲  Upgrader")
     .setDescription(lines.join("\n"))
     .setTimestamp();
 }
@@ -118,9 +130,15 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   const payout    = won ? Math.floor(amount * multiplier) : 0;
 
   if (won) await addBalance(interaction.user.id, payout);
-  await recordBet(interaction.user.id, amount, payout - amount);
+  await recordBet(interaction.user.id, amount, payout - amount, "upgrader");
 
-  await interaction.editReply({
-    embeds: [resultEmbed(amount, multiplier, won, payout, rolled)],
-  });
+  // ─── Countdown animation ──────────────────────────────────────────────────
+  await interaction.editReply({ embeds: [countdownEmbed(amount, multiplier, 3)] });
+  await sleep(1000);
+  await interaction.editReply({ embeds: [countdownEmbed(amount, multiplier, 2)] });
+  await sleep(1000);
+  await interaction.editReply({ embeds: [countdownEmbed(amount, multiplier, 1)] });
+  await sleep(1000);
+
+  await interaction.editReply({ embeds: [resultEmbed(amount, multiplier, won, payout, rolled)] });
 }

@@ -147,11 +147,16 @@ export function buildTowersEmbed(
     cashed: `🗼 Towers — Cashed Out!`,
   };
 
+  const payoutLine =
+    status === "won" || status === "cashed" ? `💰 **Payout**      \`${formatAmount(currentWin)}\`` :
+    status === "lost"                       ? `💰 **Payout**      \`0\`` :
+                                              `💰 **Potential**   \`${formatAmount(currentWin)}\``;
+
   const statsLines = [
     `💎 **Bet**         \`${formatAmount(game.bet)}\``,
     `🎯 **Difficulty**  \`${diffName[game.difficulty]}\``,
     `✨ **Multiplier**  \`${formatMult(game.multiplier)}\``,
-    `💰 **Potential**   \`${formatAmount(currentWin)}\``,
+    payoutLine,
     ...(status === "active"
       ? [`⭐ **Next gem**   \`${formatAmount(nextWin)}\``]
       : []),
@@ -297,7 +302,7 @@ export async function handleChoice(interaction: ButtonInteraction, choice: Tower
 
   if (tile === "bomb") {
     activeTowersGames.delete(interaction.user.id);
-    await recordBet(interaction.user.id, game.bet, -game.bet);
+    await recordBet(interaction.user.id, game.bet, -game.bet, `towers-${game.difficulty}`);
     await interaction.editReply({
       embeds:     [buildTowersEmbed(game, "lost")],
       components: buildEndComponents(game),
@@ -313,7 +318,7 @@ export async function handleChoice(interaction: ButtonInteraction, choice: Tower
     activeTowersGames.delete(interaction.user.id);
     const winnings = Math.floor(game.bet * game.multiplier);
     await addBalance(interaction.user.id, winnings);
-    await recordBet(interaction.user.id, game.bet, winnings - game.bet);
+    await recordBet(interaction.user.id, game.bet, winnings - game.bet, `towers-${game.difficulty}`);
     await interaction.editReply({
       embeds:     [buildTowersEmbed(game, "won")],
       components: buildEndComponents(game),
@@ -347,7 +352,7 @@ export async function handleCashout(interaction: ButtonInteraction) {
   activeTowersGames.delete(interaction.user.id);
   const winnings = Math.floor(game.bet * game.multiplier);
   await addBalance(interaction.user.id, winnings);
-  await recordBet(interaction.user.id, game.bet, winnings - game.bet);
+  await recordBet(interaction.user.id, game.bet, winnings - game.bet, `towers-${game.difficulty}`);
 
   await interaction.editReply({
     embeds:     [buildTowersEmbed(game, "cashed")],

@@ -64,11 +64,16 @@ export function buildMinesPanelEmbed(
     lost:   `${BOMB} Mines — Bomb Hit!`,
   };
 
+  const payoutLine =
+    status === "won"  ? `💰 **Payout**    \`${formatAmount(currentWin)}\`` :
+    status === "lost" ? `💰 **Payout**    \`0\`` :
+                        `💰 **Potential** \`${formatAmount(currentWin)}\``;
+
   const desc = [
     `💎 **Bet**  \`${formatAmount(game.bet)}\``,
     `✨ **Multiplier**  \`${formatMult(game.multiplier)} → ${formatMult(nextMult)}\``,
     `💎 **Gems found**  \`${game.gemsFound}/${totalGems}\``,
-    `💰 **Potential**  \`${formatAmount(currentWin)}\``,
+    payoutLine,
     `${BOMB} **Bombs**  \`${game.minesCount}\``,
   ].join("\n");
 
@@ -80,32 +85,51 @@ export function buildMinesPanelEmbed(
 }
 
 // ─── Grid (5×5, fills all 5 action rows) ─────────────────────────────────────
+// status:
+//   "active"  — only revealed cells shown; rest are blank Primary buttons
+//   "won"     — full reveal: revealed gems = green, unrevealed gems = grey, all bombs = 💣 red
+//   "lost"    — full reveal: same as "won" but explodedIndex cell shows 💥 instead of 💣
 export function buildMinesGrid(
   game: MinesGame,
-  showAll: boolean,
+  status: "active" | "won" | "lost",
+  explodedIndex?: number,
 ): ActionRowBuilder<MessageActionRowComponentBuilder>[] {
+  const showAll = status === "won" || status === "lost";
   const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
+
   for (let row = 0; row < 5; row++) {
     const actionRow = new ActionRowBuilder<MessageActionRowComponentBuilder>();
     for (let col = 0; col < 5; col++) {
       const idx        = row * 5 + col;
       const isRevealed = game.revealed[idx];
       const cell       = game.board[idx];
+      const isGem      = cell === "gem";
 
       let btn: ButtonBuilder;
-      if (isRevealed || showAll) {
-        const isGem = cell === "gem";
+
+      if (!showAll && !isRevealed) {
+        // Active game — unrevealed cell
         btn = new ButtonBuilder()
           .setCustomId(`mines_r_${idx}`)
-          .setEmoji(isGem ? "💎" : "💣")
-          .setStyle(isGem ? ButtonStyle.Success : ButtonStyle.Danger)
+          .setLabel("\u2800") // Braille blank — passes Discord validation
+          .setStyle(ButtonStyle.Primary);
+      } else if (isGem) {
+        // Gem cell: green if player already revealed it, grey if not (only on end)
+        btn = new ButtonBuilder()
+          .setCustomId(`mines_r_${idx}`)
+          .setEmoji("💎")
+          .setStyle(isRevealed ? ButtonStyle.Success : ButtonStyle.Secondary)
           .setDisabled(true);
       } else {
+        // Bomb cell: 💥 for the one the player hit, 💣 for all others
+        const exploded = status === "lost" && idx === explodedIndex;
         btn = new ButtonBuilder()
           .setCustomId(`mines_r_${idx}`)
-          .setLabel("\u2800") // Braille blank — passes Discord validation, renders invisibly
-          .setStyle(ButtonStyle.Primary);
+          .setEmoji(exploded ? "💥" : "💣")
+          .setStyle(ButtonStyle.Danger)
+          .setDisabled(true);
       }
+
       actionRow.addComponents(btn);
     }
     rows.push(actionRow);
@@ -157,8 +181,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const minesCount = interaction.options.getInteger("mines", true);
   const amount     = parseAmount(amountStr);
 
-  if (!amount || amount <= 0)
-    return interaction.editReply({ embeds: [errorEmbed("Invalid amount. Try `1m`, `2.5b`, `500k`.")] });
+  if (!amount || amount < 1_000_000)
+    return interaction.editReply({ embeds: [errorEmbed("Minimum bet is **1m gems**. Try `1m`, `2.5b`, `500k`.")] });
 
   if (activeMinesGames.has(interaction.user.id))
     return interaction.editReply({ embeds: [errorEmbed("You already have an active Mines game!")] });
@@ -236,11 +260,11 @@ export async function handleReveal(interaction: ButtonInteraction, cellIndex: nu
       activeMinesGames.delete(interaction.user.id);
       const winnings = Math.floor(game.bet * game.multiplier);
       await addBalance(interaction.user.id, winnings);
-      await recordBet(interaction.user.id, game.bet, winnings - game.bet);
+      await recordBet(interaction.user.id, game.bet, winnings - game.bet, `mines-${game.minesCount}`);
 
       await interaction.editReply({
         embeds:     [buildMinesPanelEmbed(game, "won")],
-        components: buildMinesGrid(game, false),
+        components: buildMinesGrid(game, "won"),
       });
       const cashoutMsg = await channel.messages.fetch(game.cashoutMessageId);
       // Replace cashout with Play Again
@@ -248,18 +272,18 @@ export async function handleReveal(interaction: ButtonInteraction, cellIndex: nu
     } else {
       await interaction.editReply({
         embeds:     [buildMinesPanelEmbed(game, "active")],
-        components: buildMinesGrid(game, false),
+        components: buildMinesGrid(game, "active"),
       });
       const cashoutMsg = await channel.messages.fetch(game.cashoutMessageId);
       await cashoutMsg.edit({ components: [buildCashoutRow(true)] });
     }
   } else {
-    // Bomb hit — reveal all
+    // Bomb hit — reveal all, mark the clicked cell as exploded
     activeMinesGames.delete(interaction.user.id);
-    await recordBet(interaction.user.id, game.bet, -game.bet);
+    await recordBet(interaction.user.id, game.bet, -game.bet, `mines-${game.minesCount}`);
     await interaction.editReply({
       embeds:     [buildMinesPanelEmbed(game, "lost")],
-      components: buildMinesGrid(game, true),
+      components: buildMinesGrid(game, "lost", cellIndex),
     });
     const cashoutMsg = await channel.messages.fetch(game.cashoutMessageId);
     // Replace cashout with Play Again
@@ -285,7 +309,7 @@ export async function handleCashout(interaction: ButtonInteraction) {
   activeMinesGames.delete(interaction.user.id);
   const winnings = Math.floor(game.bet * game.multiplier);
   await addBalance(interaction.user.id, winnings);
-  await recordBet(interaction.user.id, game.bet, winnings - game.bet);
+  await recordBet(interaction.user.id, game.bet, winnings - game.bet, `mines-${game.minesCount}`);
 
   const channel      = interaction.channel!;
   const panelGridMsg = await channel.messages.fetch(game.panelGridMessageId);
@@ -295,7 +319,7 @@ export async function handleCashout(interaction: ButtonInteraction) {
     // Update panel+grid on message 1
     panelGridMsg.edit({
       embeds:     [buildMinesPanelEmbed(game, "won")],
-      components: buildMinesGrid(game, false),
+      components: buildMinesGrid(game, "won"),
     }),
   ]);
 }

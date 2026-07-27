@@ -63,7 +63,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const result = (won ? choice : (choice === "heads" ? "tails" : "heads")) as typeof SIDES[number];
   const payout  = won ? amount : -amount;
   const newBal  = await addBalance(interaction.user.id, payout);
-  await recordBet(interaction.user.id, amount, payout);
+  await recordBet(interaction.user.id, amount, payout, "coinflip");
 
   const embed = new EmbedBuilder()
     .setColor(won ? COLORS.success : COLORS.danger)
@@ -74,8 +74,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         `🪙 **Result**     \`${SIDE_DISPLAY[result]!}\``,
         `💎 **Bet**        \`${formatAmount(amount)}\``,
         won
-          ? `🎉 **Return**     \`${formatAmount(amount * 2)}\``
-          : `🔴 **Return**     \`0\``,
+          ? `💰 **Payout**     \`${formatAmount(amount * 2)}\``
+          : `💰 **Payout**     \`0\``,
       ].join("\n"),
     )
     .setTimestamp();

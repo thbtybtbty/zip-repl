@@ -60,3 +60,75 @@ id = "9iBcA9kA0A1YaMGwe9m1l"
 uri = "file://wispbyte-dist-update.zip"
 type = "unspecified"
 title = "WispByte dist update"
+
+[[outputs]]
+id = "UrOHt4hBG5dENYFPQ3Vr5"
+uri = "file://index-wispbyte.mjs"
+type = "unspecified"
+title = "index.mjs — WispByte (keno update)"
+
+[[outputs]]
+id = "iWycN351lAFp3BaaVgyti"
+uri = "file://keno-update.tar.gz"
+type = "unspecified"
+title = "update.tar.gz — all changes"
+
+[[outputs]]
+id = "wRZ9p8bjgXVdEm1apok5w"
+uri = "file://update.tar.gz"
+type = "unspecified"
+title = "update.tar.gz — history + resetstats"
+
+[[outputs]]
+id = "8I43rzcPejxZI-FZBvGKQ"
+uri = "file://wispbyte-update.tar.gz"
+type = "unspecified"
+title = "Wispbyte Update — Payout label (all games)"
+
+[[outputs]]
+id = "a63Ab24aVgaNQCri6d92w"
+uri = "file://wispbyte-wheel-update.tar.gz"
+type = "unspecified"
+title = "Wispbyte Wheel Update"
+
+[[outputs]]
+id = "7sJVx8bFaZg44UkJrCrxt"
+uri = "file://wispbyte-slots-update.tar.gz"
+type = "unspecified"
+title = "Wispbyte Slots Update"
+
+[[outputs]]
+id = "5AeKW2OcW4n4rr50UswbA"
+uri = "file://wispbyte-slots-animation-payouts-update.tar.gz"
+type = "unspecified"
+title = "Wispbyte Slots Animation and Payouts Update"
+
+[[outputs]]
+id = "JYx008rYngtsZHvmN9AsJ"
+uri = "file://wispbyte-hilo-update.tar.gz"
+type = "unspecified"
+title = "Wispbyte Hi-Lo Update"
+
+[[outputs]]
+id = "lNhVNDOWRQ389gXcnZpzG"
+uri = "file://wispbyte-hilo-panel-update.tar.gz"
+type = "unspecified"
+title = "Wispbyte Hi-Lo Panel Update"
+
+[[outputs]]
+id = "3ee1PkmAKGr3_dFzYD_8H"
+uri = "file://wispbyte-update-stats-economy-adminperms.tar.gz"
+type = "unspecified"
+title = "Wispbyte Update — stats, economy, addadminperms"
+
+[[outputs]]
+id = "j9U6ADnYZyJIkOctWs4is"
+uri = "file://wispbyte-update-fixes.tar.gz"
+type = "unspecified"
+title = "Wispbyte Update — /history fix, admin bet exclusion, balance advanced stats"
+
+[[outputs]]
+id = "JwDkdO8uJ6k1x0qkPIuS_"
+uri = "file://attached_assets/gemspin-bot-v2-wispbyte.tar.gz"
+type = "unspecified"
+title = "GemSpin Bot V2 — WispByte Package (mines + flip update)"

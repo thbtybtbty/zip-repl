@@ -32,6 +32,30 @@ export const configTable = sqliteTable("config", {
   value: text("value").notNull(),
 });
 
+export const betLogTable = sqliteTable("bet_log", {
+  id:        integer("id").primaryKey({ autoIncrement: true }),
+  userId:    text("user_id").notNull(),
+  command:   text("command").notNull(),
+  bet:       integer("bet").notNull(),
+  netDelta:  integer("net_delta").notNull(),
+  adminBet:  integer("admin_bet").notNull().default(0),  // 1 = admin test bet; excluded from stats/economy
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+/** Tracks server invite usage for the invite-reward system. */
+export const inviteLogTable = sqliteTable("invite_log", {
+  id:               integer("id").primaryKey({ autoIncrement: true }),
+  inviterId:        text("inviter_id").notNull(),
+  invitedId:        text("invited_id").notNull(),
+  inviteCode:       text("invite_code").notNull(),
+  verified:         integer("verified").notNull().default(0),        // 1 when they get the verified role
+  rewarded:         integer("rewarded").notNull().default(0),        // 1 when inviter was paid
+  leftServer:       integer("left_server").notNull().default(0),     // 1 if invited user left
+  joinedAt:         integer("joined_at").notNull().$defaultFn(() => Math.floor(Date.now() / 1000)),
+  verifiedAt:       integer("verified_at"),                          // unix seconds, nullable
+  accountCreatedAt: integer("account_created_at").notNull(),         // unix seconds of Discord account creation
+});
+
 export const insertUserSchema = createInsertSchema(usersTable).omit({ createdAt: true, updatedAt: true });
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof usersTable.$inferSelect;

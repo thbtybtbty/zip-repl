@@ -1,8 +1,15 @@
 import {
   SlashCommandBuilder,
   EmbedBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ActionRowBuilder,
+  MessageFlags,
   type ChatInputCommandInteraction,
+  type ButtonInteraction,
+  type MessageActionRowComponentBuilder,
 } from "discord.js";
+import { sqlite } from "@workspace/db";
 import { COLORS, getOrCreateUser, formatAmount } from "../utils.js";
 
 export const data = new SlashCommandBuilder()
@@ -43,5 +50,53 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     )
     .setTimestamp();
 
-  await interaction.editReply({ embeds: [embed] });
+  const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`bal_adv_${interaction.user.id}`)
+      .setLabel("Advanced Stats")
+      .setEmoji("📊")
+      .setStyle(ButtonStyle.Secondary),
+  );
+
+  await interaction.editReply({ embeds: [embed], components: [row] });
+}
+
+// ─── Button: Advanced Stats (ephemeral — only the command owner can see it) ───
+export async function handleAdvancedStats(bi: ButtonInteraction, targetUserId: string): Promise<void> {
+  // Only the person whose /balance was run can open this
+  if (bi.user.id !== targetUserId) {
+    await bi.reply({
+      content: "❌ This panel belongs to someone else's `/balance`.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  await bi.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const q = <T>(sql: string, ...args: unknown[]) =>
+    (sqlite.prepare(sql).get(...args) as T) ?? ({} as T);
+
+  const { sent }     = q<{ sent: number }>(
+    `SELECT CAST(COALESCE(SUM(bet),0) AS INTEGER) AS sent
+     FROM bet_log WHERE user_id = ? AND command = 'tip-sent'`,
+    targetUserId,
+  );
+  const { received } = q<{ received: number }>(
+    `SELECT CAST(COALESCE(SUM(net_delta),0) AS INTEGER) AS received
+     FROM bet_log WHERE user_id = ? AND command = 'tip-received'`,
+    targetUserId,
+  );
+
+  const embed = new EmbedBuilder()
+    .setColor(COLORS.dark)
+    .setTitle("📊 Advanced Stats")
+    .addFields({
+      name:  "💸 Tips",
+      value: `📤  Tips Sent      **${formatAmount(sent ?? 0)} 💎**\n📥  Tips Received  **${formatAmount(received ?? 0)} 💎**`,
+      inline: false,
+    })
+    .setTimestamp();
+
+  await bi.editReply({ embeds: [embed] });
 }

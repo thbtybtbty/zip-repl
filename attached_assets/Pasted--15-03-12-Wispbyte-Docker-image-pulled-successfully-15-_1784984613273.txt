@@ -1,0 +1,47 @@
+[15:03:12][Wispbyte] : Docker image pulled successfully
+[15:03:13]v19.9.0
+[15:03:13]Server marked as running
+[15:03:13]:/home/container$ node index.js
+[15:03:13][boot] Loading .env...
+[15:03:13][boot] DB → /home/container/artifacts/api-server/bot.db
+[15:03:13][boot] Installing better-sqlite3@11.9.1 (build from source)...
+[15:03:16]25l[..................] | idealTree: sill logfile done cleaning log files
+[..................] | idealTree: sill logfile done cleaning log files
+[..................] | idealTree: sill logfile done cleaning log files
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[..................] | idealTree:container: sill idealTree buildDeps
+[#########.........] \ idealTree: timing idealTree Completed in 807ms 25hnpm ERR! code ENOTEMPTY
+[15:03:16]npm ERR! syscall rename
+[15:03:16]npm ERR! path /home/container/node_modules/better-sqlite3
+[15:03:16]npm ERR! dest /home/container/node_modules/.better-sqlite3-hubfD7Id
+[15:03:16]npm ERR! errno -39
+[15:03:16]npm ERR! ENOTEMPTY: directory not empty, rename '/home/container/node_modules/better-sqlite3' -> '/home/container/node_modules/.better-sqlite3-hubfD7Id'
+[15:03:16]
+[15:03:16]npm ERR! A complete log of this run can be found in: /home/container/.npm/_logs/2026-07-25T13_03_14_282Z-debug-0.log
+[15:03:16]node:child_process:960
+[15:03:16]throw err;
+[15:03:16]^
+[15:03:16]Error: Command failed: npm install better-sqlite3@11.9.1 --no-save --build-from-source
+[15:03:16] at checkExecSyncError (node:child_process:885:11)
+[15:03:16] at execSync (node:child_process:957:15)
+[15:03:16]at Object.<anonymous> (/home/container/index.js:43:3)
+[15:03:16] at Module._compile (node:internal/modules/cjs/loader:1275:14)
+[15:03:16] at Module._extensions..js (node:internal/modules/cjs/loader:1329:10)
+[15:03:16] at Module.load (node:internal/modules/cjs/loader:1133:32)
+[15:03:16] at Module._load (node:internal/modules/cjs/loader:972:12)
+[15:03:16] at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:83:12)
+[15:03:16] at node:internal/main/run_main_module:23:47 {
+[15:03:16]status: 217,
+[15:03:16]signal: null,
+[15:03:16]output: [ null, null, null ],
+[15:03:16]pid: 22,
+[15:03:16]stdout: null,
+[15:03:16]stderr: null
+[15:03:16]}
+[15:03:16]Node.js v19.9.0
