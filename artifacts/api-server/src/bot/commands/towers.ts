@@ -74,10 +74,13 @@ function generateRow(difficulty: Difficulty): TileType[] {
 }
 
 // ─── Tower visual ─────────────────────────────────────────────────────────────
+// Number emojis 1–9 for level labels
+const NUM_EMOJI = ["","1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣"];
+
 function tileEmoji(type: TileType, picked: boolean, exploded = false): string {
   if (exploded && type === "bomb") return "💥";
   if (type === "diamond") return picked ? "💎" : "🔹";
-  return "💣";
+  return picked ? "💣" : "⬛";
 }
 
 function buildTowerVisual(game: TowersGame, status: "active" | "won" | "lost" | "cashed"): string {
@@ -90,29 +93,33 @@ function buildTowerVisual(game: TowersGame, status: "active" | "won" | "lost" | 
     const isCurrent = idx === game.level;
     const isFuture  = idx > game.level;
 
+    const levelIcon = NUM_EMOJI[lvl] ?? `\`${lvl}\``;
+
     let tileStr: string;
 
     if (isFuture) {
-      tileStr = Array(colCount).fill("⬛").join("  ");
+      // Unplayed levels — neutral dark squares
+      tileStr = Array(colCount).fill("⬛").join(" ");
     } else if (isCurrent && status !== "lost") {
-      tileStr = Array(colCount).fill("🟦").join("  ");
+      // Active level — glowing blue tiles waiting to be picked
+      tileStr = Array(colCount).fill("🟦").join(" ");
     } else {
       const record = game.history[idx];
-      if (!record) { tileStr = Array(colCount).fill("▫️").join("  "); }
-      else {
+      if (!record) {
+        tileStr = Array(colCount).fill("⬛").join(" ");
+      } else {
         const isLostLevel = status === "lost" && isCurrent;
         const cells = record.row.map((tile, c) => {
           const picked   = c === record.picked;
           const exploded = isLostLevel && picked && tile === "bomb";
           return tileEmoji(tile, picked, exploded);
         });
-        tileStr = cells.join("  ");
+        tileStr = cells.join(" ");
       }
     }
 
-    const prefix = (isCurrent && status !== "lost") ? "▶ " : "   ";
-    const label  = `Lv ${String(lvl).padStart(2, " ")}`;
-    lines.push(`${prefix}\`${label}\`  ${tileStr}`);
+    const isActive = isCurrent && status !== "lost";
+    lines.push(`${isActive ? "▶" : "　"} ${levelIcon} ${tileStr}`);
   }
 
   return lines.join("\n");
