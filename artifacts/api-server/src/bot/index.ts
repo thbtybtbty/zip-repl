@@ -168,6 +168,9 @@ async function handleInteraction(interaction: Interaction) {
       if (id.startsWith("dep_approve_"))    return await deposit.handleApprove(bi, id.slice("dep_approve_".length));
       if (id.startsWith("dep_notapprove_")) return await deposit.handleNotApprove(bi, id.slice("dep_notapprove_".length));
 
+      // Deposit (channel announcement)
+      if (id.startsWith("dep_viewdetails_")) return await deposit.handleViewDetails(bi, id.slice("dep_viewdetails_".length));
+
       // Withdraw (player side)
       if (id.startsWith("with_confirm_")) return await withdraw.handleConfirm(bi, id.slice("with_confirm_".length));
       if (id.startsWith("with_cancel_"))  return await withdraw.handleCancel(bi, id.slice("with_cancel_".length));
@@ -175,6 +178,9 @@ async function handleInteraction(interaction: Interaction) {
       // Withdraw (mod side)
       if (id.startsWith("with_approve_"))    return await withdraw.handleApprove(bi, id.slice("with_approve_".length));
       if (id.startsWith("with_disapprove_")) return await withdraw.handleDisapprove(bi, id.slice("with_disapprove_".length));
+
+      // Withdraw (channel announcement)
+      if (id.startsWith("with_viewdetails_")) return await withdraw.handleViewDetails(bi, id.slice("with_viewdetails_".length));
 
       // Crash
       if (id.startsWith("crash_cashout_")) return await crash.handleCashout(bi, id.slice("crash_cashout_".length));

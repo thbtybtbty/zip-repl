@@ -26,6 +26,14 @@ interface PendingDeposit {
 
 export const pendingDeposits = new Map<string, PendingDeposit>();
 
+// ─── Approved announcement data (for "View Details" button) ───────────────────
+interface DepositAnnouncementData {
+  userId: string;
+  amount: number;
+  adminId: string;
+}
+export const depositAnnouncements = new Map<string, DepositAnnouncementData>();
+
 function makeReqId(): string {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -181,6 +189,8 @@ export async function handleApprove(interaction: ButtonInteraction, reqId: strin
   await addBalance(req.userId, req.amount);
   await addDeposited(req.userId, req.amount);
 
+  const adminId = interaction.user.id;
+
   await interaction.editReply({
     embeds: [
       new EmbedBuilder()
@@ -189,19 +199,42 @@ export async function handleApprove(interaction: ButtonInteraction, reqId: strin
         .addFields(
           { name: "👤 User", value: `<@${req.userId}>`, inline: true },
           { name: "💎 Amount", value: `${formatAmount(req.amount)} gems`, inline: true },
-          { name: "🛡️ By", value: `<@${interaction.user.id}>`, inline: true },
+          { name: "🛡️ By", value: `<@${adminId}>`, inline: true },
         )
         .setTimestamp(),
     ],
     components: [],
   });
 
-  // Announce in deposit channel
+  // Announce in deposit channel with embed + View Details button
   const cfg2 = getServerConfig();
   if (cfg2) {
     const depCh = interaction.client.channels.cache.get(cfg2.depositChannelId) as TextChannel | undefined;
     if (depCh) {
-      await depCh.send(`<@${req.userId}> has deposited **${formatAmount(req.amount)} 💎**`);
+      const bot = interaction.client.user!;
+      const announceEmbed = new EmbedBuilder()
+        .setColor(COLORS.primary)
+        .setTitle("Deposit Confirmed")
+        .addFields(
+          { name: "💎 Amount", value: formatAmount(req.amount), inline: false },
+          { name: "User", value: `<@${req.userId}>`, inline: false },
+        )
+        .setFooter({ text: bot.username, iconURL: bot.displayAvatarURL() });
+
+      const viewRow = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`dep_viewdetails_${reqId}`)
+          .setLabel("View Details")
+          .setStyle(ButtonStyle.Secondary),
+      );
+
+      depositAnnouncements.set(reqId, { userId: req.userId, amount: req.amount, adminId });
+
+      await depCh.send({
+        content: `<@${req.userId}> deposited **${formatAmount(req.amount)} 💎**`,
+        embeds: [announceEmbed],
+        components: [viewRow],
+      });
     }
   }
 
@@ -222,6 +255,27 @@ export async function handleApprove(interaction: ButtonInteraction, reqId: strin
   } catch {
     // DM failed (DMs disabled) — ignore silently
   }
+}
+
+// ─── Button: anyone clicks "View Details" on the deposit announcement ──────────
+export async function handleViewDetails(interaction: ButtonInteraction, reqId: string) {
+  const data = depositAnnouncements.get(reqId);
+  if (!data) {
+    return interaction.reply({ content: "❌ Details no longer available.", flags: MessageFlags.Ephemeral });
+  }
+
+  const bot = interaction.client.user!;
+  const embed = new EmbedBuilder()
+    .setColor(COLORS.primary)
+    .setTitle("Deposit Details")
+    .setDescription(
+      `💎 **Gems:** ${formatAmount(data.amount)}\n` +
+      `🌿 **Pet RAP:** 0\n\n` +
+      `**Approved by:** <@${data.adminId}>`,
+    )
+    .setFooter({ text: bot.username, iconURL: bot.displayAvatarURL() });
+
+  await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 }
 
 // ─── Button: mod clicked "Not Approve" — show modal for reason ────────────────

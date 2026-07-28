@@ -27,6 +27,15 @@ interface PendingWithdraw {
 
 export const pendingWithdraws = new Map<string, PendingWithdraw>();
 
+// ─── Approved announcement data (for "View Details" button) ───────────────────
+interface WithdrawAnnouncementData {
+  userId: string;
+  amount: number;
+  adminId: string;
+  robloxUser: string;
+}
+export const withdrawAnnouncements = new Map<string, WithdrawAnnouncementData>();
+
 function makeReqId(): string {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -219,6 +228,8 @@ export async function handleApproveModal(interaction: ModalSubmitInteraction, re
   // Gems were already deducted when player confirmed — no further deduction needed
   await addWithdrawn(req.userId, req.amount);
 
+  const adminId = interaction.user.id;
+
   await interaction.editReply({
     embeds: [
       new EmbedBuilder()
@@ -226,9 +237,9 @@ export async function handleApproveModal(interaction: ModalSubmitInteraction, re
         .setTitle("✅ Withdrawal Approved")
         .addFields(
           { name: "👤 From", value: `<@${req.userId}>`, inline: true },
-          { name: "💎 Amount", value: `${formatAmount(req.amount)} gems`, inline: true },
+          { name: "📥 Amount", value: `${formatAmount(req.amount)} gems`, inline: true },
           { name: "🎮 Sent To (Roblox)", value: `\`${req.robloxUser}\``, inline: true },
-          { name: "🛡️ By", value: `<@${interaction.user.id}>`, inline: true },
+          { name: "🛡️ By", value: `<@${adminId}>`, inline: true },
           { name: "📝 Note", value: reason, inline: false },
         )
         .setTimestamp(),
@@ -236,12 +247,35 @@ export async function handleApproveModal(interaction: ModalSubmitInteraction, re
     components: [],
   });
 
-  // Announce in withdraw channel
+  // Announce in withdraw channel with embed + View Details button
   const cfg2 = getServerConfig();
   if (cfg2) {
     const withCh = interaction.client.channels.cache.get(cfg2.withdrawChannelId) as TextChannel | undefined;
     if (withCh) {
-      await withCh.send(`<@${req.userId}> has withdrawn **${formatAmount(req.amount)} 💎**`);
+      const bot = interaction.client.user!;
+      const announceEmbed = new EmbedBuilder()
+        .setColor(COLORS.warning)
+        .setTitle("Withdrawal Confirmed")
+        .addFields(
+          { name: "📥 Amount", value: formatAmount(req.amount), inline: false },
+          { name: "User", value: `<@${req.userId}>`, inline: false },
+        )
+        .setFooter({ text: bot.username, iconURL: bot.displayAvatarURL() });
+
+      const viewRow = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`with_viewdetails_${reqId}`)
+          .setLabel("View Details")
+          .setStyle(ButtonStyle.Secondary),
+      );
+
+      withdrawAnnouncements.set(reqId, { userId: req.userId, amount: req.amount, adminId, robloxUser: req.robloxUser });
+
+      await withCh.send({
+        content: `<@${req.userId}> withdrew **${formatAmount(req.amount)} 📥**`,
+        embeds: [announceEmbed],
+        components: [viewRow],
+      });
     }
   }
 
@@ -252,9 +286,9 @@ export async function handleApproveModal(interaction: ModalSubmitInteraction, re
       embeds: [
         new EmbedBuilder()
           .setColor(COLORS.success)
-          .setTitle("💎 Withdrawal Approved!")
+          .setTitle("📥 Withdrawal Approved!")
           .setDescription(
-            `Your withdrawal of **${formatAmount(req.amount)} 💎 gems** to Roblox account **${req.robloxUser}** has been processed.\n\n**Note:** ${reason}`,
+            `Your withdrawal of **${formatAmount(req.amount)} gems** to Roblox account **${req.robloxUser}** has been processed.\n\n**Note:** ${reason}`,
           )
           .setTimestamp(),
       ],
@@ -262,6 +296,27 @@ export async function handleApproveModal(interaction: ModalSubmitInteraction, re
   } catch {
     // DM failed — ignore silently
   }
+}
+
+// ─── Button: anyone clicks "View Details" on the withdrawal announcement ───────
+export async function handleViewDetails(interaction: ButtonInteraction, reqId: string) {
+  const data = withdrawAnnouncements.get(reqId);
+  if (!data) {
+    return interaction.reply({ content: "❌ Details no longer available.", flags: MessageFlags.Ephemeral });
+  }
+
+  const bot = interaction.client.user!;
+  const embed = new EmbedBuilder()
+    .setColor(COLORS.warning)
+    .setTitle("Withdrawal Details")
+    .setDescription(
+      `📥 **Gems:** ${formatAmount(data.amount)}\n` +
+      `🌿 **Pet RAP:** 0\n\n` +
+      `**Approved by:** <@${data.adminId}>`,
+    )
+    .setFooter({ text: bot.username, iconURL: bot.displayAvatarURL() });
+
+  await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 }
 
 // ─── Button: mod clicked "Disapprove" — show modal for reason ─────────────────
