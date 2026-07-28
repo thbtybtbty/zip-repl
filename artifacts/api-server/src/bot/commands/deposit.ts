@@ -74,9 +74,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     .setColor(COLORS.primary)
     .setTitle("📥 Deposit Request")
     .setDescription(
-      `You requested a **${formatAmount(amount)} 💎** gems deposit.\n\n` +
+      `You requested a **${formatAmount(amount)} PS99 Gems Deposit**.\n\n` +
       `Please send that amount of gems in the mailbox to the account: **${cfg.robloxUser}**\n\n` +
-      `When you sent the gems to the mailbox, please click the button **Sent**.\n` +
+      `__When you sent the gems to the mailbox, please click the button **Sent**.__\n` +
       `If you want to cancel the deposit click the button **Cancel**.`,
     )
     .setTimestamp();
@@ -152,6 +152,26 @@ export async function handleSent(interaction: ButtonInteraction, reqId: string) 
   );
 
   await requestChannel.send({ embeds: [reqEmbed], components: [row] });
+
+  // DM the player — deposit is being checked
+  try {
+    const dmUser = await interaction.client.users.fetch(req.userId);
+    await dmUser.send({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(COLORS.warning)
+          .setTitle("⏳ Deposit Checking")
+          .setDescription(
+            `Your deposit of **${formatAmount(req.amount)} 💎** is being checked and your gems will be added to your balance in a few minutes.\n\n` +
+            `You will receive another DM when your deposit has been approved.\n\n` +
+            `If your gems aren't added to your balance in 1 hour staff may be offline, in this case please make a ticket.`,
+          )
+          .setTimestamp(),
+      ],
+    });
+  } catch {
+    // DMs disabled — ignore silently
+  }
 }
 
 // ─── Button: player clicked "Cancel" ──────────────────────────────────────────

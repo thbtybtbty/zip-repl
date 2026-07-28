@@ -140,6 +140,25 @@ export async function handleConfirm(interaction: ButtonInteraction, reqId: strin
     components: [],
   });
 
+  // DM the player — withdrawal is being checked
+  try {
+    const dmUser = await interaction.client.users.fetch(req.userId);
+    await dmUser.send({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(COLORS.warning)
+          .setTitle("⏳ Withdrawal Checking")
+          .setDescription(
+            `Your withdrawal of **${formatAmount(req.amount)} 💎** gems will be sent to your Roblox account **${req.robloxUser}** via mailbox.\n\n` +
+            `You will receive another DM when your withdrawal has been processed.`,
+          )
+          .setTimestamp(),
+      ],
+    });
+  } catch {
+    // DMs disabled — ignore silently
+  }
+
   if (!cfg) return;
 
   // Send to request channel
@@ -272,7 +291,7 @@ export async function handleApproveModal(interaction: ModalSubmitInteraction, re
       withdrawAnnouncements.set(reqId, { userId: req.userId, amount: req.amount, adminId, robloxUser: req.robloxUser });
 
       await withCh.send({
-        content: `<@${req.userId}> withdrew **${formatAmount(req.amount)} 📥**`,
+        content: `<@${req.userId}> withdrew **${formatAmount(req.amount)} 💎**`,
         embeds: [announceEmbed],
         components: [viewRow],
       });
