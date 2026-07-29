@@ -19,7 +19,7 @@ import {
   errorEmbed,
 } from "../utils.js";
 import { isAdmin, getServerConfig } from "../botConfig.js";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, betLogTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -151,6 +151,13 @@ export async function endRain(guildId: string): Promise<void> {
     ...[...rain.participants].map((uid) => addBalance(uid, each)),
     remainder > 0 ? addBalance(rain.adminId, remainder) : Promise.resolve(),
   ]);
+
+  // Log rain earnings for every participant so Advanced Stats can track them
+  await Promise.all(
+    [...rain.participants].map((uid) =>
+      db.insert(betLogTable).values({ userId: uid, command: "rain", bet: 0, netDelta: each }),
+    ),
+  );
 
   await rain.message
     .edit({ embeds: [endedEmbed(rain.total, count, each)], components: [] })

@@ -339,10 +339,13 @@ async function handleInteraction(interaction: Interaction) {
       if (id === "aap_remove") return await addadminperms.handleRemove(bi);
       if (id === "aap_cancel") return await addadminperms.handleCancel(bi);
 
-      // Balance — Advanced Stats
+      // Balance — Advanced Stats  (format: bal_adv_<targetUserId>_<commandRunnerId>)
       if (id.startsWith("bal_adv_")) {
-        const userId = id.slice("bal_adv_".length);
-        return await balance.handleAdvancedStats(bi, userId);
+        const rest            = id.slice("bal_adv_".length);
+        const lastUs          = rest.lastIndexOf("_");
+        const targetUserId    = rest.slice(0, lastUs);
+        const commandRunnerId = rest.slice(lastUs + 1);
+        return await balance.handleAdvancedStats(bi, targetUserId, commandRunnerId);
       }
 
       // Rain
