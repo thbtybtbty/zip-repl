@@ -9,6 +9,8 @@ export interface ServerConfig {
   flipChannelId:     string;
   codesChannelId?:   string;
   rainChannelId?:    string;
+  rainPingRoleId?:   string;
+  codePingRoleId?:   string;
   robloxUser:        string;
 }
 

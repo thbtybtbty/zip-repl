@@ -83,7 +83,7 @@ title = "update.tar.gz — history + resetstats"
 id = "8I43rzcPejxZI-FZBvGKQ"
 uri = "file://wispbyte-update.tar.gz"
 type = "unspecified"
-title = "Wispbyte Update — Payout label (all games)"
+title = "wispbyte-update.tar.gz"
 
 [[outputs]]
 id = "a63Ab24aVgaNQCri6d92w"

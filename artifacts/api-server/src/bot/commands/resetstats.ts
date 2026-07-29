@@ -24,9 +24,11 @@ import { isAdmin } from "../botConfig.js";
 // ─── Session state ─────────────────────────────────────────────────────────────
 interface ResetSession {
   adminId:        string;
-  targetUserId:   string;
+  // undefined = "all users" mode
+  targetUserId:   string | undefined;
   targetUsername: string;
   selectedFields: string[];
+  allUsers:       boolean;
 }
 
 export const sessions = new Map<string, ResetSession>();
@@ -88,9 +90,12 @@ function selectMenu(sessionId: string, defaultValues: string[] = []): StringSele
 // ─── Command definition ────────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
   .setName("resetstats")
-  .setDescription("[Admin] Reset one or more stats for a user")
+  .setDescription("[Admin] Reset one or more stats for a user or all users")
   .addUserOption((opt) =>
-    opt.setName("user").setDescription("The user to reset stats for").setRequired(true),
+    opt.setName("user").setDescription("The user to reset stats for").setRequired(false),
+  )
+  .addBooleanOption((opt) =>
+    opt.setName("all").setDescription("Reset stats for ALL users in the server").setRequired(false),
   );
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -101,27 +106,63 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     return;
   }
 
-  const target  = interaction.options.getUser("user", true);
-  const user    = await getOrCreateUser(target.id, target.username);
+  const target  = interaction.options.getUser("user", false);
+  const allMode = interaction.options.getBoolean("all", false) ?? false;
+
+  // Must provide either user or all, but not neither
+  if (!target && !allMode) {
+    await interaction.editReply({
+      embeds: [errorEmbed("Please select a **user** to reset, or set **all** to `True` to reset all users.")],
+    });
+    return;
+  }
+
+  // If both provided, user takes priority over all
   const session = makeId();
 
-  sessions.set(session, {
-    adminId:        interaction.user.id,
-    targetUserId:   target.id,
-    targetUsername: target.username,
-    selectedFields: [],
-  });
+  if (target) {
+    // ── Single-user mode ──
+    const user = await getOrCreateUser(target.id, target.username);
 
-  const embed = new EmbedBuilder()
-    .setColor(COLORS.gold)
-    .setTitle(`🔧  Reset Stats — ${target.username}`)
-    .setDescription(`**Current stats:**\n${buildStatsLines(user)}\n\nSelect which stats to reset below.`)
-    .setTimestamp();
+    sessions.set(session, {
+      adminId:        interaction.user.id,
+      targetUserId:   target.id,
+      targetUsername: target.username,
+      selectedFields: [],
+      allUsers:       false,
+    });
 
-  const row = new ActionRowBuilder<MessageActionRowComponentBuilder>()
-    .addComponents(selectMenu(session));
+    const embed = new EmbedBuilder()
+      .setColor(COLORS.gold)
+      .setTitle(`🔧  Reset Stats — ${target.username}`)
+      .setDescription(`**Current stats:**\n${buildStatsLines(user)}\n\nSelect which stats to reset below.`)
+      .setTimestamp();
 
-  await interaction.editReply({ embeds: [embed], components: [row] });
+    const row = new ActionRowBuilder<MessageActionRowComponentBuilder>()
+      .addComponents(selectMenu(session));
+
+    await interaction.editReply({ embeds: [embed], components: [row] });
+  } else {
+    // ── All-users mode ──
+    sessions.set(session, {
+      adminId:        interaction.user.id,
+      targetUserId:   undefined,
+      targetUsername: "ALL USERS",
+      selectedFields: [],
+      allUsers:       true,
+    });
+
+    const embed = new EmbedBuilder()
+      .setColor(COLORS.danger ?? 0xe74c3c)
+      .setTitle("🔧  Reset Stats — ALL USERS")
+      .setDescription("⚠️ This will reset the selected stats **for every user in the database**.\n\nSelect which stats to reset below.")
+      .setTimestamp();
+
+    const row = new ActionRowBuilder<MessageActionRowComponentBuilder>()
+      .addComponents(selectMenu(session));
+
+    await interaction.editReply({ embeds: [embed], components: [row] });
+  }
 }
 
 // ─── Select menu: admin picked which stats ─────────────────────────────────────
@@ -149,11 +190,14 @@ export async function handlePick(si: StringSelectMenuInteraction, sessionId: str
     .setLabel("Cancel")
     .setStyle(ButtonStyle.Secondary);
 
+  const titleSuffix = sess.allUsers ? "ALL USERS" : sess.targetUsername;
+  const color       = sess.allUsers ? (COLORS.danger ?? 0xe74c3c) : COLORS.gold;
+
   await si.update({
     embeds: [
       new EmbedBuilder()
-        .setColor(COLORS.gold)
-        .setTitle(`🔧  Reset Stats — ${sess.targetUsername}`)
+        .setColor(color)
+        .setTitle(`🔧  Reset Stats — ${titleSuffix}`)
         .setDescription(`**Stats selected for reset:**\n${selected}\n\nClick **Set New Values** to enter the new amounts.`)
         .setTimestamp(),
     ],
@@ -177,9 +221,11 @@ export async function handleApply(bi: ButtonInteraction, sessionId: string): Pro
     return;
   }
 
+  const titleSuffix = sess.allUsers ? "ALL USERS" : sess.targetUsername;
+
   const modal = new ModalBuilder()
     .setCustomId(`rs_modal_${sessionId}`)
-    .setTitle(`Reset — ${sess.targetUsername}`);
+    .setTitle(`Reset — ${titleSuffix}`);
 
   modal.addComponents(
     ...sess.selectedFields.map((field) =>
@@ -238,33 +284,51 @@ export async function handleModal(mi: ModalSubmitInteraction, sessionId: string)
 
   sessions.delete(sessionId);
 
-  // Apply to DB
-  await db
-    .update(usersTable)
-    .set({ ...(updates as Record<string, number>), updatedAt: new Date() })
-    .where(eq(usersTable.id, sess.targetUserId));
-
-  // Fetch fresh row
-  const rows  = await db.select().from(usersTable).where(eq(usersTable.id, sess.targetUserId)).limit(1);
-  const fresh = rows[0]!;
-
   const changeLines = sess.selectedFields.map((f) =>
     `${STAT_ICON[f] ?? ""} **${STAT_LABEL[f] ?? f}** → \`${formatAmount(updates[f]!)} 💎\``,
   );
 
-  await mi.editReply({
-    embeds: [
-      new EmbedBuilder()
-        .setColor(COLORS.success)
-        .setTitle(`✅  Stats Reset — ${sess.targetUsername}`)
-        .setDescription(`**Changes applied:**\n${changeLines.join("\n")}`)
-        .setTimestamp(),
-      new EmbedBuilder()
-        .setColor(COLORS.dark)
-        .setTitle("📊  Updated Stats")
-        .setDescription(buildStatsLines(fresh))
-        .setTimestamp(),
-    ],
-    components: [],
-  });
+  if (sess.allUsers) {
+    // ── Apply to ALL users ──
+    await db
+      .update(usersTable)
+      .set({ ...(updates as Record<string, number>), updatedAt: new Date() });
+
+    await mi.editReply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(COLORS.success)
+          .setTitle("✅  Stats Reset — ALL USERS")
+          .setDescription(`**Changes applied to every user:**\n${changeLines.join("\n")}`)
+          .setTimestamp(),
+      ],
+      components: [],
+    });
+  } else {
+    // ── Apply to single user ──
+    await db
+      .update(usersTable)
+      .set({ ...(updates as Record<string, number>), updatedAt: new Date() })
+      .where(eq(usersTable.id, sess.targetUserId!));
+
+    // Fetch fresh row
+    const rows  = await db.select().from(usersTable).where(eq(usersTable.id, sess.targetUserId!)).limit(1);
+    const fresh = rows[0]!;
+
+    await mi.editReply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(COLORS.success)
+          .setTitle(`✅  Stats Reset — ${sess.targetUsername}`)
+          .setDescription(`**Changes applied:**\n${changeLines.join("\n")}`)
+          .setTimestamp(),
+        new EmbedBuilder()
+          .setColor(COLORS.dark)
+          .setTitle("📊  Updated Stats")
+          .setDescription(buildStatsLines(fresh))
+          .setTimestamp(),
+      ],
+      components: [],
+    });
+  }
 }

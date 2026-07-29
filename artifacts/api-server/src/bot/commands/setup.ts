@@ -17,19 +17,22 @@ const pendingSetups = new Map<string, ServerConfig>();
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function ch(id: string | undefined) { return id ? `<#${id}>` : "`Not set`"; }
+function ro(id: string | undefined) { return id ? `<@&${id}>` : "`Not set`"; }
 
 function configEmbed(cfg: ServerConfig, title: string, color: number): EmbedBuilder {
   return new EmbedBuilder()
     .setColor(color)
     .setTitle(title)
     .addFields(
-      { name: "📥 Deposit Channel",  value: ch(cfg.depositChannelId),  inline: true },
-      { name: "📤 Withdraw Channel", value: ch(cfg.withdrawChannelId), inline: true },
-      { name: "📋 Request Channel",  value: ch(cfg.requestChannelId),  inline: true },
-      { name: "🪙 Flip Channel",     value: ch(cfg.flipChannelId),     inline: true },
-      { name: "🌧️ Rain Channel",     value: ch(cfg.rainChannelId),     inline: true },
-      { name: "🎰 Codes Channel",    value: ch(cfg.codesChannelId),    inline: true },
-      { name: "🎮 Roblox User",      value: `\`${cfg.robloxUser}\``,  inline: true },
+      { name: "📥 Deposit Channel",   value: ch(cfg.depositChannelId),  inline: true },
+      { name: "📤 Withdraw Channel",  value: ch(cfg.withdrawChannelId), inline: true },
+      { name: "📋 Request Channel",   value: ch(cfg.requestChannelId),  inline: true },
+      { name: "🪙 Flip Channel",      value: ch(cfg.flipChannelId),     inline: true },
+      { name: "🌧️ Rain Channel",      value: ch(cfg.rainChannelId),     inline: true },
+      { name: "🎰 Codes Channel",     value: ch(cfg.codesChannelId),    inline: true },
+      { name: "🔔 Rain Ping Role",    value: ro(cfg.rainPingRoleId),    inline: true },
+      { name: "🔔 Code Ping Role",    value: ro(cfg.codePingRoleId),    inline: true },
+      { name: "🎮 Roblox User",       value: `\`${cfg.robloxUser}\``,  inline: true },
     )
     .setTimestamp();
 }
@@ -42,6 +45,8 @@ function cfgSummary(cfg: ServerConfig): string {
     `🪙 Flip: ${ch(cfg.flipChannelId)}`,
     `🌧️ Rain: ${ch(cfg.rainChannelId)}`,
     `🎰 Codes: ${ch(cfg.codesChannelId)}`,
+    `🔔 Rain Ping: ${ro(cfg.rainPingRoleId)}`,
+    `🔔 Code Ping: ${ro(cfg.codePingRoleId)}`,
     `🎮 Roblox: \`${cfg.robloxUser}\``,
   ].join("\n");
 }
@@ -94,6 +99,14 @@ export const data = new SlashCommandBuilder()
     opt.setName("rain_channel").setDescription("Channel where /rain panels are posted")
       .addChannelTypes(ChannelType.GuildText).setRequired(false),
   )
+  .addRoleOption((opt) =>
+    opt.setName("rain_ping_role").setDescription("Role mentioned at the top of every rain panel")
+      .setRequired(false),
+  )
+  .addRoleOption((opt) =>
+    opt.setName("code_ping_role").setDescription("Role mentioned at the top of every new code announcement")
+      .setRequired(false),
+  )
 
 // ─── Execute ──────────────────────────────────────────────────────────────────
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -105,13 +118,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     });
   }
 
-  const depositCh  = interaction.options.getChannel("deposit_channel",  true);
-  const withdrawCh = interaction.options.getChannel("withdraw_channel", true);
-  const requestCh  = interaction.options.getChannel("request_channel",  true);
-  const flipCh     = interaction.options.getChannel("flip_channel",     true);
-  const codesCh    = interaction.options.getChannel("codes_channel",    false);
-  const rainCh     = interaction.options.getChannel("rain_channel",     false);
-  const robloxUser = interaction.options.getString("roblox_user",       true);
+  const depositCh     = interaction.options.getChannel("deposit_channel",  true);
+  const withdrawCh    = interaction.options.getChannel("withdraw_channel", true);
+  const requestCh     = interaction.options.getChannel("request_channel",  true);
+  const flipCh        = interaction.options.getChannel("flip_channel",     true);
+  const codesCh       = interaction.options.getChannel("codes_channel",    false);
+  const rainCh        = interaction.options.getChannel("rain_channel",     false);
+  const rainPingRole  = interaction.options.getRole("rain_ping_role",      false);
+  const codePingRole  = interaction.options.getRole("code_ping_role",      false);
+  const robloxUser    = interaction.options.getString("roblox_user",       true);
 
   const newCfg: ServerConfig = {
     depositChannelId:  depositCh.id,
@@ -120,6 +135,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     flipChannelId:     flipCh.id,
     codesChannelId:    codesCh?.id,
     rainChannelId:     rainCh?.id,
+    rainPingRoleId:    rainPingRole?.id,
+    codePingRoleId:    codePingRole?.id,
     robloxUser,
   };
 

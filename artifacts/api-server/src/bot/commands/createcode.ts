@@ -102,7 +102,10 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   const cfg = getServerConfig();
   if (cfg?.codesChannelId) {
     const ch = interaction.client.channels.cache.get(cfg.codesChannelId) as TextChannel | undefined;
-    if (ch) await ch.send({ embeds: [announceEmbed] });
+    if (ch) {
+      const codePingContent = cfg.codePingRoleId ? `<@&${cfg.codePingRoleId}>` : undefined;
+      await ch.send({ content: codePingContent, embeds: [announceEmbed] });
+    }
   }
 
   await interaction.editReply({

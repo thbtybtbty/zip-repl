@@ -241,7 +241,10 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   const endsAt       = Date.now() + durationMs;
   const participants = new Set<string>();
 
+  const rainPingContent = cfg?.rainPingRoleId ? `<@&${cfg.rainPingRoleId}>` : undefined;
+
   const msg = await channel.send({
+    content:    rainPingContent,
     embeds:     [activeEmbed(total, endsAt, participants, wagerReq, depositReq)],
     components: [joinRow()],
   });
