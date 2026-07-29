@@ -168,3 +168,9 @@ id = "Lo3H_TqFijEqVd36xzFB4"
 uri = "file://wispbyte-rain-reqs-setup-codes.tar.gz"
 type = "unspecified"
 title = "Wispbyte Update — rain reqs + setup + codes blockquote"
+
+[[outputs]]
+id = "atUHKquj5WPEYzkGoN0im"
+uri = "file://wispbyte-index.mjs"
+type = "unspecified"
+title = "index.mjs"
