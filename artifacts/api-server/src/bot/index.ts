@@ -40,6 +40,9 @@ import * as colordice        from "./commands/colordice.js";
 import * as upgrader         from "./commands/upgrader.js";
 import * as keno             from "./commands/keno.js";
 import * as flip             from "./commands/flip.js";
+import * as createcode       from "./commands/createcode.js";
+import * as redeem           from "./commands/redeem.js";
+import * as viewcodes        from "./commands/viewcodes.js";
 import * as leaderboard      from "./commands/leaderboard.js";
 import * as history         from "./commands/history.js";
 import * as resetstats      from "./commands/resetstats.js";
@@ -57,7 +60,7 @@ const GAMBLING_COMMANDS = new Set([
   "crash","scratchcard","chickencrossing","colordice","upgrader","keno","flip","hilo",
 ]);
 
-const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms];
+const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, createcode, redeem, viewcodes, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -121,6 +124,9 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "upgrader")         return await upgrader.execute(interaction);
       if (name === "keno")             return await keno.execute(interaction);
       if (name === "flip")             return await flip.execute(interaction);
+      if (name === "createcode")       return await createcode.execute(interaction);
+      if (name === "redeem")           return await redeem.execute(interaction);
+      if (name === "viewcodes")        return await viewcodes.execute(interaction);
       if (name === "leaderboard")      return await leaderboard.execute(interaction);
       if (name === "history")          return await history.execute(interaction);
       if (name === "resetstats")       return await resetstats.execute(interaction);
@@ -296,6 +302,10 @@ async function handleInteraction(interaction: Interaction) {
       // Flip
       if (id.startsWith("flip_join_")) return await flip.handleJoin(bi, id.slice("flip_join_".length));
       if (id.startsWith("flip_bot_"))  return await flip.handleCallBot(bi, id.slice("flip_bot_".length));
+
+      // View codes (admin)
+      if (id.startsWith("vc_deactivate_")) return await viewcodes.handleDeactivate(bi, id.slice("vc_deactivate_".length));
+      if (id === "vc_cancel")             return await viewcodes.handleCancel(bi);
 
       // History pagination
       if (id.startsWith("hist_prev_") || id.startsWith("hist_next_")) {

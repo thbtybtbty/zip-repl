@@ -82,6 +82,10 @@ export const data = new SlashCommandBuilder()
     opt.setName("roblox_user").setDescription("Roblox username players send gems to when depositing")
       .setRequired(true),
   )
+  .addChannelOption((opt) =>
+    opt.setName("codes_channel").setDescription("Channel where new promocodes are announced")
+      .addChannelTypes(ChannelType.GuildText).setRequired(false),
+  )
 
 // ─── Execute ──────────────────────────────────────────────────────────────────
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -97,6 +101,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const withdrawCh = interaction.options.getChannel("withdraw_channel", true);
   const requestCh  = interaction.options.getChannel("request_channel",  true);
   const flipCh     = interaction.options.getChannel("flip_channel",     true);
+  const codesCh    = interaction.options.getChannel("codes_channel",    false);
   const robloxUser = interaction.options.getString("roblox_user",       true);
 
   const newCfg: ServerConfig = {
@@ -104,6 +109,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     withdrawChannelId: withdrawCh.id,
     requestChannelId:  requestCh.id,
     flipChannelId:     flipCh.id,
+    codesChannelId:    codesCh?.id,
     robloxUser,
   };
 

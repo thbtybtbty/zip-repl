@@ -68,6 +68,29 @@ export function initDb(): void {
     );
   `);
 
+  // Promo codes
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS promocodes (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      code        TEXT    NOT NULL UNIQUE,
+      reward      INTEGER NOT NULL,
+      max_uses    INTEGER NOT NULL,
+      uses        INTEGER NOT NULL DEFAULT 0,
+      wager_req   INTEGER NOT NULL DEFAULT 0,
+      deposit_req INTEGER NOT NULL DEFAULT 0,
+      active      INTEGER NOT NULL DEFAULT 1,
+      created_at  INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+
+    CREATE TABLE IF NOT EXISTS promocode_redemptions (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      code        TEXT    NOT NULL,
+      user_id     TEXT    NOT NULL,
+      redeemed_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      UNIQUE(code, user_id)
+    );
+  `);
+
   // Migrations — safe to run every boot; ALTER TABLE is a no-op if column exists
   const migrations = [
     `ALTER TABLE users ADD COLUMN deposited INTEGER NOT NULL DEFAULT 0`,

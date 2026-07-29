@@ -7,6 +7,7 @@ export interface ServerConfig {
   withdrawChannelId: string;
   requestChannelId:  string;
   flipChannelId:     string;
+  codesChannelId?:   string;
   robloxUser:        string;
 }
 
