@@ -66,29 +66,30 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     `INSERT INTO promocodes (code, reward, max_uses, wager_req, deposit_req) VALUES (?, ?, ?, ?, ?)`,
   ).run(code, reward, maxUses, wagerReq, depositReq);
 
-  // Build the codes-channel embed
+  // Build the codes-channel embed — stacked layout matching the panel design
   const fields: { name: string; value: string; inline: boolean }[] = [
-    { name: "🏷️ Code",     value: `\`${code}\``,       inline: true },
-    { name: "💎 Reward",   value: formatAmount(reward), inline: true },
-    { name: "🔢 Max Uses", value: `${maxUses}`,          inline: true },
+    { name: "🎰 Code",     value: `\`${code}\``,       inline: false },
+    { name: "💎 Reward",   value: formatAmount(reward), inline: false },
+    { name: "⏳ Max uses", value: `${maxUses}`,          inline: false },
   ];
 
   const hasRequirements = wagerReq > 0 || depositReq > 0;
   if (hasRequirements) {
     fields.push({ name: "\u200b", value: "**Requirements**", inline: false });
-    if (wagerReq   > 0) fields.push({ name: "📈 Min Wager",   value: formatAmount(wagerReq),   inline: true });
-    if (depositReq > 0) fields.push({ name: "📥 Min Deposit", value: formatAmount(depositReq), inline: true });
+    if (wagerReq   > 0) fields.push({ name: "💎 Wager req",   value: `\`${formatAmount(wagerReq)}\``,   inline: false });
+    if (depositReq > 0) fields.push({ name: "📥 Deposit req", value: `\`${formatAmount(depositReq)}\``, inline: false });
   }
 
-  // Redeem instruction + value side by side on the bottom row
-  fields.push(
-    { name: "📋 How to Redeem", value: `\`/redeem code:${code}\``,         inline: true },
-    { name: "💎 Value",         value: `**${formatAmount(reward)}** gems`,  inline: true },
-  );
+  // Bottom redeem sentence
+  fields.push({
+    name: "\u200b",
+    value: `Use \`/redeem code:${code}\` to claim **${formatAmount(reward)}** gems.`,
+    inline: false,
+  });
 
   const announceEmbed = new EmbedBuilder()
     .setColor(COLORS.primary)
-    .setTitle("🎉 New Promocode Available!")
+    .setTitle("🎰 New promocode")
     .addFields(fields)
     .setTimestamp();
 

@@ -144,3 +144,9 @@ id = "0EQ1H__zNDyrCNI9tQVLh"
 uri = "file://wispbyte-createcode-update.tar.gz"
 type = "unspecified"
 title = "Wispbyte Update — createcode embed"
+
+[[outputs]]
+id = "GiXQtvUlCn3-l59pErfrM"
+uri = "file://wispbyte-createcode-embed-fix.tar.gz"
+type = "unspecified"
+title = "Wispbyte Update — createcode embed fix"
