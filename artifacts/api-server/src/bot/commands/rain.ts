@@ -18,12 +18,14 @@ import {
   addBalance,
   errorEmbed,
 } from "../utils.js";
-import { isAdmin } from "../botConfig.js";
+import { isAdmin, getServerConfig } from "../botConfig.js";
+import { db, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const MIN_DURATION_MS = 5_000;                 // 5 seconds
-const MAX_DURATION_MS = 3 * 24 * 3_600_000;   // 3 days
-const MIN_RAIN        = 1_000_000;             // 1M
+const MIN_DURATION_MS = 5_000;                // 5 seconds
+const MAX_DURATION_MS = 3 * 24 * 3_600_000;  // 3 days
+const MIN_RAIN        = 1_000_000;            // 1M
 
 // ─── State ───────────────────────────────────────────────────────────────────
 interface RainState {
@@ -31,6 +33,8 @@ interface RainState {
   total:        number;
   endsAt:       number;               // Unix ms
   participants: Set<string>;          // Discord user IDs who joined
+  wagerReq:     number;               // 0 = no requirement
+  depositReq:   number;               // 0 = no requirement
   message:      Message;
   timer:        ReturnType<typeof setTimeout>;
 }
@@ -53,9 +57,15 @@ export function parseDuration(raw: string): number | null {
 }
 
 // ─── Embed helpers ────────────────────────────────────────────────────────────
-function activeEmbed(total: number, endsAt: number, participants: Set<string>): EmbedBuilder {
-  const count    = participants.size;
-  const each     = count > 0 ? Math.floor(total / count) : total;
+function activeEmbed(
+  total:        number,
+  endsAt:       number,
+  participants: Set<string>,
+  wagerReq:     number,
+  depositReq:   number,
+): EmbedBuilder {
+  const count     = participants.size;
+  const each      = count > 0 ? Math.floor(total / count) : total;
   const endsAtSec = Math.floor(endsAt / 1_000);
 
   const lines = [
@@ -65,10 +75,22 @@ function activeEmbed(total: number, endsAt: number, participants: Set<string>): 
     `⏳ **Ends:** <t:${endsAtSec}:R>`,
   ];
 
+  const fields: { name: string; value: string; inline: boolean }[] = [
+    { name: "\u200b", value: lines.join("\n"), inline: false },
+  ];
+
+  const hasReqs = wagerReq > 0 || depositReq > 0;
+  if (hasReqs) {
+    const reqLines: string[] = [];
+    if (wagerReq   > 0) reqLines.push(`📈 **Min Wager:** \`${formatAmount(wagerReq)}\``);
+    if (depositReq > 0) reqLines.push(`📥 **Min Deposit:** \`${formatAmount(depositReq)}\``);
+    fields.push({ name: "Requirements", value: reqLines.join("\n"), inline: false });
+  }
+
   return new EmbedBuilder()
     .setColor(COLORS.primary)
     .setTitle("🌧️ Rain Active")
-    .addFields({ name: "\u200b", value: lines.join("\n"), inline: false })
+    .addFields(fields)
     .setTimestamp();
 }
 
@@ -93,13 +115,13 @@ function endedEmbed(total: number, count: number, each: number): EmbedBuilder {
     .setColor(COLORS.gold)
     .setTitle("Rain ended")
     .addFields(
-      { name: "\u200b", value: info,                                                                                    inline: false },
+      { name: "\u200b", value: info,                                                                         inline: false },
       { name: "\u200b", value: `> ${count} players received **${formatAmount(each)}** gems each.`, inline: false },
     )
     .setTimestamp();
 }
 
-function noJoinersEmbed(total: number): EmbedBuilder {
+function noJoinersEmbed(): EmbedBuilder {
   return new EmbedBuilder()
     .setColor(COLORS.dark)
     .setTitle("Rain ended")
@@ -107,7 +129,7 @@ function noJoinersEmbed(total: number): EmbedBuilder {
     .setTimestamp();
 }
 
-// ─── End rain (called by timer or manually) ───────────────────────────────────
+// ─── End rain (called by timer) ───────────────────────────────────────────────
 export async function endRain(guildId: string): Promise<void> {
   const rain = activeRains.get(guildId);
   if (!rain) return;
@@ -118,7 +140,7 @@ export async function endRain(guildId: string): Promise<void> {
 
   if (count === 0) {
     await addBalance(rain.adminId, rain.total);
-    await rain.message.edit({ embeds: [noJoinersEmbed(rain.total)], components: [] }).catch(() => null);
+    await rain.message.edit({ embeds: [noJoinersEmbed()], components: [] }).catch(() => null);
     return;
   }
 
@@ -143,19 +165,20 @@ export const data = new SlashCommandBuilder()
     o.setName("gems").setDescription("Total gems to rain (e.g. 5b, 100m)").setRequired(true),
   )
   .addStringOption((o) =>
-    o
-      .setName("duration")
-      .setDescription("How long the rain lasts (e.g. 30s, 5m, 2h, 1d)")
-      .setRequired(true),
+    o.setName("duration").setDescription("How long the rain lasts (e.g. 30s, 5m, 2h, 1d)").setRequired(true),
+  )
+  .addStringOption((o) =>
+    o.setName("wager_requirement").setDescription("Min lifetime wager to join (e.g. 10m)").setRequired(false),
+  )
+  .addStringOption((o) =>
+    o.setName("deposit_requirement").setDescription("Min lifetime deposit to join (e.g. 50m)").setRequired(false),
   );
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
   await interaction.deferReply({ ephemeral: true });
 
   if (!isAdmin(interaction.user.id)) {
-    return void interaction.editReply({
-      embeds: [errorEmbed("You don't have permission to use this command.")],
-    });
+    return void interaction.editReply({ embeds: [errorEmbed("You don't have permission to use this command.")] });
   }
 
   const guildId = interaction.guildId;
@@ -164,13 +187,13 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   }
 
   if (activeRains.has(guildId)) {
-    return void interaction.editReply({
-      embeds: [errorEmbed("There is already an active rain. Wait for it to end.")],
-    });
+    return void interaction.editReply({ embeds: [errorEmbed("There is already an active rain. Wait for it to end.")] });
   }
 
-  const gemsStr    = interaction.options.getString("gems", true);
-  const durStr     = interaction.options.getString("duration", true);
+  const gemsStr   = interaction.options.getString("gems",     true);
+  const durStr    = interaction.options.getString("duration", true);
+  const wagerStr  = interaction.options.getString("wager_requirement",   false);
+  const depositStr= interaction.options.getString("deposit_requirement", false);
 
   const total = parseAmount(gemsStr);
   if (!total || total < MIN_RAIN) {
@@ -179,15 +202,23 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
   const durationMs = parseDuration(durStr);
   if (!durationMs) {
-    return void interaction.editReply({
-      embeds: [errorEmbed("Invalid duration. Use `30s`, `5m`, `2h`, `1d`.")],
-    });
+    return void interaction.editReply({ embeds: [errorEmbed("Invalid duration. Use `30s`, `5m`, `2h`, `1d`.")] });
   }
   if (durationMs < MIN_DURATION_MS) {
     return void interaction.editReply({ embeds: [errorEmbed("Minimum duration is **5 seconds**.")] });
   }
   if (durationMs > MAX_DURATION_MS) {
     return void interaction.editReply({ embeds: [errorEmbed("Maximum duration is **3 days**.")] });
+  }
+
+  const wagerReq = wagerStr ? (parseAmount(wagerStr) ?? 0) : 0;
+  if (wagerStr && wagerReq <= 0) {
+    return void interaction.editReply({ embeds: [errorEmbed("Invalid wager requirement. Try `10m`.")] });
+  }
+
+  const depositReq = depositStr ? (parseAmount(depositStr) ?? 0) : 0;
+  if (depositStr && depositReq <= 0) {
+    return void interaction.editReply({ embeds: [errorEmbed("Invalid deposit requirement. Try `50m`.")] });
   }
 
   const admin = await getOrCreateUser(interaction.user.id, interaction.user.username);
@@ -199,12 +230,19 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
   await addBalance(interaction.user.id, -total);
 
-  const endsAt  = Date.now() + durationMs;
-  const channel = interaction.channel as TextChannel;
+  // Post to configured rain channel, or fall back to current channel
+  const cfg     = getServerConfig();
+  const channel = (
+    cfg?.rainChannelId
+      ? (interaction.client.channels.cache.get(cfg.rainChannelId) as TextChannel | undefined) ?? (interaction.channel as TextChannel)
+      : (interaction.channel as TextChannel)
+  );
 
+  const endsAt       = Date.now() + durationMs;
   const participants = new Set<string>();
+
   const msg = await channel.send({
-    embeds:     [activeEmbed(total, endsAt, participants)],
+    embeds:     [activeEmbed(total, endsAt, participants, wagerReq, depositReq)],
     components: [joinRow()],
   });
 
@@ -217,6 +255,8 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     total,
     endsAt,
     participants,
+    wagerReq,
+    depositReq,
     message: msg,
     timer,
   });
@@ -226,7 +266,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
       new EmbedBuilder()
         .setColor(COLORS.success)
         .setDescription(
-          `✅ Rain started! **${formatAmount(total)}** gems will be shared among all who join. Ends <t:${Math.floor(endsAt / 1_000)}:R>.`,
+          `✅ Rain started! **${formatAmount(total)}** gems shared among all who join. Ends <t:${Math.floor(endsAt / 1_000)}:R>.`,
         ),
     ],
   });
@@ -240,24 +280,43 @@ export async function handleJoin(interaction: ButtonInteraction): Promise<void> 
   const rain    = guildId ? activeRains.get(guildId) : null;
 
   if (!rain) {
-    return void interaction.followUp({
-      content: "❌ This rain has already ended.",
-      ephemeral: true,
-    });
+    return void interaction.followUp({ content: "❌ This rain has already ended.", ephemeral: true });
   }
 
   if (rain.participants.has(interaction.user.id)) {
-    return void interaction.followUp({
-      content: "❌ You already joined this rain!",
-      ephemeral: true,
-    });
+    return void interaction.followUp({ content: "❌ You already joined this rain!", ephemeral: true });
+  }
+
+  // Check requirements if set
+  if (rain.wagerReq > 0 || rain.depositReq > 0) {
+    const rows = await db
+      .select({ wagered: usersTable.wagered, deposited: usersTable.deposited })
+      .from(usersTable)
+      .where(eq(usersTable.id, interaction.user.id))
+      .limit(1);
+
+    const stats = rows[0];
+
+    if (rain.wagerReq > 0 && (!stats || stats.wagered < rain.wagerReq)) {
+      return void interaction.followUp({
+        content: `❌ You need to have wagered at least **${formatAmount(rain.wagerReq)}** gems to join this rain. Your total: **${formatAmount(stats?.wagered ?? 0)}**.`,
+        ephemeral: true,
+      });
+    }
+
+    if (rain.depositReq > 0 && (!stats || stats.deposited < rain.depositReq)) {
+      return void interaction.followUp({
+        content: `❌ You need to have deposited at least **${formatAmount(rain.depositReq)}** gems to join this rain. Your total: **${formatAmount(stats?.deposited ?? 0)}**.`,
+        ephemeral: true,
+      });
+    }
   }
 
   rain.participants.add(interaction.user.id);
   await getOrCreateUser(interaction.user.id, interaction.user.username);
 
   await interaction.editReply({
-    embeds:     [activeEmbed(rain.total, rain.endsAt, rain.participants)],
+    embeds:     [activeEmbed(rain.total, rain.endsAt, rain.participants, rain.wagerReq, rain.depositReq)],
     components: [joinRow()],
   }).catch(() => null);
 }

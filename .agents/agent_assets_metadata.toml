@@ -162,3 +162,9 @@ id = "a-wACIU8_DqvD6pCTuqHX"
 uri = "file://wispbyte-rain-command.tar.gz"
 type = "unspecified"
 title = "Wispbyte Update — /rain command"
+
+[[outputs]]
+id = "Lo3H_TqFijEqVd36xzFB4"
+uri = "file://wispbyte-rain-reqs-setup-codes.tar.gz"
+type = "unspecified"
+title = "Wispbyte Update — rain reqs + setup + codes blockquote"

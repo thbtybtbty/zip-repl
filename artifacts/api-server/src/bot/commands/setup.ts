@@ -27,6 +27,8 @@ function configEmbed(cfg: ServerConfig, title: string, color: number): EmbedBuil
       { name: "📤 Withdraw Channel", value: ch(cfg.withdrawChannelId), inline: true },
       { name: "📋 Request Channel",  value: ch(cfg.requestChannelId),  inline: true },
       { name: "🪙 Flip Channel",     value: ch(cfg.flipChannelId),     inline: true },
+      { name: "🌧️ Rain Channel",     value: ch(cfg.rainChannelId),     inline: true },
+      { name: "🎰 Codes Channel",    value: ch(cfg.codesChannelId),    inline: true },
       { name: "🎮 Roblox User",      value: `\`${cfg.robloxUser}\``,  inline: true },
     )
     .setTimestamp();
@@ -38,6 +40,8 @@ function cfgSummary(cfg: ServerConfig): string {
     `📤 Withdraw: ${ch(cfg.withdrawChannelId)}`,
     `📋 Requests: ${ch(cfg.requestChannelId)}`,
     `🪙 Flip: ${ch(cfg.flipChannelId)}`,
+    `🌧️ Rain: ${ch(cfg.rainChannelId)}`,
+    `🎰 Codes: ${ch(cfg.codesChannelId)}`,
     `🎮 Roblox: \`${cfg.robloxUser}\``,
   ].join("\n");
 }
@@ -86,6 +90,10 @@ export const data = new SlashCommandBuilder()
     opt.setName("codes_channel").setDescription("Channel where new promocodes are announced")
       .addChannelTypes(ChannelType.GuildText).setRequired(false),
   )
+  .addChannelOption((opt) =>
+    opt.setName("rain_channel").setDescription("Channel where /rain panels are posted")
+      .addChannelTypes(ChannelType.GuildText).setRequired(false),
+  )
 
 // ─── Execute ──────────────────────────────────────────────────────────────────
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -102,6 +110,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const requestCh  = interaction.options.getChannel("request_channel",  true);
   const flipCh     = interaction.options.getChannel("flip_channel",     true);
   const codesCh    = interaction.options.getChannel("codes_channel",    false);
+  const rainCh     = interaction.options.getChannel("rain_channel",     false);
   const robloxUser = interaction.options.getString("roblox_user",       true);
 
   const newCfg: ServerConfig = {
@@ -110,6 +119,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     requestChannelId:  requestCh.id,
     flipChannelId:     flipCh.id,
     codesChannelId:    codesCh?.id,
+    rainChannelId:     rainCh?.id,
     robloxUser,
   };
 

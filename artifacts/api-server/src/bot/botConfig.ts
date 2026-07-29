@@ -8,6 +8,7 @@ export interface ServerConfig {
   requestChannelId:  string;
   flipChannelId:     string;
   codesChannelId?:   string;
+  rainChannelId?:    string;
   robloxUser:        string;
 }
 

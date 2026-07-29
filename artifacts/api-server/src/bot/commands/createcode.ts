@@ -85,10 +85,10 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     fields.push({ name: "Requirements", value: reqLines.join("\n"), inline: false });
   }
 
-  // Bottom redeem sentence
+  // Bottom redeem sentence — blockquote
   fields.push({
     name: "\u200b",
-    value: `Use \`/redeem code:${code}\` to claim **${formatAmount(reward)}** gems.`,
+    value: `> Use \`/redeem code:${code}\` to claim **${formatAmount(reward)}** gems.`,
     inline: false,
   });
 
