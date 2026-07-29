@@ -66,18 +66,23 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     `INSERT INTO promocodes (code, reward, max_uses, wager_req, deposit_req) VALUES (?, ?, ?, ?, ?)`,
   ).run(code, reward, maxUses, wagerReq, depositReq);
 
-  // Build the codes-channel embed — stacked layout matching the panel design
+  // Main info block — each item on one line: emoji Label: value
+  const mainLines = [
+    `🎰 **Code:** \`${code}\``,
+    `💎 **Reward:** ${formatAmount(reward)}`,
+    `⏳ **Max uses:** ${maxUses}`,
+  ];
+
   const fields: { name: string; value: string; inline: boolean }[] = [
-    { name: "🎰 Code",     value: `\`${code}\``,       inline: false },
-    { name: "💎 Reward",   value: formatAmount(reward), inline: false },
-    { name: "⏳ Max uses", value: `${maxUses}`,          inline: false },
+    { name: "\u200b", value: mainLines.join("\n"), inline: false },
   ];
 
   const hasRequirements = wagerReq > 0 || depositReq > 0;
   if (hasRequirements) {
-    fields.push({ name: "\u200b", value: "**Requirements**", inline: false });
-    if (wagerReq   > 0) fields.push({ name: "💎 Wager req",   value: `\`${formatAmount(wagerReq)}\``,   inline: false });
-    if (depositReq > 0) fields.push({ name: "📥 Deposit req", value: `\`${formatAmount(depositReq)}\``, inline: false });
+    const reqLines: string[] = [];
+    if (wagerReq   > 0) reqLines.push(`💎 **Wager req:** \`${formatAmount(wagerReq)}\``);
+    if (depositReq > 0) reqLines.push(`📥 **Deposit req:** \`${formatAmount(depositReq)}\``);
+    fields.push({ name: "Requirements", value: reqLines.join("\n"), inline: false });
   }
 
   // Bottom redeem sentence

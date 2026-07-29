@@ -150,3 +150,9 @@ id = "GiXQtvUlCn3-l59pErfrM"
 uri = "file://wispbyte-createcode-embed-fix.tar.gz"
 type = "unspecified"
 title = "Wispbyte Update — createcode embed fix"
+
+[[outputs]]
+id = "GFPog6GR3l00rNwAZ0J28"
+uri = "file://wispbyte-createcode-inline-labels.tar.gz"
+type = "unspecified"
+title = "Wispbyte Update — inline labels"
