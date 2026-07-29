@@ -68,18 +68,13 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
   // Build the codes-channel embed
   const fields: { name: string; value: string; inline: boolean }[] = [
-    { name: "🎫 Code",     value: `\`${code}\``,         inline: false },
-    { name: "💎 Reward",   value: formatAmount(reward),   inline: false },
-    { name: "⏳ Max uses", value: `${maxUses}`,           inline: false },
+    { name: "🏷️ Code",    value: `\`${code}\``,        inline: true },
+    { name: "💎 Reward",  value: formatAmount(reward),  inline: true },
+    { name: "⏳ Max uses", value: `${maxUses}`,          inline: true },
   ];
 
-  const hasReqs = wagerReq > 0 || depositReq > 0;
-  if (hasReqs) {
-    fields.push({ name: "\u200b", value: "──────────────────────────────────────────────", inline: false });
-    fields.push({ name: "Requirements", value: "\u200b", inline: false });
-    if (wagerReq   > 0) fields.push({ name: "💎 Wager req",   value: formatAmount(wagerReq),   inline: false });
-    if (depositReq > 0) fields.push({ name: "📥 Deposit req", value: formatAmount(depositReq), inline: false });
-  }
+  if (wagerReq   > 0) fields.push({ name: "💎 Wager req",   value: formatAmount(wagerReq),   inline: true });
+  if (depositReq > 0) fields.push({ name: "📥 Deposit req", value: formatAmount(depositReq), inline: true });
 
   fields.push({
     name: "\u200b",
@@ -89,7 +84,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
   const announceEmbed = new EmbedBuilder()
     .setColor(COLORS.primary)
-    .setTitle("🎫 New promocode")
+    .setTitle("🎰 New Promocode")
     .addFields(fields)
     .setTimestamp();
 
