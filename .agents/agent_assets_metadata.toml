@@ -138,3 +138,9 @@ id = "-dw7ldCLfhvuVmr3gwgQn"
 uri = "file://wispbyte-dist.zip"
 type = "unspecified"
 title = "WispByte Package — improved promo code embed"
+
+[[outputs]]
+id = "0EQ1H__zNDyrCNI9tQVLh"
+uri = "file://wispbyte-createcode-update.tar.gz"
+type = "unspecified"
+title = "Wispbyte Update — createcode embed"

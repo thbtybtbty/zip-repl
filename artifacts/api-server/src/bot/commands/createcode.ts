@@ -68,23 +68,27 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
   // Build the codes-channel embed
   const fields: { name: string; value: string; inline: boolean }[] = [
-    { name: "🏷️ Code",    value: `\`${code}\``,        inline: true },
-    { name: "💎 Reward",  value: formatAmount(reward),  inline: true },
-    { name: "⏳ Max uses", value: `${maxUses}`,          inline: true },
+    { name: "🏷️ Code",     value: `\`${code}\``,       inline: true },
+    { name: "💎 Reward",   value: formatAmount(reward), inline: true },
+    { name: "🔢 Max Uses", value: `${maxUses}`,          inline: true },
   ];
 
-  if (wagerReq   > 0) fields.push({ name: "💎 Wager req",   value: formatAmount(wagerReq),   inline: true });
-  if (depositReq > 0) fields.push({ name: "📥 Deposit req", value: formatAmount(depositReq), inline: true });
+  const hasRequirements = wagerReq > 0 || depositReq > 0;
+  if (hasRequirements) {
+    fields.push({ name: "\u200b", value: "**Requirements**", inline: false });
+    if (wagerReq   > 0) fields.push({ name: "📈 Min Wager",   value: formatAmount(wagerReq),   inline: true });
+    if (depositReq > 0) fields.push({ name: "📥 Min Deposit", value: formatAmount(depositReq), inline: true });
+  }
 
-  fields.push({
-    name: "\u200b",
-    value: `Use \`/redeem code:${code}\` to claim **${formatAmount(reward)}** gems.`,
-    inline: false,
-  });
+  // Redeem instruction + value side by side on the bottom row
+  fields.push(
+    { name: "📋 How to Redeem", value: `\`/redeem code:${code}\``,         inline: true },
+    { name: "💎 Value",         value: `**${formatAmount(reward)}** gems`,  inline: true },
+  );
 
   const announceEmbed = new EmbedBuilder()
     .setColor(COLORS.primary)
-    .setTitle("🎰 New Promocode")
+    .setTitle("🎉 New Promocode Available!")
     .addFields(fields)
     .setTimestamp();
 
