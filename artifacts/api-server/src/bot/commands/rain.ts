@@ -16,6 +16,7 @@ import {
   formatAmount,
   getOrCreateUser,
   addBalance,
+  addLocked,
   errorEmbed,
 } from "../utils.js";
 import { isAdmin, getServerConfig } from "../botConfig.js";
@@ -152,11 +153,12 @@ export async function endRain(guildId: string): Promise<void> {
     remainder > 0 ? addBalance(rain.adminId, remainder) : Promise.resolve(),
   ]);
 
-  // Log rain earnings for every participant so Advanced Stats can track them
+  // Log rain earnings + lock the gems (must be wagered ≥1.8× before withdrawal)
   await Promise.all(
-    [...rain.participants].map((uid) =>
+    [...rain.participants].flatMap((uid) => [
       db.insert(betLogTable).values({ userId: uid, command: "rain", bet: 0, netDelta: each }),
-    ),
+      addLocked(uid, each),
+    ]),
   );
 
   await rain.message

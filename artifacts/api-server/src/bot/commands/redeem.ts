@@ -4,7 +4,7 @@ import {
   MessageFlags,
   type ChatInputCommandInteraction,
 } from "discord.js";
-import { COLORS, formatAmount, getOrCreateUser, addBalance, errorEmbed } from "../utils.js";
+import { COLORS, formatAmount, getOrCreateUser, addBalance, addLocked, errorEmbed } from "../utils.js";
 import { sqlite } from "@workspace/db";
 
 interface PromoRow {
@@ -88,6 +88,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   sqlite.prepare("UPDATE promocodes SET uses = uses + 1 WHERE code = ?").run(code);
   sqlite.prepare("INSERT INTO promocode_redemptions (code, user_id) VALUES (?, ?)").run(code, interaction.user.id);
   await addBalance(interaction.user.id, promo.reward);
+  await addLocked(interaction.user.id, promo.reward); // promo earnings must be wagered ≥1.8× before withdrawal
 
   const newBalance = (dbUser.balance + promo.reward);
 

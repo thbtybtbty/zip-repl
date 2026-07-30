@@ -115,9 +115,42 @@ export async function addBalance(userId: string, delta: number): Promise<number>
   return next;
 }
 
+/** Add to a user's locked balance (bonus gems that must be wagered ≥1.8× before withdrawal). */
+export async function addLocked(userId: string, amount: number): Promise<void> {
+  if (amount <= 0) return;
+  await db
+    .update(usersTable)
+    .set({
+      lockedBalance: sql`${usersTable.lockedBalance} + ${amount}`,
+      updatedAt: new Date(),
+    })
+    .where(eq(usersTable.id, userId));
+}
+
+/** Decrease locked balance by up to `amount` (never below 0). Internal — called by recordBet. */
+async function unlockWager(userId: string, amount: number): Promise<void> {
+  if (amount <= 0) return;
+  await db
+    .update(usersTable)
+    .set({
+      lockedBalance: sql`MAX(0, ${usersTable.lockedBalance} - ${amount})`,
+      updatedAt: new Date(),
+    })
+    .where(eq(usersTable.id, userId));
+}
+
 /** Track a completed bet: adds to lifetime wagered + updates net profit + writes to history log.
+ *  Pass `cashoutMultiplier` only for cashout-game WINS (mines/towers/hilo/crash/chickencrossing).
+ *  If the multiplier is < 1.8× the wager won't unlock locked balance — losses and fixed-odds games
+ *  always unlock (leave cashoutMultiplier undefined).
  *  Admin bets are flagged admin_bet=1 so /stats and /economy exclude them, but /history still shows them. */
-export async function recordBet(userId: string, wagered: number, netDelta: number, command = "unknown"): Promise<void> {
+export async function recordBet(
+  userId: string,
+  wagered: number,
+  netDelta: number,
+  command = "unknown",
+  cashoutMultiplier?: number,
+): Promise<void> {
   await db
     .update(usersTable)
     .set({
@@ -128,12 +161,21 @@ export async function recordBet(userId: string, wagered: number, netDelta: numbe
     .where(eq(usersTable.id, userId));
   const adminBet = isAdmin(userId) ? 1 : 0;
   await db.insert(betLogTable).values({ userId, command, bet: wagered, netDelta, adminBet });
+
+  // Unlock locked balance if the wager qualifies:
+  //   • No multiplier passed  → fixed-odds game or a loss → always unlocks
+  //   • Cashout game win ≥1.8× → unlocks
+  //   • Cashout game win <1.8× → does NOT unlock (low-risk cashout abuse prevention)
+  const shouldUnlock = cashoutMultiplier === undefined || cashoutMultiplier >= 1.8;
+  if (shouldUnlock) await unlockWager(userId, wagered);
 }
 
-/** Log a tip transfer for both sender and receiver history. */
+/** Log a tip transfer for both sender and receiver history.
+ *  Tips received are treated as bonus earnings — locked until wagered ≥1.8×. */
 export async function logTip(senderId: string, receiverId: string, amount: number): Promise<void> {
   await db.insert(betLogTable).values({ userId: senderId,   command: "tip-sent",     bet: amount, netDelta: -amount });
   await db.insert(betLogTable).values({ userId: receiverId, command: "tip-received", bet: amount, netDelta:  amount });
+  await addLocked(receiverId, amount);
 }
 
 /** Increment lifetime deposited counter (call on approved deposit). */

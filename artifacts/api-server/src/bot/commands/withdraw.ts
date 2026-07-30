@@ -76,6 +76,17 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     });
   }
 
+  const lockedBalance = dbUser.lockedBalance ?? 0;
+  const withdrawable  = Math.max(0, dbUser.balance - lockedBalance);
+  if (amount > withdrawable) {
+    return interaction.editReply({
+      embeds: [errorEmbed(
+        `You can only withdraw **${formatAmount(withdrawable)} 💎** right now.\n\n` +
+        `**${formatAmount(lockedBalance)} 💎** of your balance is locked (welcome bonus, rain winnings, promo codes, or tips received) and must be wagered at **1.8× or higher** before it can be withdrawn.`,
+      )],
+    });
+  }
+
   const reqId = makeReqId();
   pendingWithdraws.set(reqId, {
     userId: interaction.user.id,

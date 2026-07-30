@@ -253,7 +253,7 @@ export async function handleCashout(interaction: ButtonInteraction, sessionId: s
   const winnings = Math.floor(session.bet * mult);
 
   await addBalance(session.userId, winnings);
-  await recordBet(session.userId, session.bet, winnings - session.bet, "crash");
+  await recordBet(session.userId, session.bet, winnings - session.bet, "crash", mult);
 
   await interaction.update({
     embeds:     [cashedEmbed(mult, session.bet, session.crashPoint)],

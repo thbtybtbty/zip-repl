@@ -14,7 +14,7 @@ import {
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
-import { formatAmount } from "./utils.js";
+import { formatAmount, addLocked } from "./utils.js";
 
 // ─── Commands ─────────────────────────────────────────────────────────────────
 import * as balance       from "./commands/balance.js";
@@ -450,6 +450,8 @@ async function handleNewMember(member: GuildMember) {
     username,
     balance: WELCOME_BONUS,
   });
+  // Welcome bonus is locked — must wager ≥1.8× before it can be withdrawn
+  await addLocked(userId, WELCOME_BONUS);
 
   logger.info({ userId, username, bonus: WELCOME_BONUS }, "New member joined — welcome bonus awarded");
 

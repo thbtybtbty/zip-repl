@@ -93,10 +93,11 @@ export function initDb(): void {
 
   // Migrations — safe to run every boot; ALTER TABLE is a no-op if column exists
   const migrations = [
-    `ALTER TABLE users ADD COLUMN deposited INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE users ADD COLUMN withdrawn INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE users ADD COLUMN wagered   INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE users ADD COLUMN profit    INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN deposited       INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN withdrawn       INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN wagered         INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN profit          INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN locked_balance  INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE bet_log ADD COLUMN admin_bet INTEGER NOT NULL DEFAULT 0`,
   ];
   for (const stmt of migrations) {

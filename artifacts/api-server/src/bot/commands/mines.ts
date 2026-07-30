@@ -260,7 +260,7 @@ export async function handleReveal(interaction: ButtonInteraction, cellIndex: nu
       activeMinesGames.delete(interaction.user.id);
       const winnings = Math.floor(game.bet * game.multiplier);
       await addBalance(interaction.user.id, winnings);
-      await recordBet(interaction.user.id, game.bet, winnings - game.bet, `mines-${game.minesCount}`);
+      await recordBet(interaction.user.id, game.bet, winnings - game.bet, `mines-${game.minesCount}`, game.multiplier);
 
       await interaction.editReply({
         embeds:     [buildMinesPanelEmbed(game, "won")],
@@ -309,7 +309,7 @@ export async function handleCashout(interaction: ButtonInteraction) {
   activeMinesGames.delete(interaction.user.id);
   const winnings = Math.floor(game.bet * game.multiplier);
   await addBalance(interaction.user.id, winnings);
-  await recordBet(interaction.user.id, game.bet, winnings - game.bet, `mines-${game.minesCount}`);
+  await recordBet(interaction.user.id, game.bet, winnings - game.bet, `mines-${game.minesCount}`, game.multiplier);
 
   const channel      = interaction.channel!;
   const panelGridMsg = await channel.messages.fetch(game.panelGridMessageId);

@@ -9,7 +9,8 @@ export const usersTable = sqliteTable("users", {
   deposited: integer("deposited").notNull().default(0),       // lifetime approved deposits
   withdrawn: integer("withdrawn").notNull().default(0),       // lifetime approved withdrawals
   wagered:   integer("wagered").notNull().default(0),         // lifetime amount bet
-  profit:    integer("profit").notNull().default(0),          // lifetime net profit (can be negative)
+  profit:        integer("profit").notNull().default(0),           // lifetime net profit (can be negative)
+  lockedBalance: integer("locked_balance").notNull().default(0),    // bonus gems (rain/codes/tips/welcome) that must be wagered ≥1.8× before withdrawal
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });

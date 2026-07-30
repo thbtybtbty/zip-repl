@@ -374,7 +374,7 @@ export async function handleGuess(
     activeHiloGames.delete(game.userId);
     const payout = Math.floor(game.bet * game.multiplier);
     await addBalance(game.userId, payout);
-    await recordBet(game.userId, game.bet, payout - game.bet, "hilo");
+    await recordBet(game.userId, game.bet, payout - game.bet, "hilo", game.multiplier);
     await interaction.editReply({
       embeds: [
         buildWinEmbed(game, previousCard, nextCard).setTitle(
@@ -406,7 +406,7 @@ export async function handleCashout(interaction: ButtonInteraction): Promise<voi
   activeHiloGames.delete(game.userId);
   const payout = Math.floor(game.bet * game.multiplier);
   await addBalance(game.userId, payout);
-  await recordBet(game.userId, game.bet, payout - game.bet, "hilo");
+  await recordBet(game.userId, game.bet, payout - game.bet, "hilo", game.multiplier);
   await interaction.editReply({
     embeds: [buildCashoutEmbed(game)],
     components: [playAgainRow(game.userId, game.bet)],

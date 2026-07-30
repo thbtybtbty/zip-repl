@@ -259,7 +259,7 @@ export async function handleForward(interaction: ButtonInteraction): Promise<voi
     activeChickenGames.delete(interaction.user.id);
     const winnings = Math.floor(game.bet * game.multiplier);
     await addBalance(interaction.user.id, winnings);
-    await recordBet(interaction.user.id, game.bet, winnings - game.bet, "chickencrossing");
+    await recordBet(interaction.user.id, game.bet, winnings - game.bet, "chickencrossing", game.multiplier);
     await interaction.editReply({
       embeds:     [buildEmbed(game, "cashed")],
       components: [buildPlayAgainRow(game.userId, game.difficulty, game.bet)],
@@ -283,7 +283,7 @@ export async function handleCashout(interaction: ButtonInteraction): Promise<voi
   activeChickenGames.delete(interaction.user.id);
   const winnings = Math.floor(game.bet * game.multiplier);
   await addBalance(interaction.user.id, winnings);
-  await recordBet(interaction.user.id, game.bet, winnings - game.bet, "chickencrossing");
+  await recordBet(interaction.user.id, game.bet, winnings - game.bet, "chickencrossing", game.multiplier);
 
   await interaction.editReply({
     embeds:     [buildEmbed(game, "cashed")],

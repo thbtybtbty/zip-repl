@@ -124773,6 +124773,8 @@ var usersTable = sqliteTable("users", {
   // lifetime amount bet
   profit: integer("profit").notNull().default(0),
   // lifetime net profit (can be negative)
+  lockedBalance: integer("locked_balance").notNull().default(0),
+  // bonus gems (rain/codes/tips/welcome) that must be wagered ≥1.8× before withdrawal
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => /* @__PURE__ */ new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => /* @__PURE__ */ new Date())
 });
@@ -124899,10 +124901,11 @@ function initDb() {
     );
   `);
   const migrations = [
-    `ALTER TABLE users ADD COLUMN deposited INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE users ADD COLUMN withdrawn INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE users ADD COLUMN wagered   INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE users ADD COLUMN profit    INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN deposited       INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN withdrawn       INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN wagered         INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN profit          INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN locked_balance  INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE bet_log ADD COLUMN admin_bet INTEGER NOT NULL DEFAULT 0`
   ];
   for (const stmt of migrations) {
@@ -125025,7 +125028,21 @@ async function addBalance(userId, delta) {
   await db.update(usersTable).set({ balance: next, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, userId));
   return next;
 }
-async function recordBet(userId, wagered, netDelta, command = "unknown") {
+async function addLocked(userId, amount) {
+  if (amount <= 0) return;
+  await db.update(usersTable).set({
+    lockedBalance: sql`${usersTable.lockedBalance} + ${amount}`,
+    updatedAt: /* @__PURE__ */ new Date()
+  }).where(eq(usersTable.id, userId));
+}
+async function unlockWager(userId, amount) {
+  if (amount <= 0) return;
+  await db.update(usersTable).set({
+    lockedBalance: sql`MAX(0, ${usersTable.lockedBalance} - ${amount})`,
+    updatedAt: /* @__PURE__ */ new Date()
+  }).where(eq(usersTable.id, userId));
+}
+async function recordBet(userId, wagered, netDelta, command = "unknown", cashoutMultiplier) {
   await db.update(usersTable).set({
     wagered: sql`${usersTable.wagered} + ${wagered}`,
     profit: sql`${usersTable.profit}  + ${netDelta}`,
@@ -125033,10 +125050,13 @@ async function recordBet(userId, wagered, netDelta, command = "unknown") {
   }).where(eq(usersTable.id, userId));
   const adminBet = isAdmin(userId) ? 1 : 0;
   await db.insert(betLogTable).values({ userId, command, bet: wagered, netDelta, adminBet });
+  const shouldUnlock = cashoutMultiplier === void 0 || cashoutMultiplier >= 1.8;
+  if (shouldUnlock) await unlockWager(userId, wagered);
 }
 async function logTip(senderId, receiverId, amount) {
   await db.insert(betLogTable).values({ userId: senderId, command: "tip-sent", bet: amount, netDelta: -amount });
   await db.insert(betLogTable).values({ userId: receiverId, command: "tip-received", bet: amount, netDelta: amount });
+  await addLocked(receiverId, amount);
 }
 async function addDeposited(userId, amount) {
   await db.update(usersTable).set({
@@ -125364,7 +125384,7 @@ async function handleReveal(interaction, cellIndex) {
       activeMinesGames.delete(interaction.user.id);
       const winnings = Math.floor(game.bet * game.multiplier);
       await addBalance(interaction.user.id, winnings);
-      await recordBet(interaction.user.id, game.bet, winnings - game.bet, `mines-${game.minesCount}`);
+      await recordBet(interaction.user.id, game.bet, winnings - game.bet, `mines-${game.minesCount}`, game.multiplier);
       await interaction.editReply({
         embeds: [buildMinesPanelEmbed(game, "won")],
         components: buildMinesGrid(game, "won")
@@ -125404,7 +125424,7 @@ async function handleCashout(interaction) {
   activeMinesGames.delete(interaction.user.id);
   const winnings = Math.floor(game.bet * game.multiplier);
   await addBalance(interaction.user.id, winnings);
-  await recordBet(interaction.user.id, game.bet, winnings - game.bet, `mines-${game.minesCount}`);
+  await recordBet(interaction.user.id, game.bet, winnings - game.bet, `mines-${game.minesCount}`, game.multiplier);
   const channel = interaction.channel;
   const panelGridMsg = await channel.messages.fetch(game.panelGridMessageId);
   await Promise.all([
@@ -125648,7 +125668,7 @@ async function handleChoice(interaction, choice) {
     activeTowersGames.delete(interaction.user.id);
     const winnings = Math.floor(game.bet * game.multiplier);
     await addBalance(interaction.user.id, winnings);
-    await recordBet(interaction.user.id, game.bet, winnings - game.bet, `towers-${game.difficulty}`);
+    await recordBet(interaction.user.id, game.bet, winnings - game.bet, `towers-${game.difficulty}`, game.multiplier);
     await interaction.editReply({
       embeds: [buildTowersEmbed(game, "won")],
       components: buildEndComponents(game)
@@ -125678,7 +125698,7 @@ async function handleCashout2(interaction) {
   activeTowersGames.delete(interaction.user.id);
   const winnings = Math.floor(game.bet * game.multiplier);
   await addBalance(interaction.user.id, winnings);
-  await recordBet(interaction.user.id, game.bet, winnings - game.bet, `towers-${game.difficulty}`);
+  await recordBet(interaction.user.id, game.bet, winnings - game.bet, `towers-${game.difficulty}`, game.multiplier);
   await interaction.editReply({
     embeds: [buildTowersEmbed(game, "cashed")],
     components: buildEndComponents(game)
@@ -126635,6 +126655,17 @@ async function execute10(interaction) {
   if (dbUser.balance < amount) {
     return interaction.editReply({
       embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(dbUser.balance)} \u{1F48E} gems**.`)]
+    });
+  }
+  const lockedBalance = dbUser.lockedBalance ?? 0;
+  const withdrawable = Math.max(0, dbUser.balance - lockedBalance);
+  if (amount > withdrawable) {
+    return interaction.editReply({
+      embeds: [errorEmbed(
+        `You can only withdraw **${formatAmount(withdrawable)} \u{1F48E}** right now.
+
+**${formatAmount(lockedBalance)} \u{1F48E}** of your balance is locked (welcome bonus, rain winnings, promo codes, or tips received) and must be wagered at **1.8\xD7 or higher** before it can be withdrawn.`
+      )]
     });
   }
   const reqId = makeReqId2();
@@ -127710,7 +127741,7 @@ async function handleGuess(interaction, direction) {
     activeHiloGames.delete(game.userId);
     const payout = Math.floor(game.bet * game.multiplier);
     await addBalance(game.userId, payout);
-    await recordBet(game.userId, game.bet, payout - game.bet, "hilo");
+    await recordBet(game.userId, game.bet, payout - game.bet, "hilo", game.multiplier);
     await interaction.editReply({
       embeds: [
         buildWinEmbed(game, previousCard, nextCard).setTitle(
@@ -127739,7 +127770,7 @@ async function handleCashout3(interaction) {
   activeHiloGames.delete(game.userId);
   const payout = Math.floor(game.bet * game.multiplier);
   await addBalance(game.userId, payout);
-  await recordBet(game.userId, game.bet, payout - game.bet, "hilo");
+  await recordBet(game.userId, game.bet, payout - game.bet, "hilo", game.multiplier);
   await interaction.editReply({
     embeds: [buildCashoutEmbed(game)],
     components: [playAgainRow3(game.userId, game.bet)]
@@ -128191,7 +128222,7 @@ async function handleCashout4(interaction, sessionId) {
   const mult = session.lastMult;
   const winnings = Math.floor(session.bet * mult);
   await addBalance(session.userId, winnings);
-  await recordBet(session.userId, session.bet, winnings - session.bet, "crash");
+  await recordBet(session.userId, session.bet, winnings - session.bet, "crash", mult);
   await interaction.update({
     embeds: [cashedEmbed(mult, session.bet, session.crashPoint)],
     components: [playAgainRow4(session.userId, session.bet)]
@@ -128705,7 +128736,7 @@ async function handleForward(interaction) {
     activeChickenGames.delete(interaction.user.id);
     const winnings = Math.floor(game.bet * game.multiplier);
     await addBalance(interaction.user.id, winnings);
-    await recordBet(interaction.user.id, game.bet, winnings - game.bet, "chickencrossing");
+    await recordBet(interaction.user.id, game.bet, winnings - game.bet, "chickencrossing", game.multiplier);
     await interaction.editReply({
       embeds: [buildEmbed2(game, "cashed")],
       components: [buildPlayAgainRow3(game.userId, game.difficulty, game.bet)]
@@ -128724,7 +128755,7 @@ async function handleCashout5(interaction) {
   activeChickenGames.delete(interaction.user.id);
   const winnings = Math.floor(game.bet * game.multiplier);
   await addBalance(interaction.user.id, winnings);
-  await recordBet(interaction.user.id, game.bet, winnings - game.bet, "chickencrossing");
+  await recordBet(interaction.user.id, game.bet, winnings - game.bet, "chickencrossing", game.multiplier);
   await interaction.editReply({
     embeds: [buildEmbed2(game, "cashed")],
     components: [buildPlayAgainRow3(game.userId, game.difficulty, game.bet)]
@@ -129649,6 +129680,7 @@ Your current deposit: **${formatAmount(deposited)} \u{1F48E}**`
   sqlite.prepare("UPDATE promocodes SET uses = uses + 1 WHERE code = ?").run(code);
   sqlite.prepare("INSERT INTO promocode_redemptions (code, user_id) VALUES (?, ?)").run(code, interaction.user.id);
   await addBalance(interaction.user.id, promo.reward);
+  await addLocked(interaction.user.id, promo.reward);
   const newBalance = dbUser.balance + promo.reward;
   await interaction.editReply({
     embeds: [
@@ -131258,9 +131290,10 @@ async function endRain(guildId) {
     remainder > 0 ? addBalance(rain.adminId, remainder) : Promise.resolve()
   ]);
   await Promise.all(
-    [...rain.participants].map(
-      (uid) => db.insert(betLogTable).values({ userId: uid, command: "rain", bet: 0, netDelta: each })
-    )
+    [...rain.participants].flatMap((uid) => [
+      db.insert(betLogTable).values({ userId: uid, command: "rain", bet: 0, netDelta: each }),
+      addLocked(uid, each)
+    ])
   );
   await rain.message.edit({ embeds: [endedEmbed(rain.total, count, each)], components: [] }).catch(() => null);
 }
@@ -131707,6 +131740,7 @@ async function handleNewMember(member) {
     username,
     balance: WELCOME_BONUS
   });
+  await addLocked(userId, WELCOME_BONUS);
   logger.info({ userId, username, bonus: WELCOME_BONUS }, "New member joined \u2014 welcome bonus awarded");
   try {
     await member.send(

@@ -318,7 +318,7 @@ export async function handleChoice(interaction: ButtonInteraction, choice: Tower
     activeTowersGames.delete(interaction.user.id);
     const winnings = Math.floor(game.bet * game.multiplier);
     await addBalance(interaction.user.id, winnings);
-    await recordBet(interaction.user.id, game.bet, winnings - game.bet, `towers-${game.difficulty}`);
+    await recordBet(interaction.user.id, game.bet, winnings - game.bet, `towers-${game.difficulty}`, game.multiplier);
     await interaction.editReply({
       embeds:     [buildTowersEmbed(game, "won")],
       components: buildEndComponents(game),
@@ -352,7 +352,7 @@ export async function handleCashout(interaction: ButtonInteraction) {
   activeTowersGames.delete(interaction.user.id);
   const winnings = Math.floor(game.bet * game.multiplier);
   await addBalance(interaction.user.id, winnings);
-  await recordBet(interaction.user.id, game.bet, winnings - game.bet, `towers-${game.difficulty}`);
+  await recordBet(interaction.user.id, game.bet, winnings - game.bet, `towers-${game.difficulty}`, game.multiplier);
 
   await interaction.editReply({
     embeds:     [buildTowersEmbed(game, "cashed")],
