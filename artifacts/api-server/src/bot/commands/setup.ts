@@ -18,21 +18,33 @@ const pendingSetups = new Map<string, ServerConfig>();
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function ch(id: string | undefined) { return id ? `<#${id}>` : "`Not set`"; }
 function ro(id: string | undefined) { return id ? `<@&${id}>` : "`Not set`"; }
+function lock(val: boolean)          { return val ? "✅ Locked" : "❌ Not locked"; }
 
 function configEmbed(cfg: ServerConfig, title: string, color: number): EmbedBuilder {
   return new EmbedBuilder()
     .setColor(color)
     .setTitle(title)
     .addFields(
-      { name: "📥 Deposit Channel",   value: ch(cfg.depositChannelId),  inline: true },
-      { name: "📤 Withdraw Channel",  value: ch(cfg.withdrawChannelId), inline: true },
-      { name: "📋 Request Channel",   value: ch(cfg.requestChannelId),  inline: true },
-      { name: "🪙 Flip Channel",      value: ch(cfg.flipChannelId),     inline: true },
-      { name: "🌧️ Rain Channel",      value: ch(cfg.rainChannelId),     inline: true },
-      { name: "🎰 Codes Channel",     value: ch(cfg.codesChannelId),    inline: true },
-      { name: "🔔 Rain Ping Role",    value: ro(cfg.rainPingRoleId),    inline: true },
-      { name: "🔔 Code Ping Role",    value: ro(cfg.codePingRoleId),    inline: true },
-      { name: "🎮 Roblox User",       value: `\`${cfg.robloxUser}\``,  inline: true },
+      { name: "📥 Deposit Channel",    value: ch(cfg.depositChannelId),  inline: true },
+      { name: "📤 Withdraw Channel",   value: ch(cfg.withdrawChannelId), inline: true },
+      { name: "📋 Request Channel",    value: ch(cfg.requestChannelId),  inline: true },
+      { name: "🪙 Flip Channel",       value: ch(cfg.flipChannelId),     inline: true },
+      { name: "🌧️ Rain Channel",       value: ch(cfg.rainChannelId),     inline: true },
+      { name: "🎰 Codes Channel",      value: ch(cfg.codesChannelId),    inline: true },
+      { name: "🔔 Rain Ping Role",     value: ro(cfg.rainPingRoleId),    inline: true },
+      { name: "🔔 Code Ping Role",     value: ro(cfg.codePingRoleId),    inline: true },
+      { name: "🎮 Roblox User",        value: `\`${cfg.robloxUser}\``,  inline: true },
+      {
+        name: "🔒 Lock Settings",
+        value: [
+          `💸 Tips received:    ${lock(cfg.lockTips           ?? true)}`,
+          `🌧️ Rain winnings:    ${lock(cfg.lockRain           ?? true)}`,
+          `🎰 Promo codes:      ${lock(cfg.lockCodes          ?? true)}`,
+          `🎁 Starter balance:  ${lock(cfg.lockStarterBalance ?? true)}`,
+          `➕ /addbalance:      ${lock(cfg.lockAddBalance      ?? false)}`,
+        ].join("\n"),
+        inline: false,
+      },
     )
     .setTimestamp();
 }
@@ -48,6 +60,7 @@ function cfgSummary(cfg: ServerConfig): string {
     `🔔 Rain Ping: ${ro(cfg.rainPingRoleId)}`,
     `🔔 Code Ping: ${ro(cfg.codePingRoleId)}`,
     `🎮 Roblox: \`${cfg.robloxUser}\``,
+    `🔒 Locks: Tips ${lock(cfg.lockTips ?? true)} · Rain ${lock(cfg.lockRain ?? true)} · Codes ${lock(cfg.lockCodes ?? true)} · Starter ${lock(cfg.lockStarterBalance ?? true)} · AddBal ${lock(cfg.lockAddBalance ?? false)}`,
   ].join("\n");
 }
 
@@ -70,7 +83,6 @@ function confirmRow(interactionId: string): ActionRowBuilder<MessageActionRowCom
 export const data = new SlashCommandBuilder()
   .setName("setup")
   .setDescription("(Admin) Configure the bot — deposit/withdraw, invites, and roles")
-  // ── Existing options ──
   .addChannelOption((opt) =>
     opt.setName("deposit_channel").setDescription("Channel where deposit requests appear")
       .addChannelTypes(ChannelType.GuildText).setRequired(true),
@@ -107,6 +119,27 @@ export const data = new SlashCommandBuilder()
     opt.setName("code_ping_role").setDescription("Role mentioned at the top of every new code announcement")
       .setRequired(false),
   )
+  // ── Lock settings (optional — if not provided, existing value is kept) ──
+  .addBooleanOption((opt) =>
+    opt.setName("lock_tips").setDescription("Lock tips received — must wager ≥1.8× before withdrawal (default: on)")
+      .setRequired(false),
+  )
+  .addBooleanOption((opt) =>
+    opt.setName("lock_rain").setDescription("Lock rain winnings — must wager ≥1.8× before withdrawal (default: on)")
+      .setRequired(false),
+  )
+  .addBooleanOption((opt) =>
+    opt.setName("lock_codes").setDescription("Lock promo code earnings — must wager ≥1.8× before withdrawal (default: on)")
+      .setRequired(false),
+  )
+  .addBooleanOption((opt) =>
+    opt.setName("lock_starter_balance").setDescription("Lock the 10M starter balance — must wager ≥1.8× before withdrawal (default: on)")
+      .setRequired(false),
+  )
+  .addBooleanOption((opt) =>
+    opt.setName("lock_add_balance").setDescription("Lock gems added via /addbalance — must wager ≥1.8× before withdrawal (default: off)")
+      .setRequired(false),
+  )
 
 // ─── Execute ──────────────────────────────────────────────────────────────────
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -118,6 +151,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     });
   }
 
+  const existing = getServerConfig();
+
   const depositCh     = interaction.options.getChannel("deposit_channel",  true);
   const withdrawCh    = interaction.options.getChannel("withdraw_channel", true);
   const requestCh     = interaction.options.getChannel("request_channel",  true);
@@ -127,6 +162,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const rainPingRole  = interaction.options.getRole("rain_ping_role",      false);
   const codePingRole  = interaction.options.getRole("code_ping_role",      false);
   const robloxUser    = interaction.options.getString("roblox_user",       true);
+
+  // Lock settings: if not provided, keep existing; if no existing, use defaults
+  const lockTips           = interaction.options.getBoolean("lock_tips")            ?? existing?.lockTips           ?? true;
+  const lockRain           = interaction.options.getBoolean("lock_rain")            ?? existing?.lockRain           ?? true;
+  const lockCodes          = interaction.options.getBoolean("lock_codes")           ?? existing?.lockCodes          ?? true;
+  const lockStarterBalance = interaction.options.getBoolean("lock_starter_balance") ?? existing?.lockStarterBalance ?? true;
+  const lockAddBalance     = interaction.options.getBoolean("lock_add_balance")     ?? existing?.lockAddBalance     ?? false;
 
   const newCfg: ServerConfig = {
     depositChannelId:  depositCh.id,
@@ -138,9 +180,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     rainPingRoleId:    rainPingRole?.id,
     codePingRoleId:    codePingRole?.id,
     robloxUser,
+    lockTips,
+    lockRain,
+    lockCodes,
+    lockStarterBalance,
+    lockAddBalance,
   };
-
-  const existing = getServerConfig();
 
   // ── First-time setup — save immediately ──
   if (!existing) {

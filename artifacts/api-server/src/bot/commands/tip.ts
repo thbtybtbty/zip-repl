@@ -11,6 +11,7 @@ import {
   logTip,
   errorEmbed,
 } from "../utils.js";
+import { getServerConfig } from "../botConfig.js";
 
 const MIN_TIP = 1_000_000; // 1M
 
@@ -77,7 +78,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     addBalance(interaction.user.id, -amount),
     addBalance(target.id, amount),
   ]);
-  await logTip(interaction.user.id, target.id, amount);
+  const cfg = getServerConfig();
+  const lockTips = cfg?.lockTips ?? true;
+  await logTip(interaction.user.id, target.id, amount, lockTips);
 
   await interaction.editReply({
     content: `<@${interaction.user.id}> tipped **${formatAmount(amount)} gems** ${GEM} to <@${target.id}>!`,

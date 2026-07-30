@@ -124920,7 +124920,7 @@ function initDb() {
 import path2 from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-function getServerConfig() {
+function getServerConfig2() {
   try {
     const row = sqlite.prepare("SELECT value FROM config WHERE key = 'server'").get();
     if (!row) return null;
@@ -125053,10 +125053,10 @@ async function recordBet(userId, wagered, netDelta, command = "unknown", cashout
   const shouldUnlock = cashoutMultiplier === void 0 || cashoutMultiplier >= 1.8;
   if (shouldUnlock) await unlockWager(userId, wagered);
 }
-async function logTip(senderId, receiverId, amount) {
+async function logTip(senderId, receiverId, amount, lockReceived = false) {
   await db.insert(betLogTable).values({ userId: senderId, command: "tip-sent", bet: amount, netDelta: -amount });
   await db.insert(betLogTable).values({ userId: receiverId, command: "tip-received", bet: amount, netDelta: amount });
-  await addLocked(receiverId, amount);
+  if (lockReceived) await addLocked(receiverId, amount);
 }
 async function addDeposited(userId, amount) {
   await db.update(usersTable).set({
@@ -125235,7 +125235,9 @@ async function execute2(interaction) {
     addBalance(interaction.user.id, -amount),
     addBalance(target.id, amount)
   ]);
-  await logTip(interaction.user.id, target.id, amount);
+  const cfg = getServerConfig2();
+  const lockTips = cfg?.lockTips ?? true;
+  await logTip(interaction.user.id, target.id, amount, lockTips);
   await interaction.editReply({
     content: `<@${interaction.user.id}> tipped **${formatAmount(amount)} gems** ${GEM} to <@${target.id}>!`
   });
@@ -126258,6 +126260,9 @@ function ch(id) {
 function ro(id) {
   return id ? `<@&${id}>` : "`Not set`";
 }
+function lock(val) {
+  return val ? "\u2705 Locked" : "\u274C Not locked";
+}
 function configEmbed(cfg, title, color) {
   return new import_discord9.EmbedBuilder().setColor(color).setTitle(title).addFields(
     { name: "\u{1F4E5} Deposit Channel", value: ch(cfg.depositChannelId), inline: true },
@@ -126268,7 +126273,18 @@ function configEmbed(cfg, title, color) {
     { name: "\u{1F3B0} Codes Channel", value: ch(cfg.codesChannelId), inline: true },
     { name: "\u{1F514} Rain Ping Role", value: ro(cfg.rainPingRoleId), inline: true },
     { name: "\u{1F514} Code Ping Role", value: ro(cfg.codePingRoleId), inline: true },
-    { name: "\u{1F3AE} Roblox User", value: `\`${cfg.robloxUser}\``, inline: true }
+    { name: "\u{1F3AE} Roblox User", value: `\`${cfg.robloxUser}\``, inline: true },
+    {
+      name: "\u{1F512} Lock Settings",
+      value: [
+        `\u{1F4B8} Tips received:    ${lock(cfg.lockTips ?? true)}`,
+        `\u{1F327}\uFE0F Rain winnings:    ${lock(cfg.lockRain ?? true)}`,
+        `\u{1F3B0} Promo codes:      ${lock(cfg.lockCodes ?? true)}`,
+        `\u{1F381} Starter balance:  ${lock(cfg.lockStarterBalance ?? true)}`,
+        `\u2795 /addbalance:      ${lock(cfg.lockAddBalance ?? false)}`
+      ].join("\n"),
+      inline: false
+    }
   ).setTimestamp();
 }
 function cfgSummary(cfg) {
@@ -126281,7 +126297,8 @@ function cfgSummary(cfg) {
     `\u{1F3B0} Codes: ${ch(cfg.codesChannelId)}`,
     `\u{1F514} Rain Ping: ${ro(cfg.rainPingRoleId)}`,
     `\u{1F514} Code Ping: ${ro(cfg.codePingRoleId)}`,
-    `\u{1F3AE} Roblox: \`${cfg.robloxUser}\``
+    `\u{1F3AE} Roblox: \`${cfg.robloxUser}\``,
+    `\u{1F512} Locks: Tips ${lock(cfg.lockTips ?? true)} \xB7 Rain ${lock(cfg.lockRain ?? true)} \xB7 Codes ${lock(cfg.lockCodes ?? true)} \xB7 Starter ${lock(cfg.lockStarterBalance ?? true)} \xB7 AddBal ${lock(cfg.lockAddBalance ?? false)}`
   ].join("\n");
 }
 function confirmRow(interactionId) {
@@ -126308,6 +126325,16 @@ var data8 = new import_discord9.SlashCommandBuilder().setName("setup").setDescri
   (opt) => opt.setName("rain_ping_role").setDescription("Role mentioned at the top of every rain panel").setRequired(false)
 ).addRoleOption(
   (opt) => opt.setName("code_ping_role").setDescription("Role mentioned at the top of every new code announcement").setRequired(false)
+).addBooleanOption(
+  (opt) => opt.setName("lock_tips").setDescription("Lock tips received \u2014 must wager \u22651.8\xD7 before withdrawal (default: on)").setRequired(false)
+).addBooleanOption(
+  (opt) => opt.setName("lock_rain").setDescription("Lock rain winnings \u2014 must wager \u22651.8\xD7 before withdrawal (default: on)").setRequired(false)
+).addBooleanOption(
+  (opt) => opt.setName("lock_codes").setDescription("Lock promo code earnings \u2014 must wager \u22651.8\xD7 before withdrawal (default: on)").setRequired(false)
+).addBooleanOption(
+  (opt) => opt.setName("lock_starter_balance").setDescription("Lock the 10M starter balance \u2014 must wager \u22651.8\xD7 before withdrawal (default: on)").setRequired(false)
+).addBooleanOption(
+  (opt) => opt.setName("lock_add_balance").setDescription("Lock gems added via /addbalance \u2014 must wager \u22651.8\xD7 before withdrawal (default: off)").setRequired(false)
 );
 async function execute8(interaction) {
   await interaction.deferReply({ ephemeral: true });
@@ -126316,6 +126343,7 @@ async function execute8(interaction) {
       embeds: [errorEmbed("You don't have permission to use this command.")]
     });
   }
+  const existing = getServerConfig2();
   const depositCh = interaction.options.getChannel("deposit_channel", true);
   const withdrawCh = interaction.options.getChannel("withdraw_channel", true);
   const requestCh = interaction.options.getChannel("request_channel", true);
@@ -126325,6 +126353,11 @@ async function execute8(interaction) {
   const rainPingRole = interaction.options.getRole("rain_ping_role", false);
   const codePingRole = interaction.options.getRole("code_ping_role", false);
   const robloxUser = interaction.options.getString("roblox_user", true);
+  const lockTips = interaction.options.getBoolean("lock_tips") ?? existing?.lockTips ?? true;
+  const lockRain = interaction.options.getBoolean("lock_rain") ?? existing?.lockRain ?? true;
+  const lockCodes = interaction.options.getBoolean("lock_codes") ?? existing?.lockCodes ?? true;
+  const lockStarterBalance = interaction.options.getBoolean("lock_starter_balance") ?? existing?.lockStarterBalance ?? true;
+  const lockAddBalance = interaction.options.getBoolean("lock_add_balance") ?? existing?.lockAddBalance ?? false;
   const newCfg = {
     depositChannelId: depositCh.id,
     withdrawChannelId: withdrawCh.id,
@@ -126334,9 +126367,13 @@ async function execute8(interaction) {
     rainChannelId: rainCh?.id,
     rainPingRoleId: rainPingRole?.id,
     codePingRoleId: codePingRole?.id,
-    robloxUser
+    robloxUser,
+    lockTips,
+    lockRain,
+    lockCodes,
+    lockStarterBalance,
+    lockAddBalance
   };
-  const existing = getServerConfig();
   if (!existing) {
     saveServerConfig(newCfg);
     return interaction.editReply({
@@ -126406,7 +126443,7 @@ var data9 = new import_discord10.SlashCommandBuilder().setName("deposit").setDes
 );
 async function execute9(interaction) {
   await interaction.deferReply({ flags: import_discord10.MessageFlags.Ephemeral });
-  const cfg = getServerConfig();
+  const cfg = getServerConfig2();
   if (!cfg) {
     return interaction.editReply({
       embeds: [errorEmbed("The bot hasn't been configured yet. Ask an admin to run `/setup`.")]
@@ -126445,7 +126482,7 @@ async function handleSent(interaction, reqId) {
   if (interaction.user.id !== req.userId) {
     return interaction.reply({ content: "\u274C This is not your deposit request.", flags: import_discord10.MessageFlags.Ephemeral });
   }
-  const cfg = getServerConfig();
+  const cfg = getServerConfig2();
   await interaction.update({
     embeds: [
       new import_discord10.EmbedBuilder().setColor(COLORS.warning).setTitle("\u23F3 Deposit Pending Review").setDescription(
@@ -126521,7 +126558,7 @@ async function handleApprove(interaction, reqId) {
     ],
     components: []
   });
-  const cfg2 = getServerConfig();
+  const cfg2 = getServerConfig2();
   if (cfg2) {
     const depCh = interaction.client.channels.cache.get(cfg2.depositChannelId);
     if (depCh) {
@@ -126639,7 +126676,7 @@ var data10 = new import_discord11.SlashCommandBuilder().setName("withdraw").setD
 );
 async function execute10(interaction) {
   await interaction.deferReply({ flags: import_discord11.MessageFlags.Ephemeral });
-  const cfg = getServerConfig();
+  const cfg = getServerConfig2();
   if (!cfg) {
     return interaction.editReply({
       embeds: [errorEmbed("The bot hasn't been configured yet. Ask an admin to run `/setup`.")]
@@ -126695,7 +126732,7 @@ async function handleConfirm2(interaction, reqId) {
     return interaction.reply({ content: "\u274C This is not your withdrawal request.", flags: import_discord11.MessageFlags.Ephemeral });
   }
   await addBalance(req.userId, -req.amount);
-  const cfg = getServerConfig();
+  const cfg = getServerConfig2();
   await interaction.update({
     embeds: [
       new import_discord11.EmbedBuilder().setColor(COLORS.success).setTitle("\u{1F4E4} Withdrawal Recorded").setDescription(
@@ -126783,7 +126820,7 @@ async function handleApproveModal(interaction, reqId) {
     ],
     components: []
   });
-  const cfg2 = getServerConfig();
+  const cfg2 = getServerConfig2();
   if (cfg2) {
     const withCh = interaction.client.channels.cache.get(cfg2.withdrawChannelId);
     if (withCh) {
@@ -126985,6 +127022,10 @@ async function handleModal(interaction, sessionId) {
     bet: amount,
     netDelta: -amount
   });
+  const cfg2 = getServerConfig2();
+  if (cfg2?.lockAddBalance ?? false) {
+    await addLocked(session.targetUserId, amount);
+  }
   await interaction.editReply({
     embeds: [
       new import_discord12.EmbedBuilder().setColor(COLORS.success).setTitle("\u2705 Balance Added").addFields(
@@ -129421,7 +129462,7 @@ var data23 = new import_discord24.SlashCommandBuilder().setName("flip").setDescr
 );
 async function execute23(interaction) {
   await interaction.deferReply({ ephemeral: true });
-  const cfg = getServerConfig();
+  const cfg = getServerConfig2();
   if (!cfg || !cfg.flipChannelId) {
     return void interaction.editReply({
       embeds: [errorEmbed("Flip channel not configured. Ask an admin to run `/setup`.")]
@@ -129615,7 +129656,7 @@ async function execute24(interaction) {
     inline: false
   });
   const announceEmbed = new import_discord25.EmbedBuilder().setColor(COLORS.primary).setTitle("\u{1F3B0} New promocode").addFields(fields).setTimestamp();
-  const cfg = getServerConfig();
+  const cfg = getServerConfig2();
   if (cfg?.codesChannelId) {
     const ch2 = interaction.client.channels.cache.get(cfg.codesChannelId);
     if (ch2) {
@@ -129680,7 +129721,9 @@ Your current deposit: **${formatAmount(deposited)} \u{1F48E}**`
   sqlite.prepare("UPDATE promocodes SET uses = uses + 1 WHERE code = ?").run(code);
   sqlite.prepare("INSERT INTO promocode_redemptions (code, user_id) VALUES (?, ?)").run(code, interaction.user.id);
   await addBalance(interaction.user.id, promo.reward);
-  await addLocked(interaction.user.id, promo.reward);
+  const cfg2 = getServerConfig();
+  const lockCodes = cfg2?.lockCodes ?? true;
+  if (lockCodes) await addLocked(interaction.user.id, promo.reward);
   const newBalance = dbUser.balance + promo.reward;
   await interaction.editReply({
     embeds: [
@@ -131289,10 +131332,12 @@ async function endRain(guildId) {
     ...[...rain.participants].map((uid) => addBalance(uid, each)),
     remainder > 0 ? addBalance(rain.adminId, remainder) : Promise.resolve()
   ]);
+  const cfg2 = getServerConfig2();
+  const lockRain = cfg2?.lockRain ?? true;
   await Promise.all(
     [...rain.participants].flatMap((uid) => [
       db.insert(betLogTable).values({ userId: uid, command: "rain", bet: 0, netDelta: each }),
-      addLocked(uid, each)
+      ...lockRain ? [addLocked(uid, each)] : []
     ])
   );
   await rain.message.edit({ embeds: [endedEmbed(rain.total, count, each)], components: [] }).catch(() => null);
@@ -131351,7 +131396,7 @@ async function execute36(interaction) {
     });
   }
   await addBalance(interaction.user.id, -total);
-  const cfg = getServerConfig();
+  const cfg = getServerConfig2();
   const channel = cfg?.rainChannelId ? interaction.client.channels.cache.get(cfg.rainChannelId) ?? interaction.channel : interaction.channel;
   const endsAt = Date.now() + durationMs;
   const participants = /* @__PURE__ */ new Set();
@@ -131740,7 +131785,10 @@ async function handleNewMember(member) {
     username,
     balance: WELCOME_BONUS
   });
-  await addLocked(userId, WELCOME_BONUS);
+  const cfg = getServerConfig2();
+  if (cfg?.lockStarterBalance ?? true) {
+    await addLocked(userId, WELCOME_BONUS);
+  }
   logger.info({ userId, username, bonus: WELCOME_BONUS }, "New member joined \u2014 welcome bonus awarded");
   try {
     await member.send(

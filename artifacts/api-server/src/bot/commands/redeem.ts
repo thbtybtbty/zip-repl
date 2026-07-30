@@ -88,7 +88,9 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   sqlite.prepare("UPDATE promocodes SET uses = uses + 1 WHERE code = ?").run(code);
   sqlite.prepare("INSERT INTO promocode_redemptions (code, user_id) VALUES (?, ?)").run(code, interaction.user.id);
   await addBalance(interaction.user.id, promo.reward);
-  await addLocked(interaction.user.id, promo.reward); // promo earnings must be wagered ≥1.8× before withdrawal
+  const cfg2      = getServerConfig();
+  const lockCodes = cfg2?.lockCodes ?? true;
+  if (lockCodes) await addLocked(interaction.user.id, promo.reward);
 
   const newBalance = (dbUser.balance + promo.reward);
 

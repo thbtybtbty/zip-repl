@@ -171,11 +171,11 @@ export async function recordBet(
 }
 
 /** Log a tip transfer for both sender and receiver history.
- *  Tips received are treated as bonus earnings — locked until wagered ≥1.8×. */
-export async function logTip(senderId: string, receiverId: string, amount: number): Promise<void> {
+ *  Pass lockReceived=true to lock the received amount (must wager ≥1.8× before withdrawal). */
+export async function logTip(senderId: string, receiverId: string, amount: number, lockReceived = false): Promise<void> {
   await db.insert(betLogTable).values({ userId: senderId,   command: "tip-sent",     bet: amount, netDelta: -amount });
   await db.insert(betLogTable).values({ userId: receiverId, command: "tip-received", bet: amount, netDelta:  amount });
-  await addLocked(receiverId, amount);
+  if (lockReceived) await addLocked(receiverId, amount);
 }
 
 /** Increment lifetime deposited counter (call on approved deposit). */

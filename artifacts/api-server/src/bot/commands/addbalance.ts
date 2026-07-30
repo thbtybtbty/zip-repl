@@ -13,8 +13,8 @@ import {
   type ModalSubmitInteraction,
   type MessageActionRowComponentBuilder,
 } from "discord.js";
-import { COLORS, formatAmount, getOrCreateUser, addBalance, errorEmbed } from "../utils.js";
-import { isAdmin } from "../botConfig.js";
+import { COLORS, formatAmount, getOrCreateUser, addBalance, addLocked, errorEmbed } from "../utils.js";
+import { isAdmin, getServerConfig } from "../botConfig.js";
 import { db, betLogTable } from "@workspace/db";
 
 // ─── Pending sessions (userId of admin → target user info) ───────────────────
@@ -178,6 +178,12 @@ export async function handleModal(interaction: ModalSubmitInteraction, sessionId
     bet:      amount,
     netDelta: -amount,
   });
+
+  // Conditionally lock the added gems based on server config
+  const cfg2 = getServerConfig();
+  if (cfg2?.lockAddBalance ?? false) {
+    await addLocked(session.targetUserId, amount);
+  }
 
   await interaction.editReply({
     embeds: [

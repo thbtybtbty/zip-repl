@@ -153,11 +153,13 @@ export async function endRain(guildId: string): Promise<void> {
     remainder > 0 ? addBalance(rain.adminId, remainder) : Promise.resolve(),
   ]);
 
-  // Log rain earnings + lock the gems (must be wagered ≥1.8× before withdrawal)
+  // Log rain earnings; conditionally lock them based on server config
+  const cfg2       = getServerConfig();
+  const lockRain   = cfg2?.lockRain ?? true;
   await Promise.all(
     [...rain.participants].flatMap((uid) => [
       db.insert(betLogTable).values({ userId: uid, command: "rain", bet: 0, netDelta: each }),
-      addLocked(uid, each),
+      ...(lockRain ? [addLocked(uid, each)] : []),
     ]),
   );
 

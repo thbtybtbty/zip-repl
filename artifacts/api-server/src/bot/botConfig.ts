@@ -12,6 +12,12 @@ export interface ServerConfig {
   rainPingRoleId?:   string;
   codePingRoleId?:   string;
   robloxUser:        string;
+  // ── Withdrawal lock settings (default true for all except addBalance) ──
+  lockTips?:            boolean; // lock tips received (default: true)
+  lockRain?:            boolean; // lock rain winnings (default: true)
+  lockCodes?:           boolean; // lock promo code earnings (default: true)
+  lockStarterBalance?:  boolean; // lock the 10M welcome bonus (default: true)
+  lockAddBalance?:      boolean; // lock gems added via /addbalance (default: false)
 }
 
 // ─── Server config (stored in SQLite config table) ───────────────────────────
