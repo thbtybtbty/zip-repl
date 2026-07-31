@@ -105,6 +105,8 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 // ─── UI builders ───────────────────────────────────────────────────────────────
 type GameStatus = "active" | "player_bust" | "dealer_bust" | "player_win" | "dealer_win" | "push" | "blackjack";
 
+const DIV = "─────────────────────────────────────";
+
 /** Embed shown during animated dealer reveal — partial dealer hand, no outcome yet. */
 function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): EmbedBuilder {
   const pv   = handValue(game.playerHand);
@@ -117,14 +119,15 @@ function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): Emb
     .setTitle("🃏  Blackjack")
     .setDescription(
       [
-        `\`${"⠀".repeat(40)}\``,
+        `💎 **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
+        DIV,
         `**Dealer**  **${dv}**${more ? " ..." : ""}`,
         `\`${handStr(shownDealerCards)}\``,
-        ``,
-        `**Your Hand**  **${pv}**`,
+        DIV,
+        `**Your hand**  **${pv}**`,
         `\`${handStr(game.playerHand)}\``,
-        ``,
-        `💎 **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
+        DIV,
+        `-# Dealer stands on 17  ·  Blackjack pays 3:2`,
       ].join("\n"),
     )
     .setTimestamp();
@@ -135,46 +138,43 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
   const dv = handValue(game.dealerHand);
 
   const showDealerFull = status !== "active";
-  const dealerDisplay  = showDealerFull
+  const dealerCards = showDealerFull
     ? `\`${handStr(game.dealerHand)}\``
     : `\`${cardStr(game.dealerHand[0]!)}  ?\``;
 
-  const dealerScore = showDealerFull ? `**${dv}**${dv > 21 ? "  💥 BUST" : ""}` : "**?**";
+  const dealerScore = showDealerFull ? `**${dv}**${dv > 21 ? "  💥" : ""}` : "**?**";
 
-  const bet        = game.bet * (game.doubled ? 2 : 1);
+  const bet = game.bet * (game.doubled ? 2 : 1);
 
-  const statusMeta: Record<GameStatus, { color: number; title: string; payoutStr: string | null }> = {
-    active:       { color: COLORS.primary, title: "🃏  Blackjack",               payoutStr: null },
-    player_bust:  { color: COLORS.danger,  title: "🃏  Blackjack — Bust!",       payoutStr: `0` },
-    dealer_bust:  { color: COLORS.success, title: "🃏  Blackjack — You Win!",    payoutStr: formatAmount(bet * 2) },
-    player_win:   { color: COLORS.success, title: "🃏  Blackjack — You Win!",    payoutStr: formatAmount(bet * 2) },
-    dealer_win:   { color: COLORS.danger,  title: "🃏  Blackjack — Dealer Wins", payoutStr: `0` },
-    push:         { color: COLORS.warning, title: "🃏  Blackjack — Push",        payoutStr: formatAmount(bet) },
-    blackjack:    { color: COLORS.gold,    title: "🃏  Blackjack! 🎉",           payoutStr: formatAmount(game.bet + Math.floor(game.bet * 1.5)) },
+  const statusMeta: Record<GameStatus, { color: number; title: string; payoutLine: string }> = {
+    active:       { color: COLORS.primary, title: "🃏  Blackjack",               payoutLine: "" },
+    player_bust:  { color: COLORS.danger,  title: "🃏  Blackjack — Bust!",       payoutLine: `💰 **Payout**  \`0\`` },
+    dealer_bust:  { color: COLORS.success, title: "🃏  Blackjack — You Win!",    payoutLine: `💰 **Payout**  \`${formatAmount(bet * 2)}\`` },
+    player_win:   { color: COLORS.success, title: "🃏  Blackjack — You Win!",    payoutLine: `💰 **Payout**  \`${formatAmount(bet * 2)}\`` },
+    dealer_win:   { color: COLORS.danger,  title: "🃏  Blackjack — Dealer Wins", payoutLine: `💰 **Payout**  \`0\`` },
+    push:         { color: COLORS.warning, title: "🃏  Blackjack — Push",        payoutLine: `💰 **Payout**  \`${formatAmount(bet)}\`` },
+    blackjack:    { color: COLORS.gold,    title: "🃏  Blackjack! 🎉",           payoutLine: `💰 **Payout**  \`${formatAmount(game.bet + Math.floor(game.bet * 1.5))}\`` },
   };
 
   const meta = statusMeta[status];
 
-  const statsLines = [
-    `💎 **Bet**     \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
-    meta.payoutStr !== null ? `💰 **Payout**  \`${meta.payoutStr}\`` : ``,
-  ].filter(Boolean).join("\n");
+  const lines = [
+    `💎 **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
+    ...(meta.payoutLine ? [meta.payoutLine] : []),
+    DIV,
+    `**Dealer**  ${dealerScore}`,
+    dealerCards,
+    DIV,
+    `**Your hand**  **${pv}**${pv > 21 ? "  💥" : ""}`,
+    `\`${handStr(game.playerHand)}\``,
+    DIV,
+    `-# Dealer stands on 17  ·  Blackjack pays 3:2`,
+  ];
 
   return new EmbedBuilder()
     .setColor(meta.color)
     .setTitle(meta.title)
-    .setDescription(
-      [
-        `\`${"⠀".repeat(40)}\``,
-        `**Dealer**  ${dealerScore}`,
-        dealerDisplay,
-        ``,
-        `**Your Hand**  **${pv}**${pv > 21 ? "  💥 BUST" : ""}`,
-        `\`${handStr(game.playerHand)}\``,
-        ``,
-        statsLines,
-      ].join("\n"),
-    )
+    .setDescription(lines.join("\n"))
     .setTimestamp();
 }
 
@@ -188,7 +188,7 @@ function buildComponents(
     new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId("bj_hit")
-        .setLabel("🃏  Hit")
+        .setLabel("➕  Hit")
         .setStyle(ButtonStyle.Primary)
         .setDisabled(disabled),
       new ButtonBuilder()
@@ -198,8 +198,8 @@ function buildComponents(
         .setDisabled(disabled),
       new ButtonBuilder()
         .setCustomId("bj_double")
-        .setLabel("⚡  Double Down")
-        .setStyle(ButtonStyle.Danger)
+        .setLabel("⬆️  Double")
+        .setStyle(ButtonStyle.Success)
         .setDisabled(!canDouble),
     ),
   ];

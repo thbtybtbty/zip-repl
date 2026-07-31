@@ -174,3 +174,9 @@ id = "atUHKquj5WPEYzkGoN0im"
 uri = "file://wispbyte-index.mjs"
 type = "unspecified"
 title = "index.mjs"
+
+[[outputs]]
+id = "nYc1mx8bU8fxRzehUkEko"
+uri = "file://wispbyte-blackjack-update.tar.gz"
+type = "unspecified"
+title = "Wispbyte — Blackjack UI update (dist/)"
