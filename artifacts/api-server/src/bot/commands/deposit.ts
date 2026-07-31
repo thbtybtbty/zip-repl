@@ -75,9 +75,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     .setTitle("📥 Deposit Request")
     .setDescription(
       `You requested a **${formatAmount(amount)} PS99 Gems Deposit**.\n\n` +
-      `Please send that amount of gems in the mailbox to the account: **${cfg.robloxUser}**\n\n` +
-      `__When you sent the gems to the mailbox, please click the button **Sent**.__\n` +
-      `If you want to cancel the deposit click the button **Cancel**.`,
+      `**Step 1 —** Open the Mailbox in Pet Simulator 99\n` +
+      `**Step 2 —** Send **${formatAmount(amount)} gems** to: \`${cfg.robloxUser}\`\n` +
+      `**Step 3 —** In the mail **message field**, write your personal code:\n\n` +
+      `> \`${interaction.user.id}\`\n\n` +
+      `⚠️ **You must include your code in the message or your deposit cannot be verified.**\n\n` +
+      `Once sent, click **Sent** below and a mod will confirm it.`,
     )
     .setTimestamp();
 
