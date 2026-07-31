@@ -1,5 +1,17 @@
 # Discord Gambling Bot
 
+## ⚠️ AGENT STANDING RULE — READ FIRST
+
+After **every** code change — no matter how small — you MUST automatically:
+
+1. Build: `pnpm --filter @workspace/api-server run build` (run from project root)
+2. Package the updated `dist/` into a `.tar.gz` archive (include only changed files; always include `dist/`)
+3. Deliver it to the user via `presentAsset` with a clear label
+
+Do this **without waiting to be asked**. Never skip this step after making any edit to the bot.
+Do **not** include: `.env`, `bot.db`, `bot.db-shm`, `bot.db-wal`, `server-config.json`, `admins.json`, `node_modules/`
+
+
 A TypeScript Discord gambling/games bot with an Express HTTP API and SQLite database, organized as a pnpm monorepo.
 
 ## Stack
