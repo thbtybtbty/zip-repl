@@ -54,6 +54,7 @@ import * as stats           from "./commands/stats.js";
 import * as economy         from "./commands/economy.js";
 import * as addadminperms   from "./commands/addadminperms.js";
 import * as rain            from "./commands/rain.js";
+import * as link            from "./commands/link.js";
 import { isFrozen, isGameDisabled } from "./botState.js";
 
 // ─── Gambling commands (checked for freeze + disable) ─────────────────────────
@@ -62,7 +63,7 @@ const GAMBLING_COMMANDS = new Set([
   "crash","scratchcard","chickencrossing","colordice","upgrader","keno","flip","hilo",
 ]);
 
-const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, createcode, redeem, viewcodes, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms, rain];
+const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, createcode, redeem, viewcodes, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms, rain, link];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -139,6 +140,7 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "economy")          return await economy.execute(interaction);
       if (name === "addadminperms")    return await addadminperms.execute(interaction);
       if (name === "rain")             return await rain.execute(interaction);
+      if (name === "link")             return await link.execute(interaction);
     } catch (err) {
       logger.error({ err, command: name }, "Error executing command");
       const payload = { content: "❌ Something went wrong. Please try again.", ephemeral: true };

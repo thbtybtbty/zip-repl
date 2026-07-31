@@ -13,7 +13,6 @@ const DEPOSIT_SECRET = process.env["DEPOSIT_SECRET"] ?? "";
 
 function authGuard(req: Request, res: Response): boolean {
   if (!DEPOSIT_SECRET) {
-    // No secret configured — reject all requests for safety
     res.status(503).json({ ok: false, error: "DEPOSIT_SECRET not configured on server" });
     return false;
   }
@@ -27,14 +26,16 @@ function authGuard(req: Request, res: Response): boolean {
 }
 
 // ─── POST /deposit ─────────────────────────────────────────────────────────────
+// Body: { robloxUser: string, amount: number }
+// Looks up which Discord account has linked that Roblox username, then credits them.
 router.post("/deposit", async (req: Request, res: Response) => {
   if (!authGuard(req, res)) return;
 
-  const { discordId, amount } = req.body as { discordId?: unknown; amount?: unknown };
+  const { robloxUser, amount } = req.body as { robloxUser?: unknown; amount?: unknown };
 
   // ── Validate inputs ────────────────────────────────────────────────────────
-  if (!discordId || typeof discordId !== "string" || discordId.trim() === "") {
-    res.status(400).json({ ok: false, error: "discordId must be a non-empty string" });
+  if (!robloxUser || typeof robloxUser !== "string" || robloxUser.trim() === "") {
+    res.status(400).json({ ok: false, error: "robloxUser must be a non-empty string" });
     return;
   }
 
@@ -44,26 +45,50 @@ router.post("/deposit", async (req: Request, res: Response) => {
     return;
   }
 
-  const id = discordId.trim();
+  const robloxName = robloxUser.trim();
+
+  // ── Look up which Discord account is linked to this Roblox username ────────
+  const linked = await db
+    .select({ id: usersTable.id, username: usersTable.username, balance: usersTable.balance })
+    .from(usersTable)
+    .where(eq(usersTable.robloxUsername, robloxName))
+    .limit(1);
+
+  if (!linked[0]) {
+    logger.warn({ robloxUser: robloxName, amount: amountNum }, "Deposit rejected — Roblox username not linked");
+    res.status(404).json({
+      ok: false,
+      error: `Roblox username "${robloxName}" is not linked to any Discord account. The player must run /link first.`,
+    });
+    return;
+  }
+
+  const discordId = linked[0].id;
 
   try {
-    // Create the user row if this is their first-ever deposit
-    await getOrCreateUser(id, id); // username defaults to their ID until they interact
-
     // Credit balance
-    const newBalance = await addBalance(id, amountNum);
+    const newBalance = await addBalance(discordId, amountNum);
 
     // Track lifetime deposited amount
     await db
       .update(usersTable)
       .set({ deposited: sql`${usersTable.deposited} + ${amountNum}` })
-      .where(eq(usersTable.id, id));
+      .where(eq(usersTable.id, discordId));
 
-    logger.info({ discordId: id, amount: amountNum, newBalance }, "Mailbox deposit processed");
+    logger.info(
+      { robloxUser: robloxName, discordId, amount: amountNum, newBalance },
+      "Mailbox deposit processed",
+    );
 
-    res.json({ ok: true, discordId: id, deposited: amountNum, newBalance });
+    res.json({
+      ok: true,
+      robloxUser: robloxName,
+      discordId,
+      deposited: amountNum,
+      newBalance,
+    });
   } catch (err) {
-    logger.error({ err, discordId: id, amount: amountNum }, "Deposit route error");
+    logger.error({ err, robloxUser: robloxName, discordId, amount: amountNum }, "Deposit route error");
     res.status(500).json({ ok: false, error: "Internal server error" });
   }
 });

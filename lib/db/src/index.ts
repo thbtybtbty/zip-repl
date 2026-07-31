@@ -99,6 +99,8 @@ export function initDb(): void {
     `ALTER TABLE users ADD COLUMN profit          INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN locked_balance  INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE bet_log ADD COLUMN admin_bet INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN roblox_username TEXT`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS users_roblox_username ON users(roblox_username) WHERE roblox_username IS NOT NULL`,
   ];
   for (const stmt of migrations) {
     try { sqlite.exec(stmt); } catch { /* column already exists — ignore */ }

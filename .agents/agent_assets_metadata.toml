@@ -203,4 +203,10 @@ title = "Wispbyte — Mailbox update (dist/)"
 id = "gC0a_NICu91v5HCFLRG86"
 uri = "file://attached_assets/PS99_MailboxWatcher.luau"
 type = "unspecified"
-title = "PS99_MailboxWatcher.luau — Executor script"
+title = "PS99_MailboxWatcher.luau — updated executor script"
+
+[[outputs]]
+id = "atwsFt35pM-291MO3Yoh5"
+uri = "file://wispbyte-link-update.tar.gz"
+type = "unspecified"
+title = "Wispbyte — /link + robloxUser deposit (dist/)"

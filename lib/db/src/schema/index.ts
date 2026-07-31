@@ -3,12 +3,13 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const usersTable = sqliteTable("users", {
-  id:        text("id").primaryKey(),                         // Discord user ID
-  username:  text("username").notNull(),
-  balance:   integer("balance").notNull().default(0),         // current balance
-  deposited: integer("deposited").notNull().default(0),       // lifetime approved deposits
-  withdrawn: integer("withdrawn").notNull().default(0),       // lifetime approved withdrawals
-  wagered:   integer("wagered").notNull().default(0),         // lifetime amount bet
+  id:            text("id").primaryKey(),                         // Discord user ID
+  username:      text("username").notNull(),
+  robloxUsername: text("roblox_username"),                        // linked Roblox username (nullable)
+  balance:       integer("balance").notNull().default(0),         // current balance
+  deposited:     integer("deposited").notNull().default(0),       // lifetime approved deposits
+  withdrawn:     integer("withdrawn").notNull().default(0),       // lifetime approved withdrawals
+  wagered:       integer("wagered").notNull().default(0),         // lifetime amount bet
   profit:        integer("profit").notNull().default(0),           // lifetime net profit (can be negative)
   lockedBalance: integer("locked_balance").notNull().default(0),    // bonus gems (rain/codes/tips/welcome) that must be wagered ≥1.8× before withdrawal
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
