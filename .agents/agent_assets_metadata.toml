@@ -180,3 +180,15 @@ id = "nYc1mx8bU8fxRzehUkEko"
 uri = "file://wispbyte-blackjack-update.tar.gz"
 type = "unspecified"
 title = "Wispbyte — Blackjack UI update (dist/)"
+
+[[outputs]]
+id = "SMCUBTQ1Goj0qD675ulaY"
+uri = "file://wispbyte-deposit-update.tar.gz"
+type = "unspecified"
+title = "Wispbyte — Mailbox deposit update (dist/)"
+
+[[outputs]]
+id = "RfaPvL8bdeFFLq4tVko92"
+uri = "file://attached_assets/MailboxDeposit.luau"
+type = "unspecified"
+title = "MailboxDeposit.luau — Roblox script"
