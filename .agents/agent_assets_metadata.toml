@@ -224,3 +224,10 @@ uri = "file://wispbyte-sigint-fix.tar.gz"
 type = "unspecified"
 title = "wispbyte-sigint-fix.tar.gz"
 description = "dist/ + package.json. Start command auto-runs npm install then launches the bot — no console needed."
+
+[[outputs]]
+id = "j_itIUtVzfxqV6cDfTE6M"
+uri = "file://wispbyte-update.zip"
+type = "unspecified"
+title = "wispbyte-update.zip"
+description = "dist/ + package.json as a .zip. Upload to Wispbyte, set startup command to: npm start"
