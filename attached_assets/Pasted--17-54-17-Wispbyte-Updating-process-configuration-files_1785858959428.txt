@@ -1,0 +1,74 @@
+
+[17:54:17][Wispbyte]: Updating process configuration files...
+[17:54:17][Wispbyte]: Ensuring file permissions are set correctly, this could take a few seconds...
+[17:54:17]Server marked as starting
+ __        ___           _           _       
+ \ \      / (_)___ _ __ | |__  _   _| |_ ___ 
+  \ \ /\ / /| / __| '_ \| '_ \| | | | __/ _ \
+   \ V  V / | \__ \ |_) | |_) | |_| | ||  __/
+    \_/\_/  |_|___/ .__/|_.__/ \__, |\__\___|
+                  |_|          |___/         
+Your server is currently starting! Enjoy using Wispbyte
+[17:54:21]v19.9.0
+[17:54:21]Server marked as running
+[17:54:21]:/home/container$ npm start
+[17:54:22]> gambling-bot@1.0.0 start
+[17:54:22]> node --enable-source-maps ./dist/index.mjs
+[17:54:24]node:internal/modules/cjs/loader:1361
+[17:54:24]return process.dlopen(module, path.toNamespacedPath(filename));
+[17:54:24]^
+[17:54:24]Error: /lib/x86_64-linux-gnu/libm.so.6: version `GLIBC_2.38' not found (required by /home/container/node_modules/better-sqlite3/build/Release/better_sqlite3.node)
+[17:54:24] at Module._extensions..node (node:internal/modules/cjs/loader:1361:18)
+[17:54:24] at Module.load (node:internal/modules/cjs/loader:1133:32)
+[17:54:24] at Module._load (node:internal/modules/cjs/loader:972:12)
+[17:54:24] at Module.require (node:internal/modules/cjs/loader:1157:19)
+[17:54:24] at require (node:internal/modules/helpers:119:18)
+[17:54:24]at bindings (/home/container/node_modules/bindings/bindings.js:112:48)
+[17:54:24]at new Database (/home/container/node_modules/better-sqlite3/lib/database.js:48:64)
+[17:54:24]at <anonymous> (/lib/db/src/index.ts:10:23)
+[17:54:24] at ModuleJob.run (node:internal/modules/esm/module_job:193:25) {
+[17:54:24]code: 'ERR_DLOPEN_FAILED'
+[17:54:24]}
+[17:54:24]Node.js v19.9.0
+[17:54:24]Server marked as offline
+[17:54:25][Wispbyte]: ---------- Detected server process in a crashed state! ----------
+[17:54:25][Wispbyte]: Exit code: 1
+[17:54:25][Wispbyte]: Out of memory: false
+[17:54:25][Wispbyte]: Checking server disk space usage, this could take a few seconds...
+[17:54:25][Wispbyte]: Updating process configuration files...
+[17:54:25][Wispbyte]: Ensuring file permissions are set correctly, this could take a few seconds...
+[17:54:26]Server marked as starting
+ __        ___           _           _       
+ \ \      / (_)___ _ __ | |__  _   _| |_ ___ 
+  \ \ /\ / /| / __| '_ \| '_ \| | | | __/ _ \
+   \ V  V / | \__ \ |_) | |_) | |_| | ||  __/
+    \_/\_/  |_|___/ .__/|_.__/ \__, |\__\___|
+                  |_|          |___/         
+Your server is currently starting! Enjoy using Wispbyte
+[17:54:28][Wispbyte] : Docker image pulled successfully
+[17:54:29]Server marked as running
+[17:54:29]v19.9.0
+[17:54:29]:/home/container$ npm start
+[17:54:30]> gambling-bot@1.0.0 start
+[17:54:30]> node --enable-source-maps ./dist/index.mjs
+[17:54:31]node:internal/modules/cjs/loader:1361
+[17:54:31]return process.dlopen(module, path.toNamespacedPath(filename));
+[17:54:31]^
+[17:54:31]Error: /lib/x86_64-linux-gnu/libm.so.6: version `GLIBC_2.38' not found (required by /home/container/node_modules/better-sqlite3/build/Release/better_sqlite3.node)
+[17:54:31] at Module._extensions..node (node:internal/modules/cjs/loader:1361:18)
+[17:54:31] at Module.load (node:internal/modules/cjs/loader:1133:32)
+[17:54:31] at Module._load (node:internal/modules/cjs/loader:972:12)
+[17:54:31] at Module.require (node:internal/modules/cjs/loader:1157:19)
+[17:54:31] at require (node:internal/modules/helpers:119:18)
+[17:54:31]at bindings (/home/container/node_modules/bindings/bindings.js:112:48)
+[17:54:31]at new Database (/home/container/node_modules/better-sqlite3/lib/database.js:48:64)
+[17:54:31]at <anonymous> (/lib/db/src/index.ts:10:23)
+[17:54:31] at ModuleJob.run (node:internal/modules/esm/module_job:193:25) {
+[17:54:31]code: 'ERR_DLOPEN_FAILED'
+[17:54:31]}
+[17:54:31]Node.js v19.9.0
+[17:54:31]Server marked as offline
+[17:54:32][Wispbyte]: ---------- Detected server process in a crashed state! ----------
+[17:54:32][Wispbyte]: Exit code: 1
+[17:54:32][Wispbyte]: Out of memory: false
+[17:54:32][Wispbyte]: Aborting automatic restart, last crash occurred less than 60 seconds ago.
