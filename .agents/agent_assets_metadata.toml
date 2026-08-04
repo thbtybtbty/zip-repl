@@ -217,3 +217,10 @@ uri = "file://wispbyte-port-fix.tar.gz"
 type = "unspecified"
 title = "wispbyte-port-fix.tar.gz"
 description = "Updated dist/ — fixes the HTTP server to read PORT from the environment (defaults to 8080 if unset). Upload this to your Wispbyte dist/ folder and restart."
+
+[[outputs]]
+id = "tbXtxN-PjoF3lsnP8J57t"
+uri = "file://wispbyte-sigint-fix.tar.gz"
+type = "unspecified"
+title = "wispbyte-sigint-fix.tar.gz"
+description = "Updated dist/ + clean package.json. No preinstall guard, no workspace refs — only better-sqlite3 as a dependency. Also adds a 5-second shutdown timeout so SIGINT/SIGTERM can never hang the process."

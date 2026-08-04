@@ -11,6 +11,15 @@ initDb();
 // even if the host sends SIGTERM (WispByte, Replit, Docker, etc.).
 async function shutdown(signal: string) {
   logger.info({ signal }, "Shutting down gracefully…");
+
+  // Force-exit after 5 s so a hung Discord client or SQLite flush
+  // never prevents WispByte / the OS from restarting the process.
+  const killer = setTimeout(() => {
+    logger.warn("Shutdown timed out after 5 s — forcing exit");
+    process.exit(1);
+  }, 5_000);
+  killer.unref(); // don't keep the event loop alive just for this timer
+
   try {
     await destroyBot();
   } catch { /* ignore */ }
@@ -19,6 +28,7 @@ async function shutdown(signal: string) {
     sqlite.close();
     logger.info("SQLite closed cleanly");
   } catch { /* ignore */ }
+  clearTimeout(killer);
   process.exit(0);
 }
 
