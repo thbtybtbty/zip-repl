@@ -1,0 +1,75 @@
+[##################] \ reify:better-sqlite3: http fetch GET 200 https://registr
+[##################] \ reify:better-sqlite3: http fetch GET 200 https://registr
+[##################] \ reify:better-sqlite3: http fetch GET 200 https://registr 25hnpm ERR! path /home/container/node_modules/better-sqlite3
+[17:36:07]npm ERR! command failed
+[17:36:07]npm ERR! signal SIGINT
+[17:36:07]npm ERR! command sh -c prebuild-install   node-gyp rebuild --release
+[17:36:07]npm ERR! make: Entering directory '/home/container/node_modules/better-sqlite3/build'
+[17:36:07]npm ERR! TOUCH ba23eeee118cd63e16015df367567cb043fed872.intermediate
+[17:36:07]npm ERR! ACTION deps_sqlite3_gyp_locate_sqlite3_target_copy_builtin_sqlite3 ba23eeee118cd63e16015df367567cb043fed872.intermediate
+[17:36:07]npm ERR! TOUCH Release/obj.target/deps/locate_sqlite3.stamp
+[17:36:07]npm ERR! CC(target) Release/obj.target/sqlite3/gen/sqlite3/sqlite3.o
+[17:36:07]npm ERR! prebuild-install warn install No prebuilt binaries found (target=19.9.0 runtime=node arch=x64 libc= platform=linux)
+[17:36:07]npm ERR! gyp info it worked if it ends with ok
+[17:36:07]npm ERR! gyp info using node-gyp@9.4.1
+[17:36:07]npm ERR! gyp info using node@19.9.0 | linux | x64
+[17:36:08]npm ERR! gyp info find Python using Python version 3.9.2 found at "/usr/bin/python3"
+[17:36:08]npm ERR! gyp info spawn /usr/bin/python3
+[17:36:08]npm ERR! gyp info spawn args [
+[17:36:08]npm ERR! gyp info spawn args '/usr/local/lib/node_modules/npm/node_modules/node-gyp/gyp/gyp_main.py',
+[17:36:08]npm ERR! gyp info spawn args 'binding.gyp',
+[17:36:08]npm ERR! gyp info spawn args '-f',
+[17:36:08]npm ERR! gyp info spawn args 'make',
+[17:36:08]npm ERR! gyp info spawn args '-I',
+[17:36:08]npm ERR! gyp info spawn args '/home/container/node_modules/better-sqlite3/build/config.gypi',
+[17:36:08]npm ERR! gyp info spawn args '-I',
+[17:36:08]npm ERR! gyp info spawn args '/usr/local/lib/node_modules/npm/node_modules/node-gyp/addon.gypi',
+[17:36:08]npm ERR! gyp info spawn args '-I',
+[17:36:08]npm ERR! gyp info spawn args '/home/container/.cache/node-gyp/19.9.0/include/node/common.gypi',
+[17:36:08]npm ERR! gyp info spawn args '-Dlibrary=shared_library',
+[17:36:08]npm ERR! gyp info spawn args '-Dvisibility=default',
+[17:36:08]npm ERR! gyp info spawn args '-Dnode_root_dir=/home/container/.cache/node-gyp/19.9.0',
+[17:36:08]npm ERR! gyp info spawn args '-Dnode_gyp_dir=/usr/local/lib/node_modules/npm/node_modules/node-gyp',
+[17:36:08]npm ERR! gyp info spawn args '-Dnode_lib_file=/home/container/.cache/node-gyp/19.9.0/<(target_arch)/node.lib',
+[17:36:08]npm ERR! gyp info spawn args '-Dmodule_root_dir=/home/container/node_modules/better-sqlite3',
+[17:36:08]npm ERR! gyp info spawn args '-Dnode_engine=v8',
+[17:36:08]npm ERR! gyp info spawn args '--depth=.',
+[17:36:08]npm ERR! gyp info spawn args '--no-parallel',
+[17:36:08]npm ERR! gyp info spawn args '--generator-output',
+[17:36:08]npm ERR! gyp info spawn args 'build',
+[17:36:08]npm ERR! gyp info spawn args '-Goutput_dir=.'
+[17:36:08]npm ERR! gyp info spawn args ]
+[17:36:08]npm ERR! gyp info spawn make
+[17:36:08]npm ERR! gyp info spawn args [ 'BUILDTYPE=Release', '-C', 'build' ]
+[17:36:08]npm ERR! make: *** wait: No child processes. Stop.
+[17:36:08]npm ERR! make: *** Waiting for unfinished jobs....
+[17:36:08]npm ERR! make: *** wait: No child processes. Stop.
+[17:36:08]
+[17:36:08]npm ERR! A complete log of this run can be found in: /home/container/.npm/_logs/2026-08-04T15_32_18_313Z-debug-0.log
+[17:36:08]
+[17:36:08]Server marked as offline
+[17:36:08][Wispbyte]: ---------- Detected server process in a crashed state! ----------
+[17:36:08][Wispbyte]: Exit code: 130
+[17:36:08][Wispbyte]: Out of memory: false
+[17:36:08][Wispbyte]: Checking server disk space usage, this could take a few seconds...
+[17:36:08][Wispbyte]: Updating process configuration files...
+[17:36:08][Wispbyte]: Ensuring file permissions are set correctly, this could take a few seconds...
+[17:36:08]Server marked as starting
+ __        ___           _           _       
+ \ \      / (_)___ _ __ | |__  _   _| |_ ___ 
+  \ \ /\ / /| / __| '_ \| '_ \| | | | __/ _ \
+   \ V  V / | \__ \ |_) | |_) | |_| | ||  __/
+    \_/\_/  |_|___/ .__/|_.__/ \__, |\__\___|
+                  |_|          |___/         
+Your server is currently starting! Enjoy using Wispbyte
+[17:36:13][Wispbyte] : Docker image pulled successfully
+[17:36:13]v19.9.0
+[17:36:13]Server marked as running
+[17:36:13]:/home/container$ npm start
+[17:36:15]> gambling-bot@1.0.0 start
+[17:36:15]> npm install --omit=dev && node --enable-source-maps ./dist/index.mjs
+[17:36:16]Server marked as offline
+[17:36:17][Wispbyte]: ---------- Detected server process in a crashed state! ----------
+[17:36:17][Wispbyte]: Exit code: 130
+[17:36:17][Wispbyte]: Out of memory: false
+[17:36:17][Wispbyte]: Aborting automatic restart, last crash occurred less than 60 seconds ago.
