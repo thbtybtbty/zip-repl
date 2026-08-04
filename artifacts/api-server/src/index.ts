@@ -26,12 +26,13 @@ process.on("SIGINT",  () => void shutdown("SIGINT"));
 process.on("SIGTERM", () => void shutdown("SIGTERM"));
 
 // ─── HTTP server ──────────────────────────────────────────────────────────────
-app.listen(12428, "0.0.0.0", (err) => {
+const port = Number(process.env.PORT) || 8080;
+app.listen(port, "0.0.0.0", (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
   }
-  logger.info({ port: 12428, host: "0.0.0.0" }, "Server listening");
+  logger.info({ port, host: "0.0.0.0" }, "Server listening");
 });
 
 // ─── Discord bot ──────────────────────────────────────────────────────────────

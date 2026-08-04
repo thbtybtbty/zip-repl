@@ -210,3 +210,10 @@ id = "atwsFt35pM-291MO3Yoh5"
 uri = "file://wispbyte-link-update.tar.gz"
 type = "unspecified"
 title = "Wispbyte — /link + robloxUser deposit (dist/)"
+
+[[outputs]]
+id = "JGEmHY76gGgUo9ZL8AWsh"
+uri = "file://wispbyte-port-fix.tar.gz"
+type = "unspecified"
+title = "wispbyte-port-fix.tar.gz"
+description = "Updated dist/ — fixes the HTTP server to read PORT from the environment (defaults to 8080 if unset). Upload this to your Wispbyte dist/ folder and restart."
