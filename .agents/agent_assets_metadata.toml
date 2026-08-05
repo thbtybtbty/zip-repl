@@ -245,3 +245,10 @@ uri = "file://attached_assets/wispbyte-update-2026-08-05.tar.gz"
 type = "unspecified"
 title = "WispByte bot update — 2026-08-05"
 description = "Updated production runtime for WispByte. Includes index.js and rebuilt artifacts/api-server/dist/. Do not overwrite your production .env, bot.db, server-config.json, or admins.json."
+
+[[outputs]]
+id = "P6l4F6I_5kfFnvzVz3g8E"
+uri = "file://attached_assets/wispbyte-compatible-2026-08-05.tar.gz"
+type = "unspecified"
+title = "WispByte-compatible bot package — 2026-08-05"
+description = "Complete WispByte upload package. Replaces native better-sqlite3 with sql.js/WebAssembly, includes index.js as the declared main file, package.json, public npm package-lock.json, start.sh, rebuilt dist/, and deployment notes. Excludes credentials, databases, admin files, server config, and node_modules."

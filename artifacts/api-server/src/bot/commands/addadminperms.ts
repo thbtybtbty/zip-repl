@@ -24,7 +24,16 @@ import { isAdmin } from "../botConfig.js";
 // ─── Admins file helpers ──────────────────────────────────────────────────────
 const __filename2 = fileURLToPath(import.meta.url);
 const __dirname2  = path.dirname(__filename2);
-const ADMINS_PATH = path.resolve(__dirname2, "../../admins.json");
+const adminCandidates = [
+  process.env.ADMINS_PATH,
+  path.resolve(process.cwd(), "artifacts/admins.json"),
+  path.resolve(process.cwd(), "artifacts/api-server/admins.json"),
+  path.resolve(process.cwd(), "admins.json"),
+  path.resolve(__dirname2, "../../admins.json"),
+  path.resolve(__dirname2, "../admins.json"),
+].filter((candidate): candidate is string => Boolean(candidate));
+const ADMINS_PATH = adminCandidates.find((candidate) => fs.existsSync(candidate))
+  ?? adminCandidates[0]!;
 
 function readAdminIds(): string[] {
   try {

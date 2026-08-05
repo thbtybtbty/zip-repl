@@ -32,7 +32,8 @@ interface EconomyData {
   largestLoss:     number;
 }
 
-// All queries are synchronous (better-sqlite3).
+// These low-level queries are synchronous against the in-memory WASM SQLite
+// database; each write is persisted by the database facade.
 // "admin-grant" rows encode promos/manual grants: bet = amount, net_delta = -amount.
 // House game profit = -SUM(net_delta) for game bets (tips & grants excluded).
 // Today's net profit already deducts grants given today so free bets that lose

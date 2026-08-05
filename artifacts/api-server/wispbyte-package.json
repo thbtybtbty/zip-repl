@@ -2,10 +2,11 @@
   "name": "gambling-bot",
   "version": "1.0.0",
   "type": "module",
+  "main": "index.js",
   "scripts": {
-    "start": "npm install --omit=dev && node --enable-source-maps ./dist/index.mjs"
+    "start": "node index.js"
   },
   "dependencies": {
-    "better-sqlite3": "^11.10.0"
+    "sql.js": "^1.14.1"
   }
 }

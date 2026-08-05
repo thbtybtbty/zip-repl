@@ -1,28 +1,44 @@
-# Wispbyte Hi-Lo Update
+# WispByte Deployment
 
-This archive contains the rebuilt bot runtime for the Hi-Lo game update.
+This bot uses `sql.js`, SQLite compiled to WebAssembly. It does not install or
+load `better-sqlite3` or any other native SQLite addon, so it does not require
+newer GLIBC symbols than WispByte provides.
 
 ## Install
 
-1. Upload the contents of `artifacts/api-server/dist/` to the matching production `dist/` directory.
-2. Keep Wispbyte's existing launcher and restart the bot.
-3. Keep the existing production `.env`, `bot.db`, `server-config.json`, and `admins.json`.
+Upload the contents of the WispByte archive to the bot root, preserving:
 
-## Included
+```text
+index.js
+package.json
+package-lock.json
+start.sh
+artifacts/api-server/dist/
+```
 
-- `/hilo` command with a standard 52-card deck
-- Higher, Lower, and Cashout interaction buttons
-- Dynamic probability-based multipliers targeting approximately 90% RTP
-- Tie-as-loss behavior
-- Cashout and loss settlement/history logging
-- Owner-only replay handling
-- Admin game disable/list support
-- `/simulate` support for Hi-Lo
+Then run:
 
-## Not included intentionally
+```bash
+npm install
+npm start
+```
+
+`package.json` declares `index.js` as the main file. The included entrypoint
+loads `.env`, uses `/data/bot.db` when WispByte provides that volume, and starts
+the prebuilt bot bundle without running a TypeScript build.
+
+## Keep production files
+
+Do not overwrite these files with Replit test data:
 
 - `.env` or Discord credentials
-- `bot.db` or any production data
-- `server-config.json`
-- `admins.json`
-- `node_modules`
+- `/data/bot.db` (or the existing `bot.db`)
+- `artifacts/api-server/server-config.json`
+- `artifacts/admins.json` or `artifacts/api-server/admins.json`
+
+## Included runtime
+
+- Rebuilt Discord bot bundle in `artifacts/api-server/dist/`
+- `index.js` main entrypoint
+- npm install/start metadata and lockfile
+- No `node_modules`, credentials, production database, or server configuration

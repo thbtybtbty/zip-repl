@@ -12,13 +12,13 @@
     "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
   },
   "dependencies": {
-    "better-sqlite3": "^11.10.0",
     "drizzle-orm": "catalog:",
     "drizzle-zod": "^0.8.3",
+    "sql.js": "^1.14.1",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
+    "@types/sql.js": "^1.4.11",
     "@types/node": "catalog:",
     "drizzle-kit": "^0.31.10"
   }

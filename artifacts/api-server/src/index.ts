@@ -4,7 +4,7 @@ import { startBot, destroyBot } from "./bot/index.js";
 import { initDb, sqlite } from "@workspace/db";
 
 // Ensure SQLite tables exist and migrations run (safe every boot)
-initDb();
+await initDb();
 
 // ─── Graceful shutdown ────────────────────────────────────────────────────────
 // Checkpoint + close the SQLite WAL so bot.db is a clean, self-contained file

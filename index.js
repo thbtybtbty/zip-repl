@@ -1,5 +1,5 @@
 // GemSpin Bet — WispByte entry point
-const { execSync, spawn } = require("child_process");
+const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
@@ -27,33 +27,6 @@ if (fs.existsSync("/data")) {
   console.log("[boot] DB → " + process.env.DATABASE_PATH);
 }
 
-// Pick a compatible better-sqlite3 version based on Node version
-const major = parseInt(process.version.slice(1));
-const bsq3Version = major >= 20 ? "12.11.1" : "11.9.1";
-
-// Check both the installed version AND whether the native binary was actually compiled
-const bsq3Pkg    = path.join(__dirname, "node_modules", "better-sqlite3", "package.json");
-const bsq3Binding = path.join(__dirname, "node_modules", "better-sqlite3", "build", "Release", "better_sqlite3.node");
-let installedVersion = null;
-try { installedVersion = require(bsq3Pkg).version; } catch (_) {}
-const bindingExists = fs.existsSync(bsq3Binding);
-
-if (installedVersion !== bsq3Version || !bindingExists) {
-  // Remove any broken/partial install so npm can place a fresh copy
-  const bsq3Dir = path.join(__dirname, "node_modules", "better-sqlite3");
-  if (fs.existsSync(bsq3Dir)) {
-    console.log("[boot] Removing old better-sqlite3 install...");
-    execSync(`rm -rf "${bsq3Dir}"`, { stdio: "inherit", shell: true });
-  }
-  console.log("[boot] Installing better-sqlite3@" + bsq3Version + " (build from source)...");
-  execSync(`npm install better-sqlite3@${bsq3Version} --no-save --build-from-source`, {
-    stdio: "inherit",
-    shell: true,
-    env: { ...process.env, npm_config_libc: "glibc" },
-    cwd: __dirname,
-  });
-}
-
 // Patch hardcoded Replit path in the built bundle
 const distDir = path.join(__dirname, "artifacts", "api-server", "dist");
 const botEntry = path.join(distDir, "index.mjs");
@@ -68,7 +41,8 @@ if (src.includes(REPLIT_PATH)) {
   fs.copyFileSync(botEntry, botPatched);
 }
 
-// Start the bot
+// Start the bot. The compiled bundle is included in the WispByte package, so
+// the server does not need TypeScript, pnpm, esbuild, or a native addon.
 const hasToken = !!process.env.DISCORD_BOT_TOKEN;
 const hasClient = !!process.env.DISCORD_CLIENT_ID;
 console.log("[boot] DISCORD_BOT_TOKEN set:", hasToken, "| DISCORD_CLIENT_ID set:", hasClient);

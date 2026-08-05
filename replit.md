@@ -19,7 +19,7 @@ A TypeScript Discord gambling/games bot with an Express HTTP API and SQLite data
 - **Runtime:** Node.js (ESM)
 - **Bot library:** discord.js v14
 - **HTTP server:** Express v5
-- **Database:** SQLite via better-sqlite3 + drizzle-orm
+- **Database:** SQLite via sql.js/WebAssembly + drizzle-orm (no native addon)
 - **Build:** esbuild
 
 ## How to run
@@ -72,16 +72,20 @@ Mines, Towers, Rock-Paper-Scissors, Coinflip, Blackjack, Wheel, Slots, Hi-Lo, Ro
 
 After each update is tested on Replit:
 1. Build: `cd artifacts/api-server && pnpm run build`
-2. Package: create a `.tar.gz` with only the files that changed:
+2. Package: include the WispByte runtime and npm metadata:
+   - `index.js` — WispByte main entrypoint
+   - `package.json` and `package-lock.json` — allow `npm install`
+   - `start.sh` — optional WispByte startup script
    - `artifacts/api-server/dist/` — always include (rebuilt every time)
-   - `index.js` — only if the bootloader changed
 3. Deliver the archive to the user via `presentAsset`
 4. **Never include:** `.env`, `bot.db`, `bot.db-shm`, `bot.db-wal`, `server-config.json`, `admins.json`, `node_modules/`
 
 ### Wispbyte file layout (production)
 ```
 /                          ← Wispbyte root
-├── index.js               ← bootloader (patches paths, installs better-sqlite3, spawns bot)
+├── index.js               ← WispByte main entrypoint; starts the included compiled bot
+├── package.json           ← npm install/start metadata
+├── package-lock.json      ← reproducible npm dependency lockfile
 ├── .env                   ← secrets (DISCORD_BOT_TOKEN, DISCORD_CLIENT_ID) — never touch
 ├── node_modules/          ← managed by bootloader
 └── artifacts/
@@ -93,4 +97,4 @@ After each update is tested on Replit:
 ```
 
 ### How Wispbyte runs the bot
-- `index.js` loads `.env`, sets `DATABASE_PATH=/data/bot.db`, installs `better-sqlite3` if needed, patches hardcoded Replit paths in `index.mjs` → `index.patched.mjs`, then spawns it.
+- `index.js` loads `.env`, sets `DATABASE_PATH=/data/bot.db`, patches hardcoded Replit paths in `index.mjs` → `index.patched.mjs`, and spawns it. The database uses sql.js/WebAssembly, so WispByte does not need a native SQLite module.

@@ -1,24 +1,155 @@
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import Database from "better-sqlite3";
-import path from "path";
+import { drizzle } from "drizzle-orm/sqlite-proxy";
+import initSqlJs, { type Database as SqlJsDatabase, type SqlJsStatic } from "sql.js";
+import fs from "node:fs";
+import path from "node:path";
+import { createRequire } from "node:module";
 import * as schema from "./schema";
 
-// DB file path — override via DATABASE_PATH env var for custom hosting.
-// Default: bot.db next to wherever the process runs.
+// This database adapter deliberately uses SQLite compiled to WebAssembly.
+// sql.js is SQLite compiled to WebAssembly, so it has no glibc, libstdc++, or
+// native Node addon requirements and works on WispByte's older Linux image.
 const DB_PATH = process.env.DATABASE_PATH ?? path.join(process.cwd(), "bot.db");
+const require = createRequire(import.meta.url);
 
-export const sqlite: Database.Database = new Database(DB_PATH);
+let engine: SqlJsDatabase | null = null;
+let sqlJs: SqlJsStatic | null = null;
 
-// WAL mode: faster writes, safer concurrent reads
-sqlite.pragma("journal_mode = WAL");
+function requireEngine(): SqlJsDatabase {
+  if (!engine) throw new Error("Database has not been initialized");
+  return engine;
+}
 
-export const db = drizzle(sqlite, { schema });
+function persist(): void {
+  const current = requireEngine();
+  const parent = path.dirname(DB_PATH);
+  fs.mkdirSync(parent, { recursive: true });
+  const temporaryPath = `${DB_PATH}.tmp`;
+  fs.writeFileSync(temporaryPath, Buffer.from(current.export()));
+  fs.renameSync(temporaryPath, DB_PATH);
+}
 
-/**
- * Create all tables if they don't exist yet.
- * Call once at startup — safe to call on every boot.
- */
-export function initDb(): void {
+function valuesFor(params: unknown[]): (string | number | null | Uint8Array)[] {
+  return params.map((value) => {
+    if (value === undefined) return null;
+    if (typeof value === "boolean") return value ? 1 : 0;
+    if (typeof value === "string" || typeof value === "number") return value;
+    if (value === null || value instanceof Uint8Array) return value;
+    return String(value);
+  });
+}
+
+class PreparedStatement {
+  constructor(private readonly query: string) {}
+
+  get(...params: unknown[]): Record<string, unknown> | undefined {
+    const statement = requireEngine().prepare(this.query);
+    try {
+      statement.bind(valuesFor(params));
+      return statement.step() ? statement.getAsObject() as Record<string, unknown> : undefined;
+    } finally {
+      statement.free();
+    }
+  }
+
+  all(...params: unknown[]): Record<string, unknown>[] {
+    const statement = requireEngine().prepare(this.query);
+    try {
+      statement.bind(valuesFor(params));
+      const rows: Record<string, unknown>[] = [];
+      while (statement.step()) rows.push(statement.getAsObject() as Record<string, unknown>);
+      return rows;
+    } finally {
+      statement.free();
+    }
+  }
+
+  run(...params: unknown[]): void {
+    requireEngine().run(this.query, valuesFor(params));
+    persist();
+  }
+}
+
+class SqliteFacade {
+  prepare(query: string): PreparedStatement {
+    return new PreparedStatement(query);
+  }
+
+  exec(query: string): void {
+    requireEngine().exec(query);
+    persist();
+  }
+
+  // Kept for the existing shutdown contract. sql.js has no WAL checkpoint
+  // because it operates in memory and writes an atomic exported database.
+  checkpoint(): void {
+    persist();
+  }
+
+  close(): void {
+    if (engine) {
+      persist();
+      engine.close();
+      engine = null;
+    }
+  }
+
+  async query(
+    query: string,
+    params: unknown[],
+    method: "run" | "all" | "values" | "get",
+  ): Promise<{ rows: unknown }> {
+    if (method === "run") {
+      requireEngine().run(query, valuesFor(params));
+      persist();
+      return { rows: [] };
+    }
+
+    const statement = requireEngine().prepare(query);
+    try {
+      statement.bind(valuesFor(params));
+      if (method === "get") {
+        return { rows: statement.step() ? statement.getAsObject() : undefined };
+      }
+
+      if (method === "values") {
+        const rows: unknown[][] = [];
+        while (statement.step()) rows.push(statement.get());
+        return { rows };
+      }
+
+      const rows: Record<string, unknown>[] = [];
+      while (statement.step()) rows.push(statement.getAsObject() as Record<string, unknown>);
+      return { rows };
+    } finally {
+      statement.free();
+    }
+  }
+}
+
+export const sqlite = new SqliteFacade();
+
+// Drizzle's SQLite proxy driver gives the rest of the project the same
+// async query builder API while the low-level command handlers can continue
+// using their existing prepare/get/all/run calls.
+export const db = drizzle(
+  (query, params, method) => sqlite.query(query, params, method),
+  { schema },
+);
+
+export async function initDb(): Promise<void> {
+  if (engine) return;
+
+  sqlJs ??= await initSqlJs({
+    locateFile: (file) => path.join(path.dirname(require.resolve("sql.js")), file),
+  });
+
+  const existing = fs.existsSync(DB_PATH) ? fs.readFileSync(DB_PATH) : undefined;
+  engine = new sqlJs.Database(existing);
+
+  // sql.js does not use native WAL files, but accepts this pragma for
+  // compatibility with existing deployments and schema tooling.
+  engine.run("PRAGMA journal_mode = WAL");
+
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id          TEXT    PRIMARY KEY,
@@ -66,10 +197,7 @@ export function initDb(): void {
       verified_at         INTEGER,
       account_created_at  INTEGER NOT NULL
     );
-  `);
 
-  // Promo codes
-  sqlite.exec(`
     CREATE TABLE IF NOT EXISTS promocodes (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       code        TEXT    NOT NULL UNIQUE,
@@ -91,7 +219,6 @@ export function initDb(): void {
     );
   `);
 
-  // Migrations — safe to run every boot; ALTER TABLE is a no-op if column exists
   const migrations = [
     `ALTER TABLE users ADD COLUMN deposited       INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN withdrawn       INTEGER NOT NULL DEFAULT 0`,
@@ -102,9 +229,15 @@ export function initDb(): void {
     `ALTER TABLE users ADD COLUMN roblox_username TEXT`,
     `CREATE UNIQUE INDEX IF NOT EXISTS users_roblox_username ON users(roblox_username) WHERE roblox_username IS NOT NULL`,
   ];
-  for (const stmt of migrations) {
-    try { sqlite.exec(stmt); } catch { /* column already exists — ignore */ }
+  for (const statement of migrations) {
+    try {
+      sqlite.exec(statement);
+    } catch {
+      // Existing production databases already have this column/index.
+    }
   }
+
+  persist();
 }
 
 export * from "./schema";

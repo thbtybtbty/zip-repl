@@ -50,7 +50,16 @@ export function saveServerConfig(cfg: ServerConfig): void {
 import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname2 = path.dirname(__filename);
-const ADMINS_PATH = path.resolve(__dirname2, "../../admins.json");
+const adminCandidates = [
+  process.env.ADMINS_PATH,
+  path.resolve(process.cwd(), "artifacts/admins.json"),
+  path.resolve(process.cwd(), "artifacts/api-server/admins.json"),
+  path.resolve(process.cwd(), "admins.json"),
+  path.resolve(__dirname2, "../../admins.json"),
+  path.resolve(__dirname2, "../admins.json"),
+].filter((candidate): candidate is string => Boolean(candidate));
+const ADMINS_PATH = adminCandidates.find((candidate) => fs.existsSync(candidate))
+  ?? adminCandidates[0]!;
 
 // Always-admin in Replit (dev environment owner — never on Wispbyte admins.json)
 const DEV_ALWAYS_ADMIN = new Set(["1345474845307174972"]);
