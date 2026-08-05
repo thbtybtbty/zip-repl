@@ -105,8 +105,6 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 // ─── UI builders ───────────────────────────────────────────────────────────────
 type GameStatus = "active" | "player_bust" | "dealer_bust" | "player_win" | "dealer_win" | "push" | "blackjack";
 
-const DIV = "─────────────────────────────────────";
-
 /** Embed shown during animated dealer reveal — partial dealer hand, no outcome yet. */
 function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): EmbedBuilder {
   const pv   = handValue(game.playerHand);
@@ -117,19 +115,24 @@ function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): Emb
   return new EmbedBuilder()
     .setColor(COLORS.primary)
     .setTitle("🃏  Blackjack")
-    .setDescription(
-      [
-        `💎 **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
-        DIV,
-        `**Dealer**  **${dv}**${more ? " ..." : ""}`,
-        `\`${handStr(shownDealerCards)}\``,
-        DIV,
-        `**Your hand**  **${pv}**`,
-        `\`${handStr(game.playerHand)}\``,
-        DIV,
-        `-# Dealer stands on 17  ·  Blackjack pays 3:2`,
-      ].join("\n"),
+    .addFields(
+      {
+        name: "💎 Bet",
+        value: `\`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
+        inline: false,
+      },
+      {
+        name: "Dealer",
+        value: `**${dv}**${more ? " ..." : ""}\n\`${handStr(shownDealerCards)}\``,
+        inline: false,
+      },
+      {
+        name: "Your hand",
+        value: `**${pv}**\n\`${handStr(game.playerHand)}\``,
+        inline: false,
+      },
     )
+    .setFooter({ text: "Dealer stands on 17  ·  Blackjack pays 3:2" })
     .setTimestamp();
 }
 
@@ -158,24 +161,37 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
 
   const meta = statusMeta[status];
 
-  const lines = [
-    `💎 **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
-    ...(meta.payoutLine ? [meta.payoutLine] : []),
-    DIV,
-    `**Dealer**  ${dealerScore}`,
-    dealerCards,
-    DIV,
-    `**Your hand**  **${pv}**${pv > 21 ? "  💥" : ""}`,
-    `\`${handStr(game.playerHand)}\``,
-    DIV,
-    `-# Dealer stands on 17  ·  Blackjack pays 3:2`,
-  ];
-
-  return new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setColor(meta.color)
     .setTitle(meta.title)
-    .setDescription(lines.join("\n"))
+    .addFields(
+      {
+        name: "💎 Bet",
+        value: `\`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
+        inline: false,
+      },
+      ...(meta.payoutLine
+        ? [{
+            name: "Payout",
+            value: meta.payoutLine.replace("💰 **Payout**  ", ""),
+            inline: false,
+          }]
+        : []),
+      {
+        name: "Dealer",
+        value: `${dealerScore}\n${dealerCards}`,
+        inline: false,
+      },
+      {
+        name: "Your hand",
+        value: `**${pv}**${pv > 21 ? "  💥" : ""}\n\`${handStr(game.playerHand)}\``,
+        inline: false,
+      },
+    )
+    .setFooter({ text: "Dealer stands on 17  ·  Blackjack pays 3:2" })
     .setTimestamp();
+
+  return embed;
 }
 
 function buildComponents(

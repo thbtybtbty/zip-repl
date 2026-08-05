@@ -259,3 +259,10 @@ uri = "file://attached_assets/wispbyte-update-balance-history-fix-2026-08-05.tar
 type = "unspecified"
 title = "WispByte balance and history fix"
 description = "Fixed the sql.js/Drizzle row mapping that caused balance and history fields to be undefined on WispByte. Includes the rebuilt runtime, launcher, startup script, and npm metadata. Production .env, database, server config, admin config, and node_modules are excluded."
+
+[[outputs]]
+id = "LjYe9eCmRNV_iB-DZgW6b"
+uri = "file://attached_assets/wispbyte-blackjack-embed-fields-2026-08-05.tar.gz"
+type = "unspecified"
+title = "WispByte Blackjack embed update"
+description = "Replaced the Blackjack command's literal separator lines with native Discord embed fields for Bet, Payout, Dealer, and Your Hand. Includes the rebuilt runtime and WispByte launcher files. Production .env, database, server config, admin config, and node_modules are excluded."
