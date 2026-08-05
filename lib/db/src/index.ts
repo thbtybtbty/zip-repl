@@ -108,7 +108,13 @@ class SqliteFacade {
     try {
       statement.bind(valuesFor(params));
       if (method === "get") {
-        return { rows: statement.step() ? statement.getAsObject() : undefined };
+        // Drizzle's sqlite-proxy session expects positional rows here. It
+        // applies the schema's column mapping (including snake_case →
+        // camelCase and timestamp decoding) from these arrays. Returning
+        // getAsObject() makes Drizzle read row[0], row[1], etc. from an
+        // object, which turns mapped fields such as `balance` and `netDelta`
+        // into undefined.
+        return { rows: statement.step() ? statement.get() : undefined };
       }
 
       if (method === "values") {
@@ -117,8 +123,8 @@ class SqliteFacade {
         return { rows };
       }
 
-      const rows: Record<string, unknown>[] = [];
-      while (statement.step()) rows.push(statement.getAsObject() as Record<string, unknown>);
+      const rows: unknown[][] = [];
+      while (statement.step()) rows.push(statement.get());
       return { rows };
     } finally {
       statement.free();

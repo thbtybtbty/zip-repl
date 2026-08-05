@@ -252,3 +252,10 @@ uri = "file://attached_assets/wispbyte-compatible-2026-08-05.tar.gz"
 type = "unspecified"
 title = "WispByte-compatible bot package — 2026-08-05"
 description = "Complete WispByte upload package. Replaces native better-sqlite3 with sql.js/WebAssembly, includes index.js as the declared main file, package.json, public npm package-lock.json, start.sh, rebuilt dist/, and deployment notes. Excludes credentials, databases, admin files, server config, and node_modules."
+
+[[outputs]]
+id = "BgjFJtsq9ujH6KZPFd4xJ"
+uri = "file://attached_assets/wispbyte-update-balance-history-fix-2026-08-05.tar.gz"
+type = "unspecified"
+title = "WispByte balance and history fix"
+description = "Fixed the sql.js/Drizzle row mapping that caused balance and history fields to be undefined on WispByte. Includes the rebuilt runtime, launcher, startup script, and npm metadata. Production .env, database, server config, admin config, and node_modules are excluded."
