@@ -243,8 +243,8 @@ description = "Clean zip, integrity verified. Extract to your Wispbyte container
 id = "wymhfJUvXAUkegv8UyEtw"
 uri = "file://attached_assets/wispbyte-update-2026-08-05.tar.gz"
 type = "unspecified"
-title = "WispByte bot update — 2026-08-05"
-description = "Updated production runtime for WispByte. Includes index.js and rebuilt artifacts/api-server/dist/. Do not overwrite your production .env, bot.db, server-config.json, or admins.json."
+title = "WispByte bot update package"
+description = "Rebuilt WispByte runtime for the tested Discord bot. Includes the launcher, startup script, npm metadata, and rebuilt dist files. Production .env, database, server config, admin config, and node_modules are intentionally excluded."
 
 [[outputs]]
 id = "P6l4F6I_5kfFnvzVz3g8E"

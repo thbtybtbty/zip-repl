@@ -1,3 +1,4 @@
 - [Discord animation reliability](discord-animation-reliability.md) — Space animated message edits and retry transient failures so wagers always reach a final result.
 - [Hi-Lo odds](hilo-odds.md) — Calculate multipliers from remaining-card probabilities with a 0.90 RTP factor; ties lose.
 - [WispByte database compatibility](wispbyte-database-compat.md) — Use sql.js/WebAssembly for SQLite on WispByte; never ship a native SQLite addon.
+- [Workspace dependency setup](workspace-dependency-setup.md) — Imported lockfiles may lag current workspace manifests; reconcile with pnpm before building, then keep production packages minimal.
