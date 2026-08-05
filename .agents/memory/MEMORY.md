@@ -1,2 +1,3 @@
 - [Discord animation reliability](discord-animation-reliability.md) — Space animated message edits and retry transient failures so wagers always reach a final result.
 - [Hi-Lo odds](hilo-odds.md) — Calculate multipliers from remaining-card probabilities with a 0.90 RTP factor; ties lose.
+- [Wispbyte binary compatibility](wispbyte-binary-compat.md) — Patch better-sqlite3 .node for glibc 2.31 via ELF weak flags + patchelf --add-needed libdl/libpthread.

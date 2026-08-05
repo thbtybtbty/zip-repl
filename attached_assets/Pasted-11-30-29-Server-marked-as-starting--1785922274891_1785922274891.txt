@@ -1,0 +1,71 @@
+11:30:29]Server marked as starting
+ __        ___           _           _       
+ \ \      / (_)___ _ __ | |__  _   _| |_ ___ 
+  \ \ /\ / /| / __| '_ \| '_ \| | | | __/ _ \
+   \ V  V / | \__ \ |_) | |_) | |_| | ||  __/
+    \_/\_/  |_|___/ .__/|_.__/ \__, |\__\___|
+                  |_|          |___/         
+Your server is currently starting! Enjoy using Wispbyte
+[11:30:33]v19.9.0
+[11:30:33]Server marked as running
+[11:30:33]:/home/container$ npm start
+[11:30:34]> gambling-bot@1.0.0 start
+[11:30:34]> node --enable-source-maps ./dist/index.mjs
+[11:30:36]node:internal/modules/cjs/loader:1361
+[11:30:36]return process.dlopen(module, path.toNamespacedPath(filename));
+[11:30:36]^
+[11:30:36]Error: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.33' not found (required by /home/container/node_modules/better-sqlite3/build/Release/better_sqlite3.node)
+[11:30:36] at Module._extensions..node (node:internal/modules/cjs/loader:1361:18)
+[11:30:36] at Module.load (node:internal/modules/cjs/loader:1133:32)
+[11:30:36] at Module._load (node:internal/modules/cjs/loader:972:12)
+[11:30:36] at Module.require (node:internal/modules/cjs/loader:1157:19)
+[11:30:36] at require (node:internal/modules/helpers:119:18)
+[11:30:36]at bindings (/home/container/node_modules/bindings/bindings.js:112:48)
+[11:30:36]at new Database (/home/container/node_modules/better-sqlite3/lib/database.js:48:64)
+[11:30:36]at <anonymous> (/lib/db/src/index.ts:10:23)
+[11:30:36] at ModuleJob.run (node:internal/modules/esm/module_job:193:25) {
+[11:30:36]code: 'ERR_DLOPEN_FAILED'
+[11:30:36]}
+[11:30:36]Node.js v19.9.0
+[11:30:36]Server marked as offline
+[11:30:37][Wispbyte]: ---------- Detected server process in a crashed state! ----------
+[11:30:37][Wispbyte]: Exit code: 1
+[11:30:37][Wispbyte]: Out of memory: false
+[11:30:37][Wispbyte]: Checking server disk space usage, this could take a few seconds...
+[11:30:37][Wispbyte]: Updating process configuration files...
+[11:30:37][Wispbyte]: Ensuring file permissions are set correctly, this could take a few seconds...
+[11:30:37]Server marked as starting
+ __        ___           _           _       
+ \ \      / (_)___ _ __ | |__  _   _| |_ ___ 
+  \ \ /\ / /| / __| '_ \| '_ \| | | | __/ _ \
+   \ V  V / | \__ \ |_) | |_) | |_| | ||  __/
+    \_/\_/  |_|___/ .__/|_.__/ \__, |\__\___|
+                  |_|          |___/         
+Your server is currently starting! Enjoy using Wispbyte
+[11:30:40][Wispbyte] : Docker image pulled successfully
+[11:30:41]v19.9.0
+[11:30:41]Server marked as running
+[11:30:41]:/home/container$ npm start
+[11:30:42]> gambling-bot@1.0.0 start
+[11:30:42]> node --enable-source-maps ./dist/index.mjs
+[11:30:44]node:internal/modules/cjs/loader:1361
+[11:30:44]return process.dlopen(module, path.toNamespacedPath(filename));
+[11:30:44]^
+[11:30:44]Error: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.33' not found (required by /home/container/node_modules/better-sqlite3/build/Release/better_sqlite3.node)
+[11:30:44] at Module._extensions..node (node:internal/modules/cjs/loader:1361:18)
+[11:30:44] at Module.load (node:internal/modules/cjs/loader:1133:32)
+[11:30:44] at Module._load (node:internal/modules/cjs/loader:972:12)
+[11:30:44] at Module.require (node:internal/modules/cjs/loader:1157:19)
+[11:30:44] at require (node:internal/modules/helpers:119:18)
+[11:30:44]at bindings (/home/container/node_modules/bindings/bindings.js:112:48)
+[11:30:44]at new Database (/home/container/node_modules/better-sqlite3/lib/database.js:48:64)
+[11:30:44]at <anonymous> (/lib/db/src/index.ts:10:23)
+[11:30:44] at ModuleJob.run (node:internal/modules/esm/module_job:193:25) {
+[11:30:44]code: 'ERR_DLOPEN_FAILED'
+[11:30:44]}
+[11:30:44]Node.js v19.9.0
+[11:30:44]Server marked as offline
+[11:30:46][Wispbyte]: ---------- Detected server process in a crashed state! ----------
+[11:30:46][Wispbyte]: Exit code: 1
+[11:30:46][Wispbyte]: Out of memory: false
+[11:30:46][Wispbyte]: Aborting automatic restart, last crash occurred less than 60 seconds ago.
