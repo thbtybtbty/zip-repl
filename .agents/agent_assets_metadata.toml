@@ -238,3 +238,10 @@ uri = "file://wispbyte-ready.zip"
 type = "unspecified"
 title = "wispbyte-ready.zip"
 description = "Clean zip, integrity verified. Extract to your Wispbyte container root, then start with: npm start"
+
+[[outputs]]
+id = "wymhfJUvXAUkegv8UyEtw"
+uri = "file://attached_assets/wispbyte-update-2026-08-05.tar.gz"
+type = "unspecified"
+title = "WispByte bot update — 2026-08-05"
+description = "Updated production runtime for WispByte. Includes index.js and rebuilt artifacts/api-server/dist/. Do not overwrite your production .env, bot.db, server-config.json, or admins.json."

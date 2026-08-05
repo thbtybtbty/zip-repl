@@ -7,7 +7,7 @@ import * as schema from "./schema";
 // Default: bot.db next to wherever the process runs.
 const DB_PATH = process.env.DATABASE_PATH ?? path.join(process.cwd(), "bot.db");
 
-export const sqlite = new Database(DB_PATH);
+export const sqlite: Database.Database = new Database(DB_PATH);
 
 // WAL mode: faster writes, safer concurrent reads
 sqlite.pragma("journal_mode = WAL");
