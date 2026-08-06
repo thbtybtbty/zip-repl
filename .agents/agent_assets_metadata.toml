@@ -266,3 +266,17 @@ uri = "file://attached_assets/wispbyte-blackjack-embed-fields-2026-08-05.tar.gz"
 type = "unspecified"
 title = "WispByte Blackjack embed update"
 description = "Replaced the Blackjack command's literal separator lines with native Discord embed fields for Bet, Payout, Dealer, and Your Hand. Includes the rebuilt runtime and WispByte launcher files. Production .env, database, server config, admin config, and node_modules are excluded."
+
+[[outputs]]
+id = "FPiL2CxktPaSwXHGA0q8o"
+uri = "file://attached_assets/wispbyte-blackjack-embed-fields-fixed.zip"
+type = "unspecified"
+title = "WispByte Blackjack update — ZIP"
+description = "Repacked with normalized paths as a standard ZIP archive. Validated with unzip test and full extraction. Includes the rebuilt bot runtime and launcher files; production secrets and data are excluded."
+
+[[outputs]]
+id = "nz67QVmoOwFZa_xgAdUtQ"
+uri = "file://attached_assets/wispbyte-blackjack-embed-fields-fixed.tar.gz"
+type = "unspecified"
+title = "WispByte Blackjack update — tar.gz fallback"
+description = "Freshly repacked tar.gz fallback with normalized paths. Validated with gzip test, tar listing, and full extraction."
