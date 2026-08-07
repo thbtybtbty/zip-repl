@@ -301,3 +301,10 @@ uri = "file://wispbyte-ready-2026-08-07.tar.gz"
 type = "unspecified"
 title = "WispByte-ready Discord bot package"
 description = "Rebuilt runtime package for WispByte. Includes index.js, package metadata, start.sh, deployment notes, and the rebuilt artifacts/api-server/dist bundle. Excludes secrets, production database/configuration, admin files, and node_modules."
+
+[[outputs]]
+id = "p-hGh0BveKD5ChR0w--c5"
+uri = "file://wispbyte-enospc-diagnostics-2026-08-07.tar.gz"
+type = "unspecified"
+title = "WispByte ENOSPC diagnostic update"
+description = "Updated bot runtime with visible Discord gateway, login timeout, guild discovery, and command-registration diagnostics. Rebuilt and verified in Replit: Discord ready, 1 guild found, all 37 commands registered. Excludes secrets, production database/configuration, admin files, and node_modules."

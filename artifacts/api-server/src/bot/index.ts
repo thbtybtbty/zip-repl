@@ -74,6 +74,19 @@ const client = new Client({
   ],
 });
 
+// Keep gateway failures visible in WispByte's console. Without these handlers,
+// a connection/authentication problem can look like a successful HTTP-only
+// startup because the web server starts before Discord finishes logging in.
+client.on(Events.Error, (err) => {
+  logger.error({ err }, "Discord client error");
+});
+client.on(Events.Warn, (message) => {
+  logger.warn({ message }, "Discord client warning");
+});
+client.on(Events.ShardError, (err, shardId) => {
+  logger.error({ err, shardId }, "Discord gateway shard error");
+});
+
 // ─── Interaction routing ──────────────────────────────────────────────────────
 async function handleInteraction(interaction: Interaction) {
   // ── Slash commands ──
@@ -492,6 +505,12 @@ export async function startBot() {
     }
 
     const guilds = [...c.guilds.cache.values()];
+    logger.info({ guildCount: guilds.length }, "Registering guild commands");
+
+    if (guilds.length === 0) {
+      logger.warn("Discord bot is ready but has no cached guilds; no guild commands were registered");
+      return;
+    }
 
     await Promise.all(
       guilds.map(async (guild) => {
@@ -503,6 +522,7 @@ export async function startBot() {
         }
       }),
     );
+    logger.info({ guildCount: guilds.length, commandCount: commandData.length }, "Guild command registration complete");
   });
 
   client.on(Events.GuildMemberAdd, (member: GuildMember) => {
@@ -517,7 +537,18 @@ export async function startBot() {
     });
   });
 
-  await client.login(token);
+  const loginTimeout = setTimeout(() => {
+    logger.error(
+      "Discord login did not complete within 60 seconds. Check the WispByte token, outbound network access, and Discord gateway status.",
+    );
+  }, 60_000);
+  loginTimeout.unref();
+
+  try {
+    await client.login(token);
+  } finally {
+    clearTimeout(loginTimeout);
+  }
 }
 
 /** Cleanly disconnect the Discord client (called during graceful shutdown). */
