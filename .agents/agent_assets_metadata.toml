@@ -306,5 +306,12 @@ description = "Rebuilt runtime package for WispByte. Includes index.js, package 
 id = "p-hGh0BveKD5ChR0w--c5"
 uri = "file://wispbyte-enospc-diagnostics-2026-08-07.tar.gz"
 type = "unspecified"
-title = "WispByte ENOSPC diagnostic update"
-description = "Updated bot runtime with visible Discord gateway, login timeout, guild discovery, and command-registration diagnostics. Rebuilt and verified in Replit: Discord ready, 1 guild found, all 37 commands registered. Excludes secrets, production database/configuration, admin files, and node_modules."
+title = "WispByte diagnostic update — verified TAR.GZ"
+description = "Verified tar.gz alternative. Validated with gzip -t and tar listing. Use this if WispByte expects tar.gz format."
+
+[[outputs]]
+id = "9LZdBqNE1HEh0BUJbefi3"
+uri = "file://wispbyte-enospc-diagnostics-2026-08-07.zip"
+type = "unspecified"
+title = "WispByte diagnostic update — verified ZIP"
+description = "Genuine ZIP archive, not a renamed tar.gz. Locally validated with unzip -t: all files passed. Includes the rebuilt bot runtime and startup diagnostics. Excludes secrets, production database/configuration, admin files, and node_modules."
