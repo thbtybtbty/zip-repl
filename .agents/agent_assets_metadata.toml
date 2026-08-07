@@ -364,3 +364,10 @@ uri = "file://wispbyte-private-invalid-amount-2026-08-07.zip"
 type = "unspecified"
 title = "WispByte private invalid-bet update"
 description = "ZIP bundle with invalid or below-1m bet messages made private across the games. Includes the rebuilt artifacts/api-server/dist/ in the correct WispByte folder structure and excludes secrets, production data, config, admin files, and node_modules."
+
+[[outputs]]
+id = "AO4isIanY9geWpoNSSLPG"
+uri = "file://wispbyte-upgrader-x-multiplier-2026-08-07.zip"
+type = "unspecified"
+title = "WispByte upgrader x-multiplier update"
+description = "Updated WispByte ZIP for /upgrader. The multiplier now accepts both values like 2.5 and values with x like 2.5x, while keeping the same 1.5x–25x range and payout behavior."

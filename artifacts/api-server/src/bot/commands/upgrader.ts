@@ -90,18 +90,17 @@ export const data = new SlashCommandBuilder()
   .addStringOption((o) =>
     o.setName("amount").setDescription("Amount to upgrade (e.g. 1m, 2.5b, 500k)").setRequired(true),
   )
-  .addNumberOption((o) =>
+  .addStringOption((o) =>
     o
       .setName("multiplier")
-      .setDescription(`Target multiplier (${MULT_MIN}x – ${MULT_MAX}x)`)
-      .setRequired(true)
-      .setMinValue(MULT_MIN)
-      .setMaxValue(MULT_MAX),
+      .setDescription(`Target multiplier (${MULT_MIN}x – ${MULT_MAX}x), e.g. 2 or 2x`)
+      .setRequired(true),
   );
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
   const amountStr  = interaction.options.getString("amount", true);
-  const multiplier = interaction.options.getNumber("multiplier", true);
+  const multiplierStr = interaction.options.getString("multiplier", true).trim();
+  const multiplier = Number(multiplierStr.replace(/x$/i, ""));
   const amount     = parseAmount(amountStr);
 
   if (!amount || amount < 1_000_000) {
