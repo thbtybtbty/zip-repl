@@ -343,3 +343,10 @@ uri = "file://wispbyte-blackjack-universal-emojis-2026-08-07.tar.gz"
 type = "unspecified"
 title = "WispByte Blackjack update — universal emojis TAR.GZ"
 description = "Verified TAR.GZ alternative containing the same Unicode emoji update."
+
+[[outputs]]
+id = "K8TARgUIknUuFhIEcyVsm"
+uri = "file://wispbyte-blackjack-spacing-2026-08-07.zip"
+type = "unspecified"
+title = "WispByte Blackjack spacing update — ZIP"
+description = "Verified ZIP containing the requested Blackjack spacing changes."

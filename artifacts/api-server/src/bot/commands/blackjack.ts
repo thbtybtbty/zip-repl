@@ -125,11 +125,9 @@ function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): Emb
     .setTitle(`${CARDS_EMOJI} Blackjack`)
     .setDescription(
       [
-        TITLE_SPACER,
         `${DIAMOND_EMOJI} **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
         `### Dealer  \`${dv}${more ? " ..." : ""}\``,
         handDisplay(shownDealerCards),
-        "",
         `### Your hand  \`${pv}\``,
         handDisplay(game.playerHand),
       ].join("\n"),
@@ -172,14 +170,12 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
   const meta = statusMeta[status];
 
   const lines = [
-    TITLE_SPACER,
     `${DIAMOND_EMOJI} **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
     ...(status !== "active"
       ? [`${KNOWN_EMOJI} **Multiplier**  \`${multiplier.toFixed(2)}x (${formatAmount(payout)})\``]
       : []),
     `### Dealer  ${showDealerFull ? `\`${dv}${dv > 21 ? " 💥" : ""}\`` : dealerScore}`,
     dealerCards,
-    "",
     `### Your hand  \`${pv}${pv > 21 ? " 💥" : ""}\``,
     handDisplay(game.playerHand),
     "",
