@@ -115,24 +115,16 @@ function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): Emb
   return new EmbedBuilder()
     .setColor(COLORS.primary)
     .setTitle("🃏  Blackjack")
-    .addFields(
-      {
-        name: "💎 Bet",
-        value: `\`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
-        inline: false,
-      },
-      {
-        name: "Dealer",
-        value: `**${dv}**${more ? " ..." : ""}\n\`${handStr(shownDealerCards)}\``,
-        inline: false,
-      },
-      {
-        name: "Your hand",
-        value: `**${pv}**\n\`${handStr(game.playerHand)}\``,
-        inline: false,
-      },
+    .setDescription(
+      [
+        `💎 **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
+        `**Dealer**  **${dv}**${more ? " ..." : ""}`,
+        `\`${handStr(shownDealerCards)}\``,
+        `**Your hand**  **${pv}**`,
+        `\`${handStr(game.playerHand)}\``,
+        `-# Dealer stands on 17  ·  Blackjack pays 3:2`,
+      ].join("\n"),
     )
-    .setFooter({ text: "Dealer stands on 17  ·  Blackjack pays 3:2" })
     .setTimestamp();
 }
 
@@ -161,37 +153,21 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
 
   const meta = statusMeta[status];
 
-  const embed = new EmbedBuilder()
+  const lines = [
+    `💎 **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
+    ...(meta.payoutLine ? [meta.payoutLine] : []),
+    `**Dealer**  ${dealerScore}`,
+    dealerCards,
+    `**Your hand**  **${pv}**${pv > 21 ? "  💥" : ""}`,
+    `\`${handStr(game.playerHand)}\``,
+    `-# Dealer stands on 17  ·  Blackjack pays 3:2`,
+  ];
+
+  return new EmbedBuilder()
     .setColor(meta.color)
     .setTitle(meta.title)
-    .addFields(
-      {
-        name: "💎 Bet",
-        value: `\`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
-        inline: false,
-      },
-      ...(meta.payoutLine
-        ? [{
-            name: "Payout",
-            value: meta.payoutLine.replace("💰 **Payout**  ", ""),
-            inline: false,
-          }]
-        : []),
-      {
-        name: "Dealer",
-        value: `${dealerScore}\n${dealerCards}`,
-        inline: false,
-      },
-      {
-        name: "Your hand",
-        value: `**${pv}**${pv > 21 ? "  💥" : ""}\n\`${handStr(game.playerHand)}\``,
-        inline: false,
-      },
-    )
-    .setFooter({ text: "Dealer stands on 17  ·  Blackjack pays 3:2" })
+    .setDescription(lines.join("\n"))
     .setTimestamp();
-
-  return embed;
 }
 
 function buildComponents(
@@ -310,14 +286,18 @@ export const data = new SlashCommandBuilder()
   );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  await interaction.deferReply();
-
   const amountStr = interaction.options.getString("amount", true);
   const amount    = parseAmount(amountStr);
 
   if (!amount || amount < 1_000_000) {
-    return interaction.editReply({ embeds: [errorEmbed("Minimum bet is **1m gems**. Try `1m`, `2.5b`, `500k`.")] });
+    return interaction.reply({
+      embeds: [errorEmbed("Minimum bet is **1m gems**. Try `1m`, `2.5b`, `500k`.")],
+      flags: MessageFlags.Ephemeral,
+    });
   }
+
+  await interaction.deferReply();
+
   if (activeBlackjackGames.has(interaction.user.id)) {
     return interaction.editReply({ embeds: [errorEmbed("You already have an active Blackjack game!")] });
   }

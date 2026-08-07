@@ -24,22 +24,22 @@ export const data = new SlashCommandBuilder()
   );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  await interaction.deferReply();
-
   const targetMember = interaction.options.getUser("member", false);
 
   // Only admins can view someone else's balance
   if (targetMember && !isAdmin(interaction.user.id)) {
-    await interaction.editReply({
+    return interaction.reply({
       embeds: [
         new EmbedBuilder()
           .setColor(COLORS.danger ?? 0xe74c3c)
           .setDescription("❌ Only admins can view another member's balance.")
           .setTimestamp(),
       ],
+      flags: MessageFlags.Ephemeral,
     });
-    return;
   }
+
+  await interaction.deferReply();
 
   const target = targetMember ?? interaction.user;
   const user   = await getOrCreateUser(target.id, target.username);

@@ -280,3 +280,10 @@ uri = "file://attached_assets/wispbyte-blackjack-embed-fields-fixed.tar.gz"
 type = "unspecified"
 title = "WispByte Blackjack update — tar.gz fallback"
 description = "Freshly repacked tar.gz fallback with normalized paths. Validated with gzip test, tar listing, and full extraction."
+
+[[outputs]]
+id = "A_KPLAhpJMYS-G7W_sBCR"
+uri = "file://attached_assets/wispbyte-blackjack-private-errors.zip"
+type = "unspecified"
+title = "WispByte Blackjack and private errors update"
+description = "WispByte ZIP package with the original Blackjack panel restored, separator lines removed, sub-1m Blackjack errors made private, and non-admin attempts to view another user's balance made private. Archive integrity and extraction were validated. Production .env, database, server config, admin config, and node_modules are excluded."
