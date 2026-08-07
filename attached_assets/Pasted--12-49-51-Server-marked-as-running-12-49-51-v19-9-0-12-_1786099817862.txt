@@ -1,0 +1,69 @@
+[12:49:51]Server marked as running
+[12:49:51]v19.9.0
+[12:49:51]:/home/container$ npm install && node index.js
+[12:49:51]25l[..................] | idealTree: sill logfile start cleaning logs, removing 1
+[..................] | idealTree: sill logfile start cleaning logs, removing 1
+[#########.........] \ idealTree: timing idealTree Completed in 123ms
+[#########.........] - idealTree: timing idealTree Completed in 123ms
+[#########.........] \ idealTree: timing idealTree Completed in 123ms
+[#########.........] \ idealTree: timing idealTree Completed in 123ms
+[#########.........] \ idealTree: timing idealTree Completed in 123ms
+[#########.........] \ idealTree: timing idealTree Completed in 123ms
+[#########.........] \ idealTree: timing idealTree Completed in 123ms
+[#########.........] \ idealTree: timing idealTree Completed in 123ms
+[#########.........] \ idealTree: timing idealTree Completed in 123ms 25h
+[12:49:51]up to date, audited 2 packages in 2s
+[12:49:51]found 0 vulnerabilities
+[12:49:51][boot] Loading .env...
+[12:49:51][boot] DB → /home/container/artifacts/api-server/bot.db
+[12:49:51][boot] Patching hardcoded paths...
+[12:49:51][boot] DISCORD_BOT_TOKEN set: true | DISCORD_CLIENT_ID set: true
+[12:49:51][boot] Starting bot (Node v19.9.0)...
+[12:49:51][11:58:29.608] INFO (34): Server listening
+[12:49:51]port: 8080
+[12:49:51]host: "0.0.0.0"
+[12:49:51][11:58:31.306] INFO (34): Discord bot ready
+[12:49:51]tag: "AUTOPAY#6035"
+[12:49:51][11:58:31.921] INFO (34): Guild commands registered
+[12:49:51]guildId: "1529985147775094876"
+[12:49:51]guildName: "AUTOPAY PS99 CASINO"
+[12:49:51]count: 37
+[12:49:51][21:30:11.524] ERROR (34): Error executing command
+[12:49:51]command: "balance"
+[12:49:51]err: {
+[12:49:51]"type": "_DrizzleQueryError",
+[12:49:51]"message": "Failed query: insert into \"users\" (\"id\", \"username\", \"roblox_username\", \"balance\", \"deposited\", \"withdrawn\", \"wagered\", \"profit\", \"locked_balance\", \"created_at\", \"updated_at\") values (?, ?, null, ?, ?, ?, ?, ?, ?, ?, ?)\nparams: 1521283622907150366,mosann0163,0,0,0,0,0,0,1786041011,1786041011: ENOSPC: no space left on device, write",
+[12:49:51]"stack":
+[12:49:51]Error: Failed query: insert into "users" ("id", "username", "roblox_username", "balance", "deposited", "withdrawn", "wagered", "profit", "locked_balance", "created_at", "updated_at") values (?, ?, null, ?, ?, ?, ?, ?, ?, ?, ?)
+[12:49:51]params: 1521283622907150366,mosann0163,0,0,0,0,0,0,1786041011,1786041011
+[12:49:51]at RemotePreparedQuery.queryWithCache (file:///home/container/artifacts/api-server/dist/index.patched.mjs:112960:15)
+[12:49:51]at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+[12:49:51]at async RemotePreparedQuery.run (file:///home/container/artifacts/api-server/dist/index.patched.mjs:113214:12)
+[12:49:51]at async getOrCreateUser (file:///home/container/artifacts/api-server/dist/index.patched.mjs:125112:3)
+[12:49:51]at async execute (file:///home/container/artifacts/api-server/dist/index.patched.mjs:125308:16)
+[12:49:51]at async handleInteraction (file:///home/container/artifacts/api-server/dist/index.patched.mjs:131769:38)
+[12:49:51]caused by: Error: ENOSPC: no space left on device, write
+[12:49:51]at Object.writeSync (node:fs:938:3)
+[12:49:51]at Object.writeFileSync (node:fs:2253:26)
+[12:49:51]at persist (file:///home/container/artifacts/api-server/dist/index.patched.mjs:124824:6)
+[12:49:51]at SqliteFacade.query (file:///home/container/artifacts/api-server/dist/index.patched.mjs:124888:7)
+[12:49:51]at drizzle.schema [as client] (file:///home/container/artifacts/api-server/dist/index.patched.mjs:124912:37)
+[12:49:51]at file:///home/container/artifacts/api-server/dist/index.patched.mjs:113215:25
+[12:49:51]at RemotePreparedQuery.queryWithCache (file:///home/container/artifacts/api-server/dist/index.patched.mjs:112958:22)
+[12:49:51]at RemotePreparedQuery.run (file:///home/container/artifacts/api-server/dist/index.patched.mjs:113214:23)
+[12:49:51]at QueryPromise.run (file:///home/container/artifacts/api-server/dist/index.patched.mjs:112203:28)
+[12:49:51]at QueryPromise.execute (file:///home/container/artifacts/api-server/dist/index.patched.mjs:112215:54)
+[12:49:51]"query": "insert into \"users\" (\"id\", \"username\", \"roblox_username\", \"balance\", \"deposited\", \"withdrawn\", \"wagered\", \"profit\", \"locked_balance\", \"created_at\", \"updated_at\") values (?, ?, null, ?, ?, ?, ?, ?, ?, ?, ?)",
+[12:49:51]"params": [
+[12:49:51]"1521283622907150366",
+[12:49:51]"mosann0163",
+[12:49:51]0,
+[12:49:51]0,
+[12:49:51]0,
+[12:49:51]0,
+[12:49:51]0,
+[12:49:51]0,
+[12:49:51]1786041011,
+[12:49:51]1786041011
+[12:49:51]]
+[12:49:51]}

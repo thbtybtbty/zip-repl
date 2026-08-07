@@ -24,8 +24,27 @@ function persist(): void {
   const parent = path.dirname(DB_PATH);
   fs.mkdirSync(parent, { recursive: true });
   const temporaryPath = `${DB_PATH}.tmp`;
-  fs.writeFileSync(temporaryPath, Buffer.from(current.export()));
-  fs.renameSync(temporaryPath, DB_PATH);
+  const exported = Buffer.from(current.export());
+
+  // Remove a partial temp file left by an earlier failed write. On hosts
+  // with very little free space, that orphan can prevent every later save.
+  fs.rmSync(temporaryPath, { force: true });
+
+  try {
+    // Keep the normal atomic replacement path whenever there is enough room
+    // for a second copy of the database.
+    fs.writeFileSync(temporaryPath, exported);
+    fs.renameSync(temporaryPath, DB_PATH);
+  } catch (error) {
+    fs.rmSync(temporaryPath, { force: true });
+    if ((error as NodeJS.ErrnoException).code === "ENOSPC") {
+      throw new Error(
+        `Database save failed: no space left on device. Free storage on the host before retrying. Original database was preserved.`,
+        { cause: error },
+      );
+    }
+    throw error;
+  }
 }
 
 function valuesFor(params: unknown[]): (string | number | null | Uint8Array)[] {

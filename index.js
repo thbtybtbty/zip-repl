@@ -18,8 +18,11 @@ if (fs.existsSync(envFile)) {
   }
 }
 
-// Persistent database on WispByte's /data volume
-if (fs.existsSync("/data")) {
+// Persistent database on WispByte's /data volume. Respect an explicitly
+// configured path first so hosts with a mounted volume can choose it.
+if (process.env.DATABASE_PATH) {
+  console.log("[boot] DB → " + process.env.DATABASE_PATH + " (configured)");
+} else if (fs.existsSync("/data")) {
   process.env.DATABASE_PATH = "/data/bot.db";
   console.log("[boot] DB → /data/bot.db (persistent)");
 } else {
