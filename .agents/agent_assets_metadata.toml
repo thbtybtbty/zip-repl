@@ -294,3 +294,10 @@ uri = "file://attached_assets/wispbyte-enospc-database-fix.zip"
 type = "unspecified"
 title = "WispByte database storage fix"
 description = "WispByte ZIP package for the ENOSPC database write failure. Includes the updated launcher and rebuilt runtime, with configured database-path support and cleanup of failed temporary database writes. Archive integrity and extraction were validated. Production .env, database, server config, admin config, and node_modules are excluded."
+
+[[outputs]]
+id = "m2C0IopHvda3GjOauEfGT"
+uri = "file://wispbyte-ready-2026-08-07.tar.gz"
+type = "unspecified"
+title = "WispByte-ready Discord bot package"
+description = "Rebuilt runtime package for WispByte. Includes index.js, package metadata, start.sh, deployment notes, and the rebuilt artifacts/api-server/dist bundle. Excludes secrets, production database/configuration, admin files, and node_modules."
