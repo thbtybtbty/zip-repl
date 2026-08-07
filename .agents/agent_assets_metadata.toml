@@ -350,3 +350,10 @@ uri = "file://wispbyte-blackjack-spacing-2026-08-07.zip"
 type = "unspecified"
 title = "WispByte Blackjack spacing update — ZIP"
 description = "Verified ZIP containing the requested Blackjack spacing changes."
+
+[[outputs]]
+id = "NTo6ASef0mWA085fNsUWS"
+uri = "file://wispbyte-setup-2026-08-07.tar.gz"
+type = "unspecified"
+title = "WispByte bot setup bundle"
+description = "Rebuilt WispByte runtime archive with index.js, start.sh, npm metadata, and updated artifacts/api-server/dist/. It excludes secrets, production database/configuration, admin files, and node_modules."
