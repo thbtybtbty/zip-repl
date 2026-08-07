@@ -104,9 +104,9 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 // ─── UI builders ───────────────────────────────────────────────────────────────
 type GameStatus = "active" | "player_bust" | "dealer_bust" | "player_win" | "dealer_win" | "push" | "blackjack";
-const CARDS_EMOJI = "<:cards:1183372741563392071>";
-const DIAMOND_EMOJI = "<:diamond:1183369762076631142>";
-const KNOWN_EMOJI = "<:known:1192894974480629882>";
+const CARDS_EMOJI = "🃏";
+const DIAMOND_EMOJI = "💎";
+const KNOWN_EMOJI = "✨";
 const TITLE_SPACER = "\u2800";
 
 function handDisplay(hand: Card[]): string {

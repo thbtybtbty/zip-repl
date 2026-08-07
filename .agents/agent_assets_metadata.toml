@@ -329,3 +329,17 @@ uri = "file://wispbyte-blackjack-format-2026-08-07.tar.gz"
 type = "unspecified"
 title = "WispByte Blackjack update — verified TAR.GZ"
 description = "Verified TAR.GZ alternative for WispByte. Includes the same tested Blackjack update and excludes secrets, production database/configuration, admin files, and node_modules."
+
+[[outputs]]
+id = "whQtlNOzMrE5FiECjDhvU"
+uri = "file://wispbyte-blackjack-universal-emojis-2026-08-07.zip"
+type = "unspecified"
+title = "WispByte Blackjack update — universal emojis ZIP"
+description = "Genuine ZIP validated with unzip -t. Replaces server-specific emojis with standard Unicode emojis: 🃏, 💎, and ✨. The bot was rebuilt and verified in Replit with all 37 commands registered."
+
+[[outputs]]
+id = "oYB5huT9DLVOE1r6KdDKS"
+uri = "file://wispbyte-blackjack-universal-emojis-2026-08-07.tar.gz"
+type = "unspecified"
+title = "WispByte Blackjack update — universal emojis TAR.GZ"
+description = "Verified TAR.GZ alternative containing the same Unicode emoji update."
