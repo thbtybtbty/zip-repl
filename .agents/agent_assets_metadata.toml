@@ -315,3 +315,17 @@ uri = "file://wispbyte-enospc-diagnostics-2026-08-07.zip"
 type = "unspecified"
 title = "WispByte diagnostic update — verified ZIP"
 description = "Genuine ZIP archive, not a renamed tar.gz. Locally validated with unzip -t: all files passed. Includes the rebuilt bot runtime and startup diagnostics. Excludes secrets, production database/configuration, admin files, and node_modules."
+
+[[outputs]]
+id = "J6uqXrh6SZCmjMEk1whzd"
+uri = "file://wispbyte-blackjack-format-2026-08-07.zip"
+type = "unspecified"
+title = "WispByte Blackjack update — verified ZIP"
+description = "Genuine ZIP archive validated with unzip -t. Includes the updated Blackjack panel formatting, custom emojis, spaced card rows, multiplier/result layout, and ephemeral invalid or under-1M bet replies. Excludes secrets, production database/configuration, admin files, and node_modules."
+
+[[outputs]]
+id = "nqF2KEahbstM5taCBWMH-"
+uri = "file://wispbyte-blackjack-format-2026-08-07.tar.gz"
+type = "unspecified"
+title = "WispByte Blackjack update — verified TAR.GZ"
+description = "Verified TAR.GZ alternative for WispByte. Includes the same tested Blackjack update and excludes secrets, production database/configuration, admin files, and node_modules."

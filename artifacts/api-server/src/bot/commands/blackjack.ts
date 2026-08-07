@@ -104,6 +104,14 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 // ─── UI builders ───────────────────────────────────────────────────────────────
 type GameStatus = "active" | "player_bust" | "dealer_bust" | "player_win" | "dealer_win" | "push" | "blackjack";
+const CARDS_EMOJI = "<:cards:1183372741563392071>";
+const DIAMOND_EMOJI = "<:diamond:1183369762076631142>";
+const KNOWN_EMOJI = "<:known:1192894974480629882>";
+const TITLE_SPACER = "\u2800";
+
+function handDisplay(hand: Card[]): string {
+  return hand.map((card) => `\`${cardStr(card)}\``).join("  ");
+}
 
 /** Embed shown during animated dealer reveal — partial dealer hand, no outcome yet. */
 function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): EmbedBuilder {
@@ -114,15 +122,16 @@ function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): Emb
 
   return new EmbedBuilder()
     .setColor(COLORS.primary)
-    .setTitle("🃏  Blackjack")
+    .setTitle(`${CARDS_EMOJI} Blackjack`)
     .setDescription(
       [
-        `💎 **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
-        `**Dealer**  **${dv}**${more ? " ..." : ""}`,
-        `\`${handStr(shownDealerCards)}\``,
-        `**Your hand**  **${pv}**`,
-        `\`${handStr(game.playerHand)}\``,
-        `-# Dealer stands on 17  ·  Blackjack pays 3:2`,
+        TITLE_SPACER,
+        `${DIAMOND_EMOJI} **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
+        `### Dealer  \`${dv}${more ? " ..." : ""}\``,
+        handDisplay(shownDealerCards),
+        "",
+        `### Your hand  \`${pv}\``,
+        handDisplay(game.playerHand),
       ].join("\n"),
     )
     .setTimestamp();
@@ -134,33 +143,47 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
 
   const showDealerFull = status !== "active";
   const dealerCards = showDealerFull
-    ? `\`${handStr(game.dealerHand)}\``
-    : `\`${cardStr(game.dealerHand[0]!)}  ?\``;
+    ? handDisplay(game.dealerHand)
+    : `\`${cardStr(game.dealerHand[0]!)}\`  \`?\``;
 
-  const dealerScore = showDealerFull ? `**${dv}**${dv > 21 ? "  💥" : ""}` : "**?**";
+  const dealerScore = showDealerFull ? `\`${dv}${dv > 21 ? " 💥" : ""}\`` : "`?`";
 
   const bet = game.bet * (game.doubled ? 2 : 1);
 
-  const statusMeta: Record<GameStatus, { color: number; title: string; payoutLine: string }> = {
-    active:       { color: COLORS.primary, title: "🃏  Blackjack",               payoutLine: "" },
-    player_bust:  { color: COLORS.danger,  title: "🃏  Blackjack — Bust!",       payoutLine: `💰 **Payout**  \`0\`` },
-    dealer_bust:  { color: COLORS.success, title: "🃏  Blackjack — You Win!",    payoutLine: `💰 **Payout**  \`${formatAmount(bet * 2)}\`` },
-    player_win:   { color: COLORS.success, title: "🃏  Blackjack — You Win!",    payoutLine: `💰 **Payout**  \`${formatAmount(bet * 2)}\`` },
-    dealer_win:   { color: COLORS.danger,  title: "🃏  Blackjack — Dealer Wins", payoutLine: `💰 **Payout**  \`0\`` },
-    push:         { color: COLORS.warning, title: "🃏  Blackjack — Push",        payoutLine: `💰 **Payout**  \`${formatAmount(bet)}\`` },
-    blackjack:    { color: COLORS.gold,    title: "🃏  Blackjack! 🎉",           payoutLine: `💰 **Payout**  \`${formatAmount(game.bet + Math.floor(game.bet * 1.5))}\`` },
+  const payout = status === "blackjack"
+    ? game.bet + Math.floor(game.bet * 1.5)
+    : status === "player_win" || status === "dealer_bust"
+      ? bet * 2
+      : status === "push"
+        ? bet
+        : 0;
+  const multiplier = bet > 0 ? payout / bet : 0;
+
+  const statusMeta: Record<GameStatus, { color: number; title: string; resultLine: string }> = {
+    active:       { color: COLORS.primary, title: `${CARDS_EMOJI} Blackjack`,                    resultLine: "" },
+    player_bust:  { color: COLORS.danger,  title: `${CARDS_EMOJI} Blackjack - YOU LOST`,         resultLine: `> You busted with ${pv}.` },
+    dealer_bust:  { color: COLORS.success, title: `${CARDS_EMOJI} Blackjack - YOU WON`,          resultLine: `> The dealer busted with ${dv}.` },
+    player_win:   { color: COLORS.success, title: `${CARDS_EMOJI} Blackjack - YOU WON`,          resultLine: `> You beat the dealer, ${pv} to ${dv}.` },
+    dealer_win:   { color: COLORS.danger,  title: `${CARDS_EMOJI} Blackjack - YOU LOST`,         resultLine: `> The dealer beat you, ${dv} to ${pv}.` },
+    push:         { color: COLORS.warning, title: `${CARDS_EMOJI} Blackjack - PUSH`,              resultLine: `> Push — you and the dealer both had ${pv}.` },
+    blackjack:    { color: COLORS.gold,    title: `${CARDS_EMOJI} Blackjack - BLACKJACK`,         resultLine: `> Blackjack! You beat the dealer, ${pv} to ${dv}.` },
   };
 
   const meta = statusMeta[status];
 
   const lines = [
-    `💎 **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
-    ...(meta.payoutLine ? [meta.payoutLine] : []),
-    `**Dealer**  ${dealerScore}`,
+    TITLE_SPACER,
+    `${DIAMOND_EMOJI} **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
+    ...(status !== "active"
+      ? [`${KNOWN_EMOJI} **Multiplier**  \`${multiplier.toFixed(2)}x (${formatAmount(payout)})\``]
+      : []),
+    `### Dealer  ${showDealerFull ? `\`${dv}${dv > 21 ? " 💥" : ""}\`` : dealerScore}`,
     dealerCards,
-    `**Your hand**  **${pv}**${pv > 21 ? "  💥" : ""}`,
-    `\`${handStr(game.playerHand)}\``,
-    `-# Dealer stands on 17  ·  Blackjack pays 3:2`,
+    "",
+    `### Your hand  \`${pv}${pv > 21 ? " 💥" : ""}\``,
+    handDisplay(game.playerHand),
+    "",
+    ...(meta.resultLine ? [meta.resultLine] : []),
   ];
 
   return new EmbedBuilder()
