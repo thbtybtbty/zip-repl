@@ -175,14 +175,17 @@ export const data = new SlashCommandBuilder()
   );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  await interaction.deferReply();
-
   const amountStr  = interaction.options.getString("amount", true);
   const minesCount = interaction.options.getInteger("mines", true);
   const amount     = parseAmount(amountStr);
 
   if (!amount || amount < 1_000_000)
-    return interaction.editReply({ embeds: [errorEmbed("Minimum bet is **1m gems**. Try `1m`, `2.5b`, `500k`.")] });
+    return interaction.reply({
+      embeds: [errorEmbed("Minimum bet is **1m gems**. Try `1m`, `2.5b`, `500k`.")],
+      flags: MessageFlags.Ephemeral,
+    });
+
+  await interaction.deferReply();
 
   if (activeMinesGames.has(interaction.user.id))
     return interaction.editReply({ embeds: [errorEmbed("You already have an active Mines game!")] });

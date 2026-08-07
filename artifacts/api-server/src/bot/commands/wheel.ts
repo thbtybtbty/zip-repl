@@ -179,13 +179,16 @@ export const data = new SlashCommandBuilder()
   );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  await interaction.deferReply();
-
   const amountStr = interaction.options.getString("amount", true);
   const amount    = parseAmount(amountStr);
 
   if (!amount || amount < 1_000_000)
-    return interaction.editReply({ embeds: [errorEmbed("Minimum bet is **1m gems**. Try `1m`, `2.5b`, `500k`.")] });
+    return interaction.reply({
+      embeds: [errorEmbed("Minimum bet is **1m gems**. Try `1m`, `2.5b`, `500k`.")],
+      flags: MessageFlags.Ephemeral,
+    });
+
+  await interaction.deferReply();
 
   const user = await getOrCreateUser(interaction.user.id, interaction.user.username);
   if (user.balance < amount)

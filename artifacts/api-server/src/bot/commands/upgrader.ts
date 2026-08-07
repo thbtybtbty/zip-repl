@@ -1,6 +1,7 @@
 import {
   SlashCommandBuilder,
   EmbedBuilder,
+  MessageFlags,
   type ChatInputCommandInteraction,
 } from "discord.js";
 import {
@@ -99,15 +100,18 @@ export const data = new SlashCommandBuilder()
   );
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
-  await interaction.deferReply();
-
   const amountStr  = interaction.options.getString("amount", true);
   const multiplier = interaction.options.getNumber("multiplier", true);
   const amount     = parseAmount(amountStr);
 
   if (!amount || amount < 1_000_000) {
-    return void interaction.editReply({ embeds: [errorEmbed("Minimum bet is **1M gems**. Try `1m`, `2.5b`, `500k`.")] });
+    return void interaction.reply({
+      embeds: [errorEmbed("Minimum bet is **1M gems**. Try `1m`, `2.5b`, `500k`.")],
+      flags: MessageFlags.Ephemeral,
+    });
   }
+
+  await interaction.deferReply();
 
   if (multiplier < MULT_MIN || multiplier > MULT_MAX) {
     return void interaction.editReply({

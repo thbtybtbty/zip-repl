@@ -357,3 +357,10 @@ uri = "file://wispbyte-setup-2026-08-07.tar.gz"
 type = "unspecified"
 title = "WispByte bot setup bundle"
 description = "Rebuilt WispByte runtime archive with index.js, start.sh, npm metadata, and updated artifacts/api-server/dist/. It excludes secrets, production database/configuration, admin files, and node_modules."
+
+[[outputs]]
+id = "IxUTImLu29wqsUS8h5E77"
+uri = "file://wispbyte-private-invalid-amount-2026-08-07.zip"
+type = "unspecified"
+title = "WispByte private invalid-bet update"
+description = "ZIP bundle with invalid or below-1m bet messages made private across the games. Includes the rebuilt artifacts/api-server/dist/ in the correct WispByte folder structure and excludes secrets, production data, config, admin files, and node_modules."
