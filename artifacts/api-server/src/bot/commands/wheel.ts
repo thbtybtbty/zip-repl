@@ -37,44 +37,42 @@ const SEGMENTS: Segment[] = [
   { emoji: "💎", label: "25×",  mult: 25,  weight:  1, color: COLORS.gold    },
 ];
 
-// Build a randomized weighted pool without grouping the low multipliers
-// together. The counts stay exactly the same, so the outcome odds and house
-// edge are unchanged; only the visual order changes. A soft preference for a
-// higher multiplier after a low one makes the strip less repetitive without
-// making good multipliers predictable on either side.
+// Build a randomized weighted pool without allowing five low multipliers
+// (0x/0.5x) to appear in a row. The counts stay exactly the same, so the
+// outcome odds and house edge are unchanged; only the visual order changes.
+// Low segments are distributed into randomized gaps of 3 or 4 between the
+// higher multipliers, so good results appear nearby without a fixed pattern.
 function buildPool(): Segment[] {
-  const remaining = SEGMENTS.map((segment) => ({ segment, count: segment.weight }));
+  const shuffle = <T,>(items: T[]): T[] => {
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [items[i], items[j]] = [items[j]!, items[i]!];
+    }
+    return items;
+  };
+
+  const low: Segment[] = [];
+  const high: Segment[] = [];
+  for (const segment of SEGMENTS) {
+    for (let i = 0; i < segment.weight; i++) {
+      (segment.mult < 1 ? low : high).push(segment);
+    }
+  }
+
+  // There are 66 low and 21 higher-multiplier segments. Distributing the low
+  // segments as eighteen gaps of 3 and three gaps of 4 guarantees that every
+  // five-segment strip contains at least one multiplier above 0.5x.
+  const gaps = shuffle([...Array(18).fill(3), 4, 4, 4]);
+  shuffle(low);
+  shuffle(high);
+
   const pool: Segment[] = [];
-  let previous: Segment | undefined;
-
-  while (pool.length < SEGMENTS.reduce((total, segment) => total + segment.weight, 0)) {
-    let available = remaining
-      .filter(({ count, segment }) => count > 0 && segment !== previous);
-    if (available.length === 0) {
-      available = remaining.filter(({ count }) => count > 0);
+  let lowIndex = 0;
+  for (let i = 0; i < high.length; i++) {
+    pool.push(high[i]!);
+    for (let j = 0; j < gaps[i]!; j++) {
+      pool.push(low[lowIndex++]!);
     }
-    if (available.length === 0) throw new Error("Unable to build a Wheel pool");
-
-    const previousWasLow = previous !== undefined && previous.mult < 1;
-    const weighted = available.map((entry) => ({
-      entry,
-      selectionWeight: entry.count * (previousWasLow && entry.segment.mult < 1 ? 0.28 : 1),
-    }));
-    const totalWeight = weighted.reduce((total, item) => total + item.selectionWeight, 0);
-    let pick = Math.random() * totalWeight;
-    let next = weighted[weighted.length - 1]!;
-
-    for (const candidate of weighted) {
-      pick -= candidate.selectionWeight;
-      if (pick <= 0) {
-        next = candidate;
-        break;
-      }
-    }
-
-    pool.push(next.entry.segment);
-    next.entry.count -= 1;
-    previous = next.entry.segment;
   }
 
   return pool;
