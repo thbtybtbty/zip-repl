@@ -378,3 +378,10 @@ uri = "file://wispbyte-chickencrossing-panel-2026-08-07.zip"
 type = "unspecified"
 title = "WispByte Chicken Crossing panel update"
 description = "Updated Chicken Crossing ZIP. The panel now shows the current cash-out amount, labels the maximum payout as Last lane, and displays the Next lane pays footer starting from lane 1. Production data and secrets are excluded."
+
+[[outputs]]
+id = "6Aqj9Crb4Df-g4g4cN676"
+uri = "file://wispbyte-wheel-roulette-2026-08-08.zip"
+type = "unspecified"
+title = "WispByte Wheel and Roulette update"
+description = "Updated WispByte ZIP. Wheel keeps the exact weighted counts and house edge while reducing repetitive low-multiplier strip layouts, removes Odds, and Roulette now uses Multiplier or Missed Multiplier with 2x/3x/36x bet choices."

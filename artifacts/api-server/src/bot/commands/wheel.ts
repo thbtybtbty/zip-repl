@@ -37,29 +37,44 @@ const SEGMENTS: Segment[] = [
   { emoji: "💎", label: "25×",  mult: 25,  weight:  1, color: COLORS.gold    },
 ];
 
-// Build the weighted pool without grouping identical segments together.
-//
-// The old grouped pool made a result near the 0x block render as five 0x
-// entries in a row during the animation. The counts stay exactly the same,
-// so the odds and house edge are unchanged; only the visual order changes.
+// Build a randomized weighted pool without grouping the low multipliers
+// together. The counts stay exactly the same, so the outcome odds and house
+// edge are unchanged; only the visual order changes. A soft preference for a
+// higher multiplier after a low one makes the strip less repetitive without
+// making good multipliers predictable on either side.
 function buildPool(): Segment[] {
   const remaining = SEGMENTS.map((segment) => ({ segment, count: segment.weight }));
   const pool: Segment[] = [];
   let previous: Segment | undefined;
 
   while (pool.length < SEGMENTS.reduce((total, segment) => total + segment.weight, 0)) {
-    const available = remaining
-      .filter(({ count, segment }) => count > 0 && segment !== previous)
-      .sort((a, b) => b.count - a.count);
-    const next = available[0];
+    let available = remaining
+      .filter(({ count, segment }) => count > 0 && segment !== previous);
+    if (available.length === 0) {
+      available = remaining.filter(({ count }) => count > 0);
+    }
+    if (available.length === 0) throw new Error("Unable to build a Wheel pool");
 
-    // The largest group is never more than half of the pool, so a different
-    // segment is always available while there are entries left to place.
-    if (!next) throw new Error("Unable to build a varied Wheel pool");
+    const previousWasLow = previous !== undefined && previous.mult < 1;
+    const weighted = available.map((entry) => ({
+      entry,
+      selectionWeight: entry.count * (previousWasLow && entry.segment.mult < 1 ? 0.28 : 1),
+    }));
+    const totalWeight = weighted.reduce((total, item) => total + item.selectionWeight, 0);
+    let pick = Math.random() * totalWeight;
+    let next = weighted[weighted.length - 1]!;
 
-    pool.push(next.segment);
-    next.count -= 1;
-    previous = next.segment;
+    for (const candidate of weighted) {
+      pick -= candidate.selectionWeight;
+      if (pick <= 0) {
+        next = candidate;
+        break;
+      }
+    }
+
+    pool.push(next.entry.segment);
+    next.entry.count -= 1;
+    previous = next.entry.segment;
   }
 
   return pool;
@@ -113,7 +128,6 @@ async function runSpin(
   const winnings = Math.floor(bet * result.mult);
   if (winnings > 0) await addBalance(userId, winnings);
   await recordBet(userId, bet, winnings - bet, "wheel");
-  const oddsText = `${((result.weight / POOL.length) * 100).toFixed(1)}%`;
 
   // Animation frames
   for (let f = 0; f < OFFSETS.length; f++) {
@@ -153,7 +167,6 @@ async function runSpin(
   const statsLines = [
     `💎 **Bet**        \`${formatAmount(bet)}\``,
     `🎯 **Multiplier** \`${result.label}\``,
-    `📊 **Odds**       \`${oddsText}\``,
     `💰 **Payout**     \`${formatAmount(winnings)}\``,
   ].join("\n");
 

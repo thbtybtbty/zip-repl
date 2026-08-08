@@ -109,11 +109,11 @@ const BET_DISPLAY: Record<BetType, string> = {
   straight: "🎯 Straight",
 };
 
-const PAYOUT_DISPLAY: Record<BetType, string> = {
-  red: "1:1", black: "1:1", odd: "1:1", even: "1:1", low: "1:1", high: "1:1",
-  dozen1: "2:1", dozen2: "2:1", dozen3: "2:1",
-  col1: "2:1", col2: "2:1", col3: "2:1",
-  straight: "35:1",
+const MULTIPLIER_DISPLAY: Record<BetType, string> = {
+  red: "2x", black: "2x", odd: "2x", even: "2x", low: "2x", high: "2x",
+  dozen1: "3x", dozen2: "3x", dozen3: "3x",
+  col1: "3x", col2: "3x", col3: "3x",
+  straight: "36x",
 };
 
 // ─── Animation constants ──────────────────────────────────────────────────────
@@ -135,19 +135,19 @@ export const data = new SlashCommandBuilder()
       .setDescription("Type of bet to place")
       .setRequired(true)
       .addChoices(
-        { name: "🟥 Red (1:1)",                     value: "red"      },
-        { name: "⬛ Black (1:1)",                    value: "black"    },
-        { name: "🔢 Odd (1:1)",                      value: "odd"      },
-        { name: "🔢 Even (1:1)",                     value: "even"     },
-        { name: "📉 Low — 1 to 18 (1:1)",           value: "low"      },
-        { name: "📈 High — 19 to 36 (1:1)",         value: "high"     },
-        { name: "1️⃣ 1st Dozen — 1-12 (2:1)",        value: "dozen1"   },
-        { name: "2️⃣ 2nd Dozen — 13-24 (2:1)",       value: "dozen2"   },
-        { name: "3️⃣ 3rd Dozen — 25-36 (2:1)",       value: "dozen3"   },
-        { name: "🔷 Column 1 (2:1)",                 value: "col1"     },
-        { name: "🔷 Column 2 (2:1)",                 value: "col2"     },
-        { name: "🔷 Column 3 (2:1)",                 value: "col3"     },
-        { name: "🎯 Straight — single number (35:1)", value: "straight" },
+        { name: "🟥 Red (2x)",                     value: "red"      },
+        { name: "⬛ Black (2x)",                    value: "black"    },
+        { name: "🔢 Odd (2x)",                      value: "odd"      },
+        { name: "🔢 Even (2x)",                     value: "even"     },
+        { name: "📉 Low — 1 to 18 (2x)",           value: "low"      },
+        { name: "📈 High — 19 to 36 (2x)",         value: "high"     },
+        { name: "1️⃣ 1st Dozen — 1-12 (3x)",        value: "dozen1"   },
+        { name: "2️⃣ 2nd Dozen — 13-24 (3x)",       value: "dozen2"   },
+        { name: "3️⃣ 3rd Dozen — 25-36 (3x)",       value: "dozen3"   },
+        { name: "🔷 Column 1 (3x)",                 value: "col1"     },
+        { name: "🔷 Column 2 (3x)",                 value: "col2"     },
+        { name: "🔷 Column 3 (3x)",                 value: "col3"     },
+        { name: "🎯 Straight — single number (36x)", value: "straight" },
       ),
   )
   .addStringOption((opt) =>
@@ -198,13 +198,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (won) await addBalance(interaction.user.id, amount + amount * payout);
   await recordBet(interaction.user.id, amount, won ? amount * payout : -amount, "roulette");
 
-  const winningPockets: Record<BetType, number> = {
-    red: 18, black: 18, odd: 18, even: 18, low: 18, high: 18,
-    dozen1: 12, dozen2: 12, dozen3: 12,
-    col1: 12, col2: 12, col3: 12,
-    straight: 1,
-  };
-  const oddsText  = `${((winningPockets[bet]! / 38) * 100).toFixed(1)}%`;
   const winAmount = won ? amount * payout : 0;
 
   // ── Animation: scroll strip through decelerating offsets ──────────────────
@@ -231,7 +224,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const statsLines = [
     `🎲 **Bet**    \`${betName}\``,
     `💸 **Stake**  \`${formatAmount(amount)}\``,
-    `📊 **Odds**   \`${oddsText}  ·  ${PAYOUT_DISPLAY[bet]}\``,
+    `📊 **${won ? "Multiplier" : "Missed Multiplier"}**  \`${MULTIPLIER_DISPLAY[bet]}\``,
     `💰 **Payout**  \`${won ? formatAmount(amount + winAmount) : "0"}\``,
   ].join("\n");
 
