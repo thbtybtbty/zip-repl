@@ -324,11 +324,8 @@ async function runDraw(interaction: ButtonInteraction, state: KenoState): Promis
   await recordBet(state.userId, state.bet, payout - state.bet, "keno");
   activeSessions.delete(sessionKey(state.userId));
 
-  // Acknowledge the button without replying to or replacing the control panel.
-  await interaction.deferUpdate();
-
-  // Draw button is on message 2 (controls) — replace with Play Again.
-  await editChannelMessage(interaction, state.panelMessageId, {
+  // Draw button is on message 2 (controls) — replace with Play Again
+  await interaction.update({
     components: [playAgainRow(state.userId, state.bet, state.difficulty)],
   });
 
@@ -336,13 +333,6 @@ async function runDraw(interaction: ButtonInteraction, state: KenoState): Promis
   await editChannelMessage(interaction, state.embedMessageId, {
     embeds:     [resultEmbed(state, hits, payout)],
     components: resultNumberRows(state.picks, drawn),
-  });
-
-  const channel = interaction.channel as TextChannel;
-  await channel.send({
-    content: payout > 0
-      ? `🎲 Keno draw complete — **${hits}/${PICK_COUNT}** hits and a **${formatAmount(payout)} 💎** payout.`
-      : `🎲 Keno draw complete — **${hits}/${PICK_COUNT}** hits. No payout this time.`,
   });
 }
 
@@ -387,7 +377,6 @@ export async function handleQuickPick(interaction: ButtonInteraction): Promise<v
   }
 
   // Clear all existing picks and choose 6 brand-new random numbers
-  await interaction.deferUpdate();
   state.picks.clear();
   const pool = Array.from({ length: GRID_SIZE }, (_, i) => i + 1);
   for (let i = pool.length - 1; i > 0; i--) {
@@ -396,9 +385,8 @@ export async function handleQuickPick(interaction: ButtonInteraction): Promise<v
   }
   pool.slice(0, PICK_COUNT).forEach((n) => state.picks.add(n));
 
-  // Quick Pick button is on message 2 (controls) — update controls without
-  // making the button interaction a reply to the panel.
-  await editChannelMessage(interaction, state.panelMessageId, {
+  // Quick Pick button is on message 2 (controls) — update controls
+  await interaction.update({
     components: [controlRow(state.picks, true)],
   });
 
@@ -406,11 +394,6 @@ export async function handleQuickPick(interaction: ButtonInteraction): Promise<v
   await editChannelMessage(interaction, state.embedMessageId, {
     embeds:     [selectionEmbed(state)],
     components: numberRows(state.picks),
-  });
-
-  const channel = interaction.channel as TextChannel;
-  await channel.send({
-    content: `✨ Quick Pick selected: **${[...state.picks].sort((a, b) => a - b).join(", ")}**`,
   });
 }
 
@@ -421,12 +404,10 @@ export async function handleClear(interaction: ButtonInteraction): Promise<void>
     return void interaction.reply({ content: "❌ No active Keno session for you.", ephemeral: true });
   }
 
-  await interaction.deferUpdate();
   state.picks.clear();
 
-  // Clear button is on message 2 (controls) — update controls without making
-  // the button interaction a reply to the panel.
-  await editChannelMessage(interaction, state.panelMessageId, {
+  // Clear button is on message 2 (controls) — update controls
+  await interaction.update({
     components: [controlRow(state.picks, false)],
   });
 
@@ -435,9 +416,6 @@ export async function handleClear(interaction: ButtonInteraction): Promise<void>
     embeds:     [selectionEmbed(state)],
     components: numberRows(state.picks),
   });
-
-  const channel = interaction.channel as TextChannel;
-  await channel.send({ content: "🧹 Keno picks cleared." });
 }
 
 // ─── Button: Draw ─────────────────────────────────────────────────────────────
