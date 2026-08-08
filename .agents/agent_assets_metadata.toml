@@ -413,3 +413,10 @@ uri = "file://wispbyte-blackjack-dealer-blackjack-flow-2026-08-08.zip"
 type = "unspecified"
 title = "WispByte update — Blackjack dealer blackjack flow"
 description = "Updated runtime package: dealer-only blackjack no longer ends the game automatically; the player gets the normal blackjack controls. Includes rebuilt dist/ and excludes secrets, databases, server config, admin files, and node_modules."
+
+[[outputs]]
+id = "5uFZlRt2evY29nmn0Fhgw"
+uri = "file://wispbyte-blackjack-natural-dealer-wins-2026-08-08.zip"
+type = "unspecified"
+title = "WispByte update — Natural dealer blackjack wins"
+description = "Dealer natural blackjack now beats any non-natural player 21, including 21 made with additional cards. Only two natural blackjacks push. Revealed dealer blackjack displays as Dealer's Blackjack. Package excludes secrets, databases, server config, admin files, and node_modules."

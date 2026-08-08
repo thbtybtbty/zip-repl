@@ -119,6 +119,9 @@ function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): Emb
   const dv   = handValue(shownDealerCards);
   const bet  = game.bet * (game.doubled ? 2 : 1);
   const more = shownDealerCards.length < game.dealerHand.length;
+  const dealerScore = !more && isBlackjack(shownDealerCards)
+    ? "Dealer's Blackjack"
+    : `${dv}${more ? " ..." : ""}`;
 
   return new EmbedBuilder()
     .setColor(COLORS.primary)
@@ -126,7 +129,7 @@ function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): Emb
     .setDescription(
       [
         `${DIAMOND_EMOJI} **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
-        `### Dealer  \`${dv}${more ? " ..." : ""}\``,
+        `### Dealer  \`${dealerScore}\``,
         handDisplay(shownDealerCards),
         `### Your hand  \`${pv}\``,
         handDisplay(game.playerHand),
@@ -144,7 +147,11 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
     ? handDisplay(game.dealerHand)
     : `\`${cardStr(game.dealerHand[0]!)}\`  \`?\``;
 
-  const dealerScore = showDealerFull ? `\`${dv}${dv > 21 ? " 💥" : ""}\`` : "`?`";
+  const dealerScore = showDealerFull
+    ? isBlackjack(game.dealerHand)
+      ? "`Dealer's Blackjack`"
+      : `\`${dv}${dv > 21 ? " 💥" : ""}\``
+    : "`?`";
 
   const bet = game.bet * (game.doubled ? 2 : 1);
 
@@ -233,6 +240,20 @@ function dealerPlay(game: BlackjackGame): void {
   while (handValue(game.dealerHand) < 17) {
     game.dealerHand.push(deal(game.deck));
   }
+}
+
+function determineOutcome(game: BlackjackGame): GameStatus {
+  const playerBJ = isBlackjack(game.playerHand);
+  const dealerBJ = isBlackjack(game.dealerHand);
+
+  // A natural blackjack beats any non-natural 21, including a 21 made
+  // with three or more player cards. Only two natural blackjacks push.
+  if (dealerBJ) return playerBJ ? "push" : "dealer_win";
+  if (isBust(game.dealerHand)) return "dealer_bust";
+
+  const pv = handValue(game.playerHand);
+  const dv = handValue(game.dealerHand);
+  return pv > dv ? "player_win" : pv === dv ? "push" : "dealer_win";
 }
 
 // ─── Resolve outcome ───────────────────────────────────────────────────────────
@@ -393,12 +414,7 @@ export async function handleHit(interaction: ButtonInteraction) {
   // If 21 exactly, auto-stand
   if (handValue(game.playerHand) === 21) {
     dealerPlay(game);
-    const dv = handValue(game.dealerHand);
-    const pv = handValue(game.playerHand);
-    const status: GameStatus = isBust(game.dealerHand)
-      ? "dealer_bust"
-      : pv > dv ? "player_win" : pv === dv ? "push" : "dealer_win";
-    return resolveGame(game, interaction, status);
+    return resolveGame(game, interaction, determineOutcome(game));
   }
 
   await interaction.editReply({
@@ -416,16 +432,7 @@ export async function handleStand(interaction: ButtonInteraction) {
 
   dealerPlay(game);
 
-  const pv = handValue(game.playerHand);
-  const dv = handValue(game.dealerHand);
-
-  const status: GameStatus = isBust(game.dealerHand)
-    ? "dealer_bust"
-    : pv > dv  ? "player_win"
-    : pv === dv ? "push"
-    : "dealer_win";
-
-  return resolveGame(game, interaction, status);
+  return resolveGame(game, interaction, determineOutcome(game));
 }
 
 // ─── Button: Double Down ──────────────────────────────────────────────────────
@@ -457,16 +464,7 @@ export async function handleDouble(interaction: ButtonInteraction) {
 
   dealerPlay(game);
 
-  const pv = handValue(game.playerHand);
-  const dv = handValue(game.dealerHand);
-
-  const status: GameStatus = isBust(game.dealerHand)
-    ? "dealer_bust"
-    : pv > dv  ? "player_win"
-    : pv === dv ? "push"
-    : "dealer_win";
-
-  return resolveGame(game, interaction, status);
+  return resolveGame(game, interaction, determineOutcome(game));
 }
 
 // ─── Button: Play Again ───────────────────────────────────────────────────────
