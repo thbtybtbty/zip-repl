@@ -69,6 +69,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     return interaction.editReply({ embeds: [errorEmbed("Invalid amount. Try `1m`, `2.5b`, `500k`.")] });
   }
 
+  if (cfg.minWithdraw && amount < cfg.minWithdraw) {
+    return interaction.editReply({
+      embeds: [errorEmbed(
+        `The minimum withdrawal is **${formatAmount(cfg.minWithdraw)} 💎 gems**.`,
+      )],
+    });
+  }
+
   const dbUser = await getOrCreateUser(interaction.user.id, interaction.user.username);
   if (dbUser.balance < amount) {
     return interaction.editReply({

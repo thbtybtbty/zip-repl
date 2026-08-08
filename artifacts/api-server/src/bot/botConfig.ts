@@ -12,6 +12,8 @@ export interface ServerConfig {
   rainPingRoleId?:   string;
   codePingRoleId?:   string;
   robloxUser:        string;
+  minDeposit?:       number; // minimum deposit amount in gems (default: none)
+  minWithdraw?:      number; // minimum withdrawal amount in gems (default: none)
   // ── Withdrawal lock settings (default true for all except addBalance) ──
   lockTips?:            boolean; // lock tips received (default: true)
   lockRain?:            boolean; // lock rain winnings (default: true)

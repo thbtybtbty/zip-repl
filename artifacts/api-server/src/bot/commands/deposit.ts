@@ -63,6 +63,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     return interaction.editReply({ embeds: [errorEmbed("Invalid amount. Try `1m`, `2.5b`, `500k`.")] });
   }
 
+  if (cfg.minDeposit && amount < cfg.minDeposit) {
+    return interaction.editReply({
+      embeds: [errorEmbed(
+        `The minimum deposit is **${formatAmount(cfg.minDeposit)} 💎 gems**.`,
+      )],
+    });
+  }
+
   const reqId = makeReqId();
   pendingDeposits.set(reqId, {
     userId: interaction.user.id,
@@ -77,9 +85,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       `You requested a **${formatAmount(amount)} PS99 Gems Deposit**.\n\n` +
       `**Step 1 —** Open the Mailbox in Pet Simulator 99\n` +
       `**Step 2 —** Send **${formatAmount(amount)} gems** to: \`${cfg.robloxUser}\`\n` +
-      `**Step 3 —** In the mail **message field**, write your personal code:\n\n` +
-      `> \`${interaction.user.id}\`\n\n` +
-      `⚠️ **You must include your code in the message or your deposit cannot be verified.**\n\n` +
       `Once sent, click **Sent** below and a mod will confirm it.`,
     )
     .setTimestamp();

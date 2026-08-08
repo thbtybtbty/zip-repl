@@ -399,3 +399,10 @@ uri = "file://wispbyte-setup-2026-08-08.tar.gz"
 type = "unspecified"
 title = "WispByte-ready Discord bot package"
 description = "Verified build from the Replit test bot. Includes index.js, npm metadata, start.sh, deployment notes, and the rebuilt artifacts/api-server/dist/ bundle. Excludes .env, tokens, databases, server config, admin files, and node_modules."
+
+[[outputs]]
+id = "PKBtDvJF1T6Z9vAr6Kl4d"
+uri = "file://wispbyte-min-deposit-withdraw-2026-08-08.tar.gz"
+type = "unspecified"
+title = "Updated WispByte bot package"
+description = "Includes optional /setup minimum_deposit and minimum_withdraw settings, enforces both thresholds, and removes the personal-code Step 3 from the /deposit panel. Verified with the Replit test bot. Excludes .env, tokens, databases, server config, admin files, and node_modules."

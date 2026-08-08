@@ -9,7 +9,7 @@ import {
   type ButtonInteraction,
   type MessageActionRowComponentBuilder,
 } from "discord.js";
-import { COLORS, errorEmbed } from "../utils.js";
+import { COLORS, errorEmbed, parseAmount } from "../utils.js";
 import { isAdmin, getServerConfig, saveServerConfig, type ServerConfig } from "../botConfig.js";
 
 // ─── Pending configs waiting for Re-setup confirmation ───────────────────────
@@ -19,6 +19,9 @@ const pendingSetups = new Map<string, ServerConfig>();
 function ch(id: string | undefined) { return id ? `<#${id}>` : "`Not set`"; }
 function ro(id: string | undefined) { return id ? `<@&${id}>` : "`Not set`"; }
 function lock(val: boolean)          { return val ? "✅ Locked" : "❌ Not locked"; }
+function minimumAmount(amount: number | undefined) {
+  return amount && amount > 0 ? `\`${amount.toLocaleString()} 💎\`` : "`No minimum`";
+}
 
 function configEmbed(cfg: ServerConfig, title: string, color: number): EmbedBuilder {
   return new EmbedBuilder()
@@ -34,6 +37,8 @@ function configEmbed(cfg: ServerConfig, title: string, color: number): EmbedBuil
       { name: "🔔 Rain Ping Role",     value: ro(cfg.rainPingRoleId),    inline: true },
       { name: "🔔 Code Ping Role",     value: ro(cfg.codePingRoleId),    inline: true },
       { name: "🎮 Roblox User",        value: `\`${cfg.robloxUser}\``,  inline: true },
+      { name: "📥 Minimum Deposit",    value: minimumAmount(cfg.minDeposit),  inline: true },
+      { name: "📤 Minimum Withdraw",   value: minimumAmount(cfg.minWithdraw), inline: true },
       {
         name: "🔒 Lock Settings",
         value: [
@@ -60,6 +65,8 @@ function cfgSummary(cfg: ServerConfig): string {
     `🔔 Rain Ping: ${ro(cfg.rainPingRoleId)}`,
     `🔔 Code Ping: ${ro(cfg.codePingRoleId)}`,
     `🎮 Roblox: \`${cfg.robloxUser}\``,
+    `📥 Min Deposit: ${minimumAmount(cfg.minDeposit)}`,
+    `📤 Min Withdraw: ${minimumAmount(cfg.minWithdraw)}`,
     `🔒 Locks: Tips ${lock(cfg.lockTips ?? true)} · Rain ${lock(cfg.lockRain ?? true)} · Codes ${lock(cfg.lockCodes ?? true)} · Starter ${lock(cfg.lockStarterBalance ?? true)} · AddBal ${lock(cfg.lockAddBalance ?? false)}`,
   ].join("\n");
 }
@@ -102,6 +109,14 @@ export const data = new SlashCommandBuilder()
   .addStringOption((opt) =>
     opt.setName("roblox_user").setDescription("Roblox username players send gems to when depositing")
       .setRequired(true),
+  )
+  .addStringOption((opt) =>
+    opt.setName("minimum_deposit").setDescription("Optional minimum deposit, e.g. 1m (use 0 to disable)")
+      .setRequired(false),
+  )
+  .addStringOption((opt) =>
+    opt.setName("minimum_withdraw").setDescription("Optional minimum withdrawal, e.g. 1m (use 0 to disable)")
+      .setRequired(false),
   )
   .addChannelOption((opt) =>
     opt.setName("codes_channel").setDescription("Channel where new promocodes are announced")
@@ -162,6 +177,24 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const rainPingRole  = interaction.options.getRole("rain_ping_role",      false);
   const codePingRole  = interaction.options.getRole("code_ping_role",      false);
   const robloxUser    = interaction.options.getString("roblox_user",       true);
+  const minDepositStr  = interaction.options.getString("minimum_deposit",  false);
+  const minWithdrawStr = interaction.options.getString("minimum_withdraw", false);
+
+  const parseMinimum = (value: string | null, existingValue: number | undefined): number | undefined => {
+    if (value === null) return existingValue;
+    if (value.trim() === "0") return undefined;
+    const parsed = parseAmount(value);
+    if (!parsed || parsed <= 0) return NaN;
+    return parsed;
+  };
+  const minDeposit = parseMinimum(minDepositStr, existing?.minDeposit);
+  const minWithdraw = parseMinimum(minWithdrawStr, existing?.minWithdraw);
+
+  if (Number.isNaN(minDeposit) || Number.isNaN(minWithdraw)) {
+    return interaction.editReply({
+      embeds: [errorEmbed("Invalid minimum amount. Use values like `1m`, `2.5b`, or `0` to disable.")],
+    });
+  }
 
   // Lock settings: if not provided, keep existing; if no existing, use defaults
   const lockTips           = interaction.options.getBoolean("lock_tips")            ?? existing?.lockTips           ?? true;
@@ -180,6 +213,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     rainPingRoleId:    rainPingRole?.id,
     codePingRoleId:    codePingRole?.id,
     robloxUser,
+    minDeposit,
+    minWithdraw,
     lockTips,
     lockRain,
     lockCodes,
