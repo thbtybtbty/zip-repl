@@ -406,3 +406,10 @@ uri = "file://wispbyte-min-deposit-withdraw-2026-08-08.tar.gz"
 type = "unspecified"
 title = "Updated WispByte bot package"
 description = "Includes optional /setup minimum_deposit and minimum_withdraw settings, enforces both thresholds, and removes the personal-code Step 3 from the /deposit panel. Verified with the Replit test bot. Excludes .env, tokens, databases, server config, admin files, and node_modules."
+
+[[outputs]]
+id = "Z9KPGBjLyk4iKXolCResj"
+uri = "file://wispbyte-blackjack-dealer-blackjack-flow-2026-08-08.zip"
+type = "unspecified"
+title = "WispByte update — Blackjack dealer blackjack flow"
+description = "Updated runtime package: dealer-only blackjack no longer ends the game automatically; the player gets the normal blackjack controls. Includes rebuilt dist/ and excludes secrets, databases, server config, admin files, and node_modules."

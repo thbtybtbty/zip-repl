@@ -345,7 +345,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const playerBJ = isBlackjack(game.playerHand);
   const dealerBJ = isBlackjack(game.dealerHand);
 
-  if (playerBJ || dealerBJ) {
+  if (playerBJ) {
     activeBlackjackGames.delete(interaction.user.id);
 
     let status: GameStatus;
@@ -515,7 +515,7 @@ export async function handlePlayAgain(interaction: ButtonInteraction, userId: st
   const playerBJ = isBlackjack(game.playerHand);
   const dealerBJ = isBlackjack(game.dealerHand);
 
-  if (playerBJ || dealerBJ) {
+  if (playerBJ) {
     let status: GameStatus;
     let payout: number;
 
