@@ -101,8 +101,8 @@ function buildEmbed(game: ChickenGame, status: "active" | "cashed" | "dead"): Em
     embed.setDescription([
       `💎 **Bet**  \`${formatAmount(game.bet)}\``,
       `${diffEmoji} **Difficulty**  \`${diffLabel}\``,
-      `💰 **If you cross**  \`${formatAmount(nextWin)}\``,
-      `💰 **Potential**  \`${formatAmount(maxWin)}\``,
+      `💰 **If you cash**  \`${formatAmount(currentWin)}\``,
+      `💰 **Last lane**  \`${formatAmount(maxWin)}\``,
     ].join("\n"));
   } else if (status === "cashed") {
     embed.setDescription([
@@ -126,7 +126,7 @@ function buildEmbed(game: ChickenGame, status: "active" | "cashed" | "dead"): Em
 
   embed.addFields({ name: laneLabel, value: buildTrack(game.lanesCrossed, status) });
 
-  if (status === "active" && game.lanesCrossed > 0) {
+  if (status === "active" && game.lanesCrossed < TOTAL_LANES) {
     embed.setFooter({ text: `Next lane pays ${formatMult(nextMult)} for ${formatAmount(nextWin)} gems.` });
   }
   if (status === "cashed") {

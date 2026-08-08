@@ -371,3 +371,10 @@ uri = "file://wispbyte-upgrader-x-multiplier-2026-08-07.zip"
 type = "unspecified"
 title = "WispByte upgrader x-multiplier update"
 description = "Updated WispByte ZIP for /upgrader. The multiplier now accepts both values like 2.5 and values with x like 2.5x, while keeping the same 1.5x–25x range and payout behavior."
+
+[[outputs]]
+id = "dJ9gVHFWAPdpnGG_56W3r"
+uri = "file://wispbyte-chickencrossing-panel-2026-08-07.zip"
+type = "unspecified"
+title = "WispByte Chicken Crossing panel update"
+description = "Updated Chicken Crossing ZIP. The panel now shows the current cash-out amount, labels the maximum payout as Last lane, and displays the Next lane pays footer starting from lane 1. Production data and secrets are excluded."
