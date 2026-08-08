@@ -392,3 +392,10 @@ uri = "file://wispbyte-wheel-no-all-low-2026-08-08.zip"
 type = "unspecified"
 title = "WispByte Wheel no-all-low update"
 description = "Updated Wheel ZIP. No five-item visible strip can consist only of 0x and 0.5x; original weighted counts and house edge remain unchanged. Production secrets, database, config, admin files, and node_modules are excluded."
+
+[[outputs]]
+id = "kVZtasF0V-UusYPXZ3T9U"
+uri = "file://wispbyte-keno-normal-messages-2026-08-08.zip"
+type = "unspecified"
+title = "WispByte Keno normal messages update"
+description = "Updated Keno ZIP. Quick Pick, Clear, and Draw now acknowledge button clicks without replying to the panel and send separate ordinary channel messages. Rebuilt and startup-verified; secrets, databases, config/admin files, and node_modules are excluded."
