@@ -135,7 +135,7 @@ function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): Emb
     .setTitle(`${CARDS_EMOJI} Blackjack`)
     .setDescription(
       [
-        `${DIAMOND_EMOJI} **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
+        `${DIAMOND_EMOJI} **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  (doubled)" : ""}`,
         dealerLine,
         handDisplay(shownDealerCards),
         `### Your hand  \`${pv}\``,
@@ -164,13 +164,24 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
         ? bet
         : 0;
   const multiplier = bet > 0 ? payout / bet : 0;
+  const dealerNaturalBeatPlayer21 =
+    status === "dealer_win" &&
+    isBlackjack(game.dealerHand) &&
+    pv === 21 &&
+    !isBlackjack(game.playerHand);
 
   const statusMeta: Record<GameStatus, { color: number; title: string; resultLine: string }> = {
     active:       { color: COLORS.primary, title: `${CARDS_EMOJI} Blackjack`,                    resultLine: "" },
     player_bust:  { color: COLORS.danger,  title: `${CARDS_EMOJI} Blackjack - YOU LOST`,         resultLine: `> You busted with ${pv}.` },
     dealer_bust:  { color: COLORS.success, title: `${CARDS_EMOJI} Blackjack - YOU WON`,          resultLine: `> The dealer busted with ${dv}.` },
     player_win:   { color: COLORS.success, title: `${CARDS_EMOJI} Blackjack - YOU WON`,          resultLine: `> You beat the dealer, ${pv} to ${dv}.` },
-    dealer_win:   { color: COLORS.danger,  title: `${CARDS_EMOJI} Blackjack - YOU LOST`,         resultLine: `> The dealer beat you, ${dv} to ${pv}.` },
+    dealer_win:   {
+      color: COLORS.danger,
+      title: `${CARDS_EMOJI} Blackjack - YOU LOST`,
+      resultLine: dealerNaturalBeatPlayer21
+        ? "> The dealer beat you, natural blackjack to 21."
+        : `> The dealer beat you, ${dv} to ${pv}.`,
+    },
     push:         { color: COLORS.warning, title: `${CARDS_EMOJI} Blackjack - PUSH`,              resultLine: `> Push — you and the dealer both had ${pv}.` },
     blackjack:    { color: COLORS.gold,    title: `${CARDS_EMOJI} Blackjack - BLACKJACK`,         resultLine: `> Blackjack! You beat the dealer, ${pv} to ${dv}.` },
   };
@@ -178,7 +189,7 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
   const meta = statusMeta[status];
 
   const lines = [
-    `${DIAMOND_EMOJI} **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
+    `${DIAMOND_EMOJI} **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  (doubled)" : ""}`,
     ...(status !== "active"
       ? [`${KNOWN_EMOJI} **Multiplier**  \`${multiplier.toFixed(2)}x (${formatAmount(payout)})\``]
       : []),

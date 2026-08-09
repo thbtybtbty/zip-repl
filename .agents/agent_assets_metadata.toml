@@ -427,3 +427,10 @@ uri = "file://wispbyte-blackjack-dealers-blackjack-display-fix-2026-08-09.zip"
 type = "unspecified"
 title = "WispByte update — Dealer's Blackjack display fix"
 description = "Fixes the reveal so a natural dealer blackjack consistently displays only \"Dealer's Blackjack\" instead of \"Dealer Dealer's Blackjack\" or \"Dealer 21\". Includes rebuilt dist/ and excludes secrets, databases, server config, admin files, and node_modules."
+
+[[outputs]]
+id = "K40c0SkAVEmWRbb3Jqxp-"
+uri = "file://wispbyte-blackjack-natural-result-and-doubled-font-2026-08-09.zip"
+type = "unspecified"
+title = "WispByte update — Blackjack result and doubled label"
+description = "A non-natural player 21 losing to a dealer natural blackjack now says: The dealer beat you, natural blackjack to 21. The (doubled) label is now normal font instead of italic. Includes rebuilt dist/ and excludes secrets, databases, server config, admin files, and node_modules."
