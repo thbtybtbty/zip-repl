@@ -420,3 +420,10 @@ uri = "file://wispbyte-blackjack-natural-dealer-wins-2026-08-08.zip"
 type = "unspecified"
 title = "WispByte update — Natural dealer blackjack wins"
 description = "Dealer natural blackjack now beats any non-natural player 21, including 21 made with additional cards. Only two natural blackjacks push. Revealed dealer blackjack displays as Dealer's Blackjack. Package excludes secrets, databases, server config, admin files, and node_modules."
+
+[[outputs]]
+id = "kzkN4xp3FOezwBrV9LlTE"
+uri = "file://wispbyte-blackjack-dealers-blackjack-display-fix-2026-08-09.zip"
+type = "unspecified"
+title = "WispByte update — Dealer's Blackjack display fix"
+description = "Fixes the reveal so a natural dealer blackjack consistently displays only \"Dealer's Blackjack\" instead of \"Dealer Dealer's Blackjack\" or \"Dealer 21\". Includes rebuilt dist/ and excludes secrets, databases, server config, admin files, and node_modules."

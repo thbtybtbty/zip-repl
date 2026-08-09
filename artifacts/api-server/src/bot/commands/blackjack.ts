@@ -113,15 +113,22 @@ function handDisplay(hand: Card[]): string {
   return hand.map((card) => `\`${cardStr(card)}\``).join("  ");
 }
 
+function dealerDisplayLine(hand: Card[], showFull: boolean): string {
+  if (showFull && isBlackjack(hand)) return "### Dealer's Blackjack";
+
+  const score = showFull ? handValue(hand) : "?";
+  const suffix = showFull && handValue(hand) > 21 ? " 💥" : "";
+  return `### Dealer  \`${score}${suffix}\``;
+}
+
 /** Embed shown during animated dealer reveal — partial dealer hand, no outcome yet. */
 function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): EmbedBuilder {
   const pv   = handValue(game.playerHand);
-  const dv   = handValue(shownDealerCards);
   const bet  = game.bet * (game.doubled ? 2 : 1);
   const more = shownDealerCards.length < game.dealerHand.length;
-  const dealerScore = !more && isBlackjack(shownDealerCards)
-    ? "Dealer's Blackjack"
-    : `${dv}${more ? " ..." : ""}`;
+  const dealerLine = !more && isBlackjack(shownDealerCards)
+    ? dealerDisplayLine(shownDealerCards, true)
+    : `### Dealer  \`${handValue(shownDealerCards)}${more ? " ..." : ""}\``;
 
   return new EmbedBuilder()
     .setColor(COLORS.primary)
@@ -129,7 +136,7 @@ function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): Emb
     .setDescription(
       [
         `${DIAMOND_EMOJI} **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  *(doubled)*" : ""}`,
-        `### Dealer  \`${dealerScore}\``,
+        dealerLine,
         handDisplay(shownDealerCards),
         `### Your hand  \`${pv}\``,
         handDisplay(game.playerHand),
@@ -146,12 +153,6 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
   const dealerCards = showDealerFull
     ? handDisplay(game.dealerHand)
     : `\`${cardStr(game.dealerHand[0]!)}\`  \`?\``;
-
-  const dealerScore = showDealerFull
-    ? isBlackjack(game.dealerHand)
-      ? "`Dealer's Blackjack`"
-      : `\`${dv}${dv > 21 ? " 💥" : ""}\``
-    : "`?`";
 
   const bet = game.bet * (game.doubled ? 2 : 1);
 
@@ -181,7 +182,7 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
     ...(status !== "active"
       ? [`${KNOWN_EMOJI} **Multiplier**  \`${multiplier.toFixed(2)}x (${formatAmount(payout)})\``]
       : []),
-    `### Dealer  ${showDealerFull ? `\`${dv}${dv > 21 ? " 💥" : ""}\`` : dealerScore}`,
+    dealerDisplayLine(game.dealerHand, showDealerFull),
     dealerCards,
     `### Your hand  \`${pv}${pv > 21 ? " 💥" : ""}\``,
     handDisplay(game.playerHand),
