@@ -38,6 +38,52 @@ const SIDE_DISPLAY: Record<string, string> = {
   tails: "🔵 Tails",
 };
 
+const FLIP_PROGRESS_BARS = [
+  "▰▱▱▱▱▱",
+  "▰▰▰▱▱▱",
+  "▰▰▰▰▰▱",
+  "▰▰▰▰▰▰",
+];
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+function coinflipAnimationEmbed(amount: number, choice: string, result: string, frame: number): EmbedBuilder {
+  const animatedResult = frame >= FLIP_PROGRESS_BARS.length - 1
+    ? result
+    : (frame % 2 === 0 ? "heads" : "tails");
+
+  return new EmbedBuilder()
+    .setColor(COLORS.primary)
+    .setTitle("🪙  Coin Flip")
+    .setDescription([
+      `🎯 **Your pick**  \`${SIDE_DISPLAY[choice]!}\``,
+      `🪙 **Result**     \`${SIDE_DISPLAY[animatedResult]!}\``,
+      `💎 **Bet**        \`${formatAmount(amount)}\``,
+      "",
+      "🕐 **Flipping the coin…**",
+      FLIP_PROGRESS_BARS[Math.min(frame, FLIP_PROGRESS_BARS.length - 1)]!,
+    ].join("\n"))
+    .setTimestamp();
+}
+
+async function animateCoinflip(
+  interaction: ChatInputCommandInteraction,
+  amount: number,
+  choice: string,
+  result: string,
+): Promise<void> {
+  await interaction.editReply({ embeds: [coinflipAnimationEmbed(amount, choice, result, 0)] }).catch(() => null);
+
+  for (let frame = 1; frame < FLIP_PROGRESS_BARS.length; frame++) {
+    await sleep(350);
+    await interaction
+      .editReply({ embeds: [coinflipAnimationEmbed(amount, choice, result, frame)] })
+      .catch(() => null);
+  }
+
+  await sleep(350);
+}
+
 export async function execute(interaction: ChatInputCommandInteraction) {
   const amountStr = interaction.options.getString("amount", true);
   const choice    = interaction.options.getString("choice", true);
@@ -66,6 +112,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const payout  = won ? amount : -amount;
   const newBal  = await addBalance(interaction.user.id, payout);
   await recordBet(interaction.user.id, amount, payout, "coinflip");
+
+  await animateCoinflip(interaction, amount, choice, result);
 
   const embed = new EmbedBuilder()
     .setColor(won ? COLORS.success : COLORS.danger)

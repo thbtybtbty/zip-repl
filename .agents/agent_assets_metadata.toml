@@ -434,3 +434,10 @@ uri = "file://wispbyte-blackjack-natural-result-and-doubled-font-2026-08-09.zip"
 type = "unspecified"
 title = "WispByte update — Blackjack result and doubled label"
 description = "A non-natural player 21 losing to a dealer natural blackjack now says: The dealer beat you, natural blackjack to 21. The (doubled) label is now normal font instead of italic. Includes rebuilt dist/ and excludes secrets, databases, server config, admin files, and node_modules."
+
+[[outputs]]
+id = "GRzH5nP4GZnrPAQW9-U6t"
+uri = "file://wispbyte-coinflip-flip-rps-animations-2026-08-09.zip"
+type = "unspecified"
+title = "WispByte update — Coinflip, Flip, and RPS animations"
+description = "Adds short Color Dice-style animations with game-specific visuals to /coinflip, /flip, and /rps. Outcomes are precomputed before animation and final result embeds remain unchanged. Includes rebuilt dist/ and excludes secrets, databases, server config, admin files, and node_modules."

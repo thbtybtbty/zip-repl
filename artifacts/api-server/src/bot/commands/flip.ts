@@ -87,6 +87,70 @@ function challengeRow(challengerId: string): ActionRowBuilder<MessageActionRowCo
 
 const SIDE_ICON: Record<"Heads" | "Tails", string> = { Heads: "🟡", Tails: "⚪" };
 
+const FLIP_PROGRESS_BARS = [
+  "▰▱▱▱▱▱",
+  "▰▰▰▱▱▱",
+  "▰▰▰▰▰▱",
+  "▰▰▰▰▰▰",
+];
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+function flipAnimationEmbed(
+  title: string,
+  playerOneName: string,
+  playerOneSide: "Heads" | "Tails",
+  playerTwoName: string,
+  playerTwoSide: "Heads" | "Tails",
+  bet: number,
+  coinResult: "Heads" | "Tails",
+  frame: number,
+): EmbedBuilder {
+  const animatedResult = frame >= FLIP_PROGRESS_BARS.length - 1
+    ? coinResult
+    : (frame % 2 === 0 ? "Heads" : "Tails");
+
+  return new EmbedBuilder()
+    .setColor(COLORS.primary)
+    .setTitle(title)
+    .setDescription([
+      `${SIDE_ICON[playerOneSide]} **${playerOneName}**  \`${playerOneSide}\`   vs   \`${playerTwoSide}\`  **${playerTwoName}** ${SIDE_ICON[playerTwoSide]}`,
+      "",
+      `🎲 **Coin landed**   \`${animatedResult}\``,
+      `💎 **Bet each**      \`${formatAmount(bet)}\``,
+      "",
+      "🕐 **Flipping the coin…**",
+      FLIP_PROGRESS_BARS[Math.min(frame, FLIP_PROGRESS_BARS.length - 1)]!,
+    ].join("\n"))
+    .setTimestamp();
+}
+
+async function animateFlip(
+  interaction: ButtonInteraction,
+  title: string,
+  playerOneName: string,
+  playerOneSide: "Heads" | "Tails",
+  playerTwoName: string,
+  playerTwoSide: "Heads" | "Tails",
+  bet: number,
+  coinResult: "Heads" | "Tails",
+): Promise<void> {
+  await interaction.editReply({
+    embeds: [flipAnimationEmbed(title, playerOneName, playerOneSide, playerTwoName, playerTwoSide, bet, coinResult, 0)],
+    components: [],
+  }).catch(() => null);
+
+  for (let frame = 1; frame < FLIP_PROGRESS_BARS.length; frame++) {
+    await sleep(350);
+    await interaction.editReply({
+      embeds: [flipAnimationEmbed(title, playerOneName, playerOneSide, playerTwoName, playerTwoSide, bet, coinResult, frame)],
+      components: [],
+    }).catch(() => null);
+  }
+
+  await sleep(350);
+}
+
 function pvpResultEmbed(
   winner: string, loser: string,
   winnerSide: "Heads" | "Tails", loserSide: "Heads" | "Tails",
@@ -244,6 +308,17 @@ export async function handleJoin(interaction: ButtonInteraction, challengerId: s
 
   pendingFlips.delete(challengerId);
 
+  await animateFlip(
+    interaction,
+    "🪙  Flip — Player vs Player",
+    challenge.challengerName,
+    challengerSide,
+    interaction.user.username,
+    joinerSide,
+    challenge.bet,
+    coinResult,
+  );
+
   await interaction.editReply({
     embeds:     [pvpResultEmbed(winnerName, loserName, winnerSide, loserSide, coinResult, challenge.bet, winnerGets)],
     components: [],
@@ -279,6 +354,17 @@ export async function handleCallBot(interaction: ButtonInteraction, challengerId
   pendingFlips.delete(challengerId);
 
   const profit = won ? payout - challenge.bet : -challenge.bet;
+
+  await animateFlip(
+    interaction,
+    "🪙  Flip vs Bot",
+    interaction.user.username,
+    playerSide,
+    "Bot",
+    botSide,
+    challenge.bet,
+    coinResult,
+  );
 
   const embed = new EmbedBuilder()
     .setColor(won ? COLORS.success : COLORS.danger)

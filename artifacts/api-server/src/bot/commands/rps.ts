@@ -41,6 +41,56 @@ function getResult(player: Choice, bot: Choice): "win" | "loss" | "tie" {
   return "loss";
 }
 
+const RPS_PROGRESS_BARS = [
+  "▰▱▱▱▱▱",
+  "▰▰▰▱▱▱",
+  "▰▰▰▰▰▱",
+  "▰▰▰▰▰▰",
+];
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+function rpsAnimationEmbed(amount: number, playerChoice: Choice, botChoice: Choice, frame: number): EmbedBuilder {
+  const animatedBotChoice = frame >= RPS_PROGRESS_BARS.length - 1
+    ? botChoice
+    : (["rock", "paper", "scissors"] as Choice[])[frame % 3]!;
+  const playerName = playerChoice.charAt(0).toUpperCase() + playerChoice.slice(1);
+  const botName = animatedBotChoice.charAt(0).toUpperCase() + animatedBotChoice.slice(1);
+
+  return new EmbedBuilder()
+    .setColor(COLORS.primary)
+    .setTitle("🪨✂️📄  Rock Paper Scissors")
+    .setDescription([
+      `${EMOJI[playerChoice]} **${playerName}**   vs   **${botName}** ${EMOJI[animatedBotChoice]}`,
+      "",
+      "🕐 **Choosing…**",
+      RPS_PROGRESS_BARS[Math.min(frame, RPS_PROGRESS_BARS.length - 1)]!,
+      "",
+      `💎 **Bet**  \`${formatAmount(amount)}\``,
+    ].join("\n"))
+    .setTimestamp();
+}
+
+async function animateRps(
+  interaction: ChatInputCommandInteraction,
+  amount: number,
+  playerChoice: Choice,
+  botChoice: Choice,
+): Promise<void> {
+  await interaction.editReply({
+    embeds: [rpsAnimationEmbed(amount, playerChoice, botChoice, 0)],
+  }).catch(() => null);
+
+  for (let frame = 1; frame < RPS_PROGRESS_BARS.length; frame++) {
+    await sleep(350);
+    await interaction.editReply({
+      embeds: [rpsAnimationEmbed(amount, playerChoice, botChoice, frame)],
+    }).catch(() => null);
+  }
+
+  await sleep(350);
+}
+
 export const data = new SlashCommandBuilder()
   .setName("rps")
   .setDescription("Play Rock Paper Scissors against the bot")
@@ -137,5 +187,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     .setDescription(lines.join("\n"))
     .setTimestamp();
 
+  await animateRps(interaction, amount, playerChoice, botChoice);
   await interaction.editReply({ embeds: [embed] });
 }
