@@ -89,7 +89,9 @@ const SIDE_ICON: Record<"Heads" | "Tails", string> = { Heads: "🟡", Tails: "�
 
 const FLIP_PROGRESS_BARS = [
   "▰▱▱▱▱▱",
+  "▰▰▱▱▱▱",
   "▰▰▰▱▱▱",
+  "▰▰▰▰▱▱",
   "▰▰▰▰▰▱",
   "▰▰▰▰▰▰",
 ];

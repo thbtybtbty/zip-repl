@@ -40,7 +40,9 @@ const SIDE_DISPLAY: Record<string, string> = {
 
 const FLIP_PROGRESS_BARS = [
   "▰▱▱▱▱▱",
+  "▰▰▱▱▱▱",
   "▰▰▰▱▱▱",
+  "▰▰▰▰▱▱",
   "▰▰▰▰▰▱",
   "▰▰▰▰▰▰",
 ];

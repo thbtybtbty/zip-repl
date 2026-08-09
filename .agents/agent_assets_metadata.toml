@@ -441,3 +441,10 @@ uri = "file://wispbyte-coinflip-flip-rps-animations-2026-08-09.zip"
 type = "unspecified"
 title = "WispByte update — Coinflip, Flip, and RPS animations"
 description = "Adds short Color Dice-style animations with game-specific visuals to /coinflip, /flip, and /rps. Outcomes are precomputed before animation and final result embeds remain unchanged. Includes rebuilt dist/ and excludes secrets, databases, server config, admin files, and node_modules."
+
+[[outputs]]
+id = "tB7CyWNsm6y2zas1hG6zm"
+uri = "file://wispbyte-one-square-per-animation-frame-2026-08-09.zip"
+type = "unspecified"
+title = "WispByte update — One square per animation frame"
+description = "Coinflip, Flip, and RPS animations now fill exactly one square per frame, matching the Color Dice animation style. Includes rebuilt dist/ and excludes secrets, databases, server config, admin files, and node_modules."

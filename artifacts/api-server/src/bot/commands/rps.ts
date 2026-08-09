@@ -43,7 +43,9 @@ function getResult(player: Choice, bot: Choice): "win" | "loss" | "tie" {
 
 const RPS_PROGRESS_BARS = [
   "▰▱▱▱▱▱",
+  "▰▰▱▱▱▱",
   "▰▰▰▱▱▱",
+  "▰▰▰▰▱▱",
   "▰▰▰▰▰▱",
   "▰▰▰▰▰▰",
 ];
