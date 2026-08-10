@@ -135,34 +135,32 @@ export function buildTowersEmbed(
   };
 
   const diffName: Record<Difficulty, string> = {
-    easy:   "🟢 Easy",
-    medium: "🟡 Medium",
-    hard:   "🔴 Hard",
+    easy:   "Easy",
+    medium: "Medium",
+    hard:   "Hard",
   };
 
   const titles: Record<string, string> = {
-    active: `🗼 Towers — Level ${game.level + 1} / ${game.maxLevels}`,
-    won:    `🗼 Towers — Cleared! 🏆`,
-    lost:   `🗼 Towers — Bomb Hit! 💥`,
-    cashed: `🗼 Towers — Cashed Out!`,
+    active: `🗼 Towers ${diffName[game.difficulty]} - Level ${game.level + 1} / ${game.maxLevels}`,
+    won:    `🗼 Towers ${diffName[game.difficulty]} - Cleared! 🏆`,
+    lost:   `🗼 Towers ${diffName[game.difficulty]} - Bomb Hit! 💥`,
+    cashed: `🗼 Towers ${diffName[game.difficulty]} - Cashed Out!`,
   };
 
   const payoutLine =
     status === "won" || status === "cashed" ? `💰 **Payout**      \`${formatAmount(currentWin)}\`` :
     status === "lost"                       ? `💰 **Payout**      \`0\`` :
-                                              `💰 **Potential**   \`${formatAmount(currentWin)}\``;
+                                              `💰 **Potential**   \`${formatAmount(currentWin)} (${formatMult(game.multiplier)})\``;
 
   const statsLines = [
     `💎 **Bet**         \`${formatAmount(game.bet)}\``,
-    `🎯 **Difficulty**  \`${diffName[game.difficulty]}\``,
-    `✨ **Multiplier**  \`${formatMult(game.multiplier)}\``,
     payoutLine,
     ...(status === "active"
-      ? [`⭐ **Next gem**   \`${formatAmount(nextWin)}\``]
+      ? [`⭐ **Next gem**   \`${formatAmount(nextWin)} (${formatMult(nextMult)})\``]
       : []),
   ].join("\n");
 
-  const desc = `${buildTowerVisual(game, status)}\n\n${statsLines}`;
+  const desc = `${statsLines}\n\n${buildTowerVisual(game, status)}`;
 
   return new EmbedBuilder()
     .setColor(colors[status] ?? COLORS.primary)

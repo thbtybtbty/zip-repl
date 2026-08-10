@@ -448,3 +448,10 @@ uri = "file://wispbyte-one-square-per-animation-frame-2026-08-09.zip"
 type = "unspecified"
 title = "WispByte update — One square per animation frame"
 description = "Coinflip, Flip, and RPS animations now fill exactly one square per frame, matching the Color Dice animation style. Includes rebuilt dist/ and excludes secrets, databases, server config, admin files, and node_modules."
+
+[[outputs]]
+id = "CE7plsAEBxuR9yZQLmbuq"
+uri = "file://wispbyte-towers-panel-update-2026-08-10.zip"
+type = "unspecified"
+title = "WispByte Towers panel update"
+description = "Updated Towers embed layout: difficulty is in the title, bet/potential/next gem appear above the grid, the standalone multiplier section is removed, and multipliers are shown in parentheses. Secrets, databases, production configuration, admin files, and node_modules are excluded."
