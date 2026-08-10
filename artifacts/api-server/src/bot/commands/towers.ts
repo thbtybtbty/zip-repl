@@ -191,7 +191,6 @@ export function buildTowersComponents(
   if (isMedium) {
     choiceRow.addComponents(
       new ButtonBuilder().setCustomId("towers_l").setLabel("⬅  Left").setStyle(ButtonStyle.Primary).setDisabled(disabled),
-      new ButtonBuilder().setCustomId("towers_m").setLabel("　·　").setStyle(ButtonStyle.Secondary).setDisabled(true),
       new ButtonBuilder().setCustomId("towers_r").setLabel("Right  ➡").setStyle(ButtonStyle.Primary).setDisabled(disabled),
     );
   } else {
@@ -216,16 +215,14 @@ export function buildTowersComponents(
 function buildEndComponents(
   game: TowersGame,
 ): ActionRowBuilder<MessageActionRowComponentBuilder>[] {
-  const base = buildTowersComponents(game, true);
-  base.push(
+  return [
     new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(`pa_towers_${game.userId}_${game.difficulty}_${game.bet}`)
         .setLabel("🔄  Play Again")
         .setStyle(ButtonStyle.Secondary),
     ),
-  );
-  return base;
+  ];
 }
 
 // ─── Command ──────────────────────────────────────────────────────────────────
@@ -394,7 +391,6 @@ export async function handlePlayAgain(
   await interaction.deferUpdate();
   await interaction.editReply({
     components: [
-      ...buildTowersComponents({ difficulty: diff } as TowersGame, true),
       new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId(`pa_towers_${userId}_${difficulty}_${bet}`)

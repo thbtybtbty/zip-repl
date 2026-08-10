@@ -26,3 +26,11 @@ channel = "stable-25_05"
 
 [userenv.shared]
 DISCORD_CLIENT_ID = "1530170782175465546"
+
+[[ports]]
+localPort = 8080
+externalPort = 80
+
+[[ports]]
+localPort = 8081
+externalPort = 8081
