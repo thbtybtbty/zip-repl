@@ -41,6 +41,7 @@ export interface TowersGame {
   maxLevels: number;
   multiplier: number;
   row: TileType[];
+  grid: TileType[][];
   history: LevelRecord[];
   messageId: string;
   channelId: string;
@@ -76,13 +77,14 @@ function generateRow(difficulty: Difficulty): TileType[] {
 // ─── Tower visual ─────────────────────────────────────────────────────────────
 function tileEmoji(type: TileType, picked: boolean, exploded = false): string {
   if (exploded && type === "bomb") return "💥";
-  if (type === "diamond") return picked ? "💎" : "🔹";
+  if (type === "diamond") return "💎";
   return "💣";
 }
 
 function buildTowerVisual(game: TowersGame, status: "active" | "won" | "lost" | "cashed"): string {
   const isMedium = game.difficulty === "medium";
   const colCount = isMedium ? 2 : 3;
+  const showFullGrid = status !== "active";
   const lines: string[] = [];
 
   for (let lvl = game.maxLevels; lvl >= 1; lvl--) {
@@ -92,13 +94,21 @@ function buildTowerVisual(game: TowersGame, status: "active" | "won" | "lost" | 
 
     let tileStr: string;
 
-    if (isFuture) {
-      tileStr = Array(colCount).fill("⬛").join("  ");
+    if (isFuture && !showFullGrid) {
+      tileStr = Array(colCount).fill("❓").join("  ");
     } else if (isCurrent && status !== "lost") {
-      tileStr = Array(colCount).fill("🟦").join("  ");
+      if (showFullGrid) {
+        tileStr = (game.grid[idx] ?? game.row).map((tile) => tileEmoji(tile, false)).join("  ");
+      } else {
+        tileStr = Array(colCount).fill("🟦").join("  ");
+      }
     } else {
       const record = game.history[idx];
-      if (!record) { tileStr = Array(colCount).fill("▫️").join("  "); }
+      if (!record) {
+        tileStr = showFullGrid
+          ? (game.grid[idx] ?? []).map((tile) => tileEmoji(tile, false)).join("  ")
+          : Array(colCount).fill("▫️").join("  ");
+      }
       else {
         const isLostLevel = status === "lost" && isCurrent;
         const cells = record.row.map((tile, c) => {
@@ -269,10 +279,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     maxLevels:  MAX_LEVELS,
     multiplier: 1.0,
     row:        generateRow(difficulty),
+    grid:       Array.from({ length: MAX_LEVELS }, () => generateRow(difficulty)),
     history:    [],
     messageId:  "",
     channelId:  interaction.channelId,
   };
+  game.row = game.grid[0]!;
 
   const msg = await interaction.editReply({
     embeds:     [buildTowersEmbed(game, "active")],
@@ -327,7 +339,7 @@ export async function handleChoice(interaction: ButtonInteraction, choice: Tower
     return;
   }
 
-  game.row = generateRow(game.difficulty);
+  game.row = game.grid[game.level]!;
   await interaction.editReply({
     embeds:     [buildTowersEmbed(game, "active")],
     components: buildTowersComponents(game, false),
@@ -412,10 +424,12 @@ export async function handlePlayAgain(
     maxLevels:  MAX_LEVELS,
     multiplier: 1.0,
     row:        generateRow(diff),
+    grid:       Array.from({ length: MAX_LEVELS }, () => generateRow(diff)),
     history:    [],
     messageId:  "",
     channelId:  interaction.channelId,
   };
+  game.row = game.grid[0]!;
 
   const msg: Message = await interaction.followUp({
     embeds:     [buildTowersEmbed(game, "active")],

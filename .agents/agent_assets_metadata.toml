@@ -455,3 +455,10 @@ uri = "file://wispbyte-towers-panel-update-2026-08-10.zip"
 type = "unspecified"
 title = "WispByte Towers panel update"
 description = "Updated Towers embed layout: difficulty is in the title, bet/potential/next gem appear above the grid, the standalone multiplier section is removed, and multipliers are shown in parentheses. Secrets, databases, production configuration, admin files, and node_modules are excluded."
+
+[[outputs]]
+id = "rT5EWhAN-4t9eMgxdsOXq"
+uri = "file://wispbyte-towers-grid-reveal-update-2026-08-10.zip"
+type = "unspecified"
+title = "WispByte Towers grid reveal update"
+description = "Updated Towers behavior: unrevealed diamonds use the gem emoji, hidden grid cells use question emojis, and cash-out or bomb-hit results reveal the complete stored grid. Secrets, databases, production configuration, admin files, and node_modules are excluded."
