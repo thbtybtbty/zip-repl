@@ -107,6 +107,7 @@ type GameStatus = "active" | "player_bust" | "dealer_bust" | "player_win" | "dea
 const CARDS_EMOJI = "🃏";
 const DIAMOND_EMOJI = "💎";
 const KNOWN_EMOJI = "✨";
+const TITLE_SPACER = "\u2800";
 
 function handDisplay(hand: Card[]): string {
   return hand.map((card) => `\`${cardStr(card)}\``).join("  ");
@@ -132,11 +133,16 @@ function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): Emb
   return new EmbedBuilder()
     .setColor(COLORS.primary)
     .setTitle(`${CARDS_EMOJI} Blackjack`)
-    .setDescription(`${DIAMOND_EMOJI} **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  (doubled)" : ""}`)
-    .addFields(
-      { name: dealerLine, value: handDisplay(shownDealerCards) || "\u200b" },
-      { name: `### Your hand  \`${pv}\``, value: handDisplay(game.playerHand) || "\u200b" },
-    );
+    .setDescription(
+      [
+        `${DIAMOND_EMOJI} **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  (doubled)" : ""}`,
+        dealerLine,
+        handDisplay(shownDealerCards),
+        `### Your hand  \`${pv}\``,
+        handDisplay(game.playerHand),
+      ].join("\n"),
+    )
+    .setTimestamp();
 }
 
 function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
@@ -182,25 +188,24 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
 
   const meta = statusMeta[status];
 
-  const descriptionLines = [
+  const lines = [
     `${DIAMOND_EMOJI} **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  (doubled)" : ""}`,
     ...(status !== "active"
       ? [`${KNOWN_EMOJI} **Multiplier**  \`${multiplier.toFixed(2)}x (${formatAmount(payout)})\``]
       : []),
+    dealerDisplayLine(game.dealerHand, showDealerFull),
+    dealerCards,
+    `### Your hand  \`${pv}${pv > 21 ? " 💥" : ""}\``,
+    handDisplay(game.playerHand),
+    "",
     ...(meta.resultLine ? [meta.resultLine] : []),
   ];
 
   return new EmbedBuilder()
     .setColor(meta.color)
     .setTitle(meta.title)
-    .setDescription(descriptionLines.join("\n"))
-    .addFields(
-      { name: dealerDisplayLine(game.dealerHand, showDealerFull), value: dealerCards || "\u200b" },
-      {
-        name: `### Your hand  \`${pv}${pv > 21 ? " 💥" : ""}\``,
-        value: handDisplay(game.playerHand) || "\u200b",
-      },
-    );
+    .setDescription(lines.join("\n"))
+    .setTimestamp();
 }
 
 function buildComponents(

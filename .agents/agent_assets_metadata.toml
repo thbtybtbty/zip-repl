@@ -469,10 +469,3 @@ uri = "file://wispbyte-towers-buttons-update-2026-08-10.zip"
 type = "unspecified"
 title = "WispByte Towers buttons update"
 description = "Updated Towers controls: lost and cashed-out games show only Play Again, and Medium difficulty removes the middle placeholder button so only Left and Right remain. Secrets, databases, production configuration, admin files, and node_modules are excluded."
-
-[[outputs]]
-id = "hHA_8LO__ojUEZU-JUlk-"
-uri = "file://wispbyte-blackjack-layout-update-2026-08-12.zip"
-type = "unspecified"
-title = "WispByte Blackjack layout update"
-description = "Updated Blackjack embed layout: Bet remains in the main description, Dealer and Your hand use aligned embed fields, and timestamps were removed. Embed and buttons remain in the same interaction payload. Secrets, databases, production configuration, admin files, and node_modules are excluded."
