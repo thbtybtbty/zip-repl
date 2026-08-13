@@ -117,7 +117,7 @@ function dealerDisplayLine(hand: Card[], showFull: boolean): string {
   if (showFull && isBlackjack(hand)) return "### Dealer's Blackjack";
 
   const score = showFull ? handValue(hand) : "?";
-  const suffix = showFull && handValue(hand) > 21 ? " 💥" : "";
+  const suffix = showFull && handValue(hand) > 21 ? " • Bust" : "";
   return `### Dealer  \`${score}${suffix}\``;
 }
 
@@ -195,7 +195,7 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
       : []),
     dealerDisplayLine(game.dealerHand, showDealerFull),
     dealerCards,
-    `### Your hand  \`${pv}${pv > 21 ? " 💥" : ""}\``,
+    `### Your hand  \`${pv}${pv > 21 ? " • Bust" : ""}\``,
     handDisplay(game.playerHand),
     "",
     ...(meta.resultLine ? [meta.resultLine] : []),
