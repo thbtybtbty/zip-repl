@@ -469,3 +469,10 @@ uri = "file://wispbyte-towers-buttons-update-2026-08-10.zip"
 type = "unspecified"
 title = "WispByte Towers buttons update"
 description = "Updated Towers controls: lost and cashed-out games show only Play Again, and Medium difficulty removes the middle placeholder button so only Left and Right remain. Secrets, databases, production configuration, admin files, and node_modules are excluded."
+
+[[outputs]]
+id = "ENPJHbwISeLCFrUEugdml"
+uri = "file://wispbyte-console-error-fix-2026-08-13.zip"
+type = "unspecified"
+title = "WispByte console error fix"
+description = "Fixed the syntax error in blackjack.ts by removing accidentally pasted explanatory Markdown while preserving the intended Blackjack formatting changes. The compiled runtime is rebuilt. Secrets, databases, production configuration, admin files, and node_modules are excluded."
