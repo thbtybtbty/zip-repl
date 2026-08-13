@@ -37,20 +37,24 @@ const SYMBOLS: CardSymbol[] = [
 const JACKPOT_MULT = 500.0;
 const SYMBOL_POOL: CardSymbol[] = SYMBOLS.flatMap((s) => Array(s.weight).fill(s));
 
-// Win-symbol pool — biased toward low multipliers so RTP stays at ~88%.
-// Jackpot (👑 500×) is intentionally excluded: it can still appear on the grid
-// but is never forced as the matching triple, keeping house edge stable.
+// Win-symbol pool — includes occasional large multipliers without changing RTP.
+// The larger prizes are rare but can now be selected as the matching triple,
+// including the 500× jackpot.
 //
-// E[mult | forced win] ≈ (35×0.5 + 30×1 + 25×2 + 8×10 + 1×50 + 1×100) / 100 = 3.275
-// WIN_PROB = 0.88 / 3.275 ≈ 0.269  →  ~12% house edge
-const WIN_PROB = 0.269;
+// E[mult | forced win] =
+// (40×0.5 + 30×1 + 15×2 + 8×10 + 4×50 + 2×100 + 1×500) / 100 = 10.6
+// WIN_PROB = 0.88 / 10.6 ≈ 0.083  →  ~12% house edge
+const TARGET_RTP = 0.88;
+const WIN_SYMBOL_EXPECTED_MULTIPLIER = 10.6;
+const WIN_PROB = TARGET_RTP / WIN_SYMBOL_EXPECTED_MULTIPLIER;
 const WIN_SYMBOL_POOL: CardSymbol[] = [
-  ...Array(35).fill(SYMBOLS[1]), // 💎  0.5×
+  ...Array(40).fill(SYMBOLS[1]), // 💎  0.5×
   ...Array(30).fill(SYMBOLS[2]), // 🌿  1×
-  ...Array(25).fill(SYMBOLS[3]), // 💰  2×
+  ...Array(15).fill(SYMBOLS[3]), // 💰  2×
   ...Array(8).fill(SYMBOLS[4]),  // 🎁  10×
-  ...Array(1).fill(SYMBOLS[5]),  // 🔥  50×
-  ...Array(1).fill(SYMBOLS[6]),  // ⭐  100×
+  ...Array(4).fill(SYMBOLS[5]),  // 🔥  50×
+  ...Array(2).fill(SYMBOLS[6]),  // ⭐  100×
+  ...Array(1).fill(SYMBOLS[7]),  // 👑  500×
 ];
 
 function pickWeighted(): CardSymbol {
@@ -279,7 +283,7 @@ function buildResultEmbed(game: ScratchGame): EmbedBuilder {
   const resultLine = win.winner
     ? `🎉 **3× ${win.symbol!.emoji}** matched! (${fmtMult(win.symbol!.mult)})\n` +
       `${net >= 0 ? "+" : ""}${formatAmount(net)} 💎`
-    : `No 3 matching symbols found.\nPayout: **0** 💎`;
+    : "No 3 matching symbols found.";
 
   return new EmbedBuilder()
     .setColor(win.winner ? COLORS.success : COLORS.danger)

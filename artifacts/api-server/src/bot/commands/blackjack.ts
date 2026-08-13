@@ -128,7 +128,7 @@ function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): Emb
   const more = shownDealerCards.length < game.dealerHand.length;
   const dealerLine = !more && isBlackjack(shownDealerCards)
     ? dealerDisplayLine(shownDealerCards, true)
-    : `### Dealer  \`${handValue(shownDealerCards)}${more ? " ..." : ""}\``;
+    : `### Dealer  \`${handValue(shownDealerCards)}\``;
 
   return new EmbedBuilder()
     .setColor(COLORS.primary)
@@ -190,7 +190,7 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
 
   const lines = [
     `${DIAMOND_EMOJI} **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  (doubled)" : ""}`,
-    ...(status !== "active"
+    ...(status === "player_win" || status === "dealer_bust" || status === "push" || status === "blackjack"
       ? [`${KNOWN_EMOJI} **Multiplier**  \`${multiplier.toFixed(2)}x (${formatAmount(payout)})\``]
       : []),
     dealerDisplayLine(game.dealerHand, showDealerFull),

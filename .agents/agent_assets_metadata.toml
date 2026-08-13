@@ -476,3 +476,10 @@ uri = "file://wispbyte-blackjack-bust-update-2026-08-13.zip"
 type = "unspecified"
 title = "WispByte Blackjack bust display update"
 description = "Updated Blackjack hand displays so a bust shows the hand value followed by `• Bust`, matching the attached reference, instead of the explosion emoji. Secrets, databases, production configuration, admin files, and node_modules are excluded."
+
+[[outputs]]
+id = "A3_9l4pPzWbKYQJn0gT20"
+uri = "file://wispbyte-blackjack-scratchcard-update-2026-08-13.zip"
+type = "unspecified"
+title = "WispByte Blackjack and Scratchcard update"
+description = "Blackjack losses no longer show a multiplier, dealer reveal no longer shows temporary ellipsis points, Scratchcard now includes rare large multipliers including an occasional 500x jackpot while targeting the same 88% RTP, and duplicate loss payout text was removed. Secrets, databases, production configuration, admin files, and node_modules are excluded."
