@@ -107,17 +107,18 @@ type GameStatus = "active" | "player_bust" | "dealer_bust" | "player_win" | "dea
 const CARDS_EMOJI = "🃏";
 const DIAMOND_EMOJI = "💎";
 const KNOWN_EMOJI = "✨";
+const TITLE_SPACER = "\u2800";
 
 function handDisplay(hand: Card[]): string {
   return hand.map((card) => `\`${cardStr(card)}\``).join("  ");
 }
 
 function dealerDisplayLine(hand: Card[], showFull: boolean): string {
-  if (showFull && isBlackjack(hand)) return "**Dealer's Blackjack**";
+  if (showFull && isBlackjack(hand)) return "### Dealer's Blackjack";
 
   const score = showFull ? handValue(hand) : "?";
   const suffix = showFull && handValue(hand) > 21 ? " 💥" : "";
-  return `**Dealer**  \`${score}${suffix}\``;
+  return `### Dealer  \`${score}${suffix}\``;
 }
 
 /** Embed shown during animated dealer reveal — partial dealer hand, no outcome yet. */
@@ -127,7 +128,7 @@ function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): Emb
   const more = shownDealerCards.length < game.dealerHand.length;
   const dealerLine = !more && isBlackjack(shownDealerCards)
     ? dealerDisplayLine(shownDealerCards, true)
-    : `**Dealer**  \`${handValue(shownDealerCards)}${more ? " ..." : ""}\``;
+    : `### Dealer  \`${handValue(shownDealerCards)}${more ? " ..." : ""}\``;
 
   return new EmbedBuilder()
     .setColor(COLORS.primary)
@@ -135,11 +136,9 @@ function buildEmbedAnimating(game: BlackjackGame, shownDealerCards: Card[]): Emb
     .setDescription(
       [
         `${DIAMOND_EMOJI} **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  (doubled)" : ""}`,
-        "---",
         dealerLine,
         handDisplay(shownDealerCards),
-        "",
-        `**Your hand**  \`${pv}\``,
+        `### Your hand  \`${pv}\``,
         handDisplay(game.playerHand),
       ].join("\n"),
     )
@@ -194,11 +193,9 @@ function buildEmbed(game: BlackjackGame, status: GameStatus): EmbedBuilder {
     ...(status !== "active"
       ? [`${KNOWN_EMOJI} **Multiplier**  \`${multiplier.toFixed(2)}x (${formatAmount(payout)})\``]
       : []),
-    "---",
     dealerDisplayLine(game.dealerHand, showDealerFull),
     dealerCards,
-    "",
-    `**Your hand**  \`${pv}${pv > 21 ? " 💥" : ""}\``,
+    `### Your hand  \`${pv}${pv > 21 ? " 💥" : ""}\``,
     handDisplay(game.playerHand),
     "",
     ...(meta.resultLine ? [meta.resultLine] : []),
@@ -249,6 +246,7 @@ function playAgainRow(userId: string, bet: number, disabled = false): ActionRowB
   );
 }
 
+
 // ─── Dealer play ───────────────────────────────────────────────────────────────
 function dealerPlay(game: BlackjackGame): void {
   while (handValue(game.dealerHand) < 17) {
@@ -260,6 +258,8 @@ function determineOutcome(game: BlackjackGame): GameStatus {
   const playerBJ = isBlackjack(game.playerHand);
   const dealerBJ = isBlackjack(game.dealerHand);
 
+  // A natural blackjack beats any non-natural 21, including a 21 made
+  // with three or more player cards. Only two natural blackjacks push.
   if (dealerBJ) return playerBJ ? "push" : "dealer_win";
   if (isBust(game.dealerHand)) return "dealer_bust";
 
@@ -275,6 +275,7 @@ async function resolveGame(
   status: GameStatus,
 ): Promise<void> {
   activeBlackjackGames.delete(game.userId);
+
 
   const multiplier = game.doubled ? 2 : 1;
   const totalStake = game.bet * multiplier;
@@ -299,14 +300,17 @@ async function resolveGame(
   await addBalance(game.userId, payout);
   await recordBet(game.userId, totalStake, netDelta, "blackjack");
 
+  // ─── Animated dealer reveal (skipped if player already busted) ───────────
   if (status !== "player_bust") {
     const all = game.dealerHand;
 
+    // Step 1: flip the hidden card — show both initial cards
     await interaction.editReply({
       embeds:     [buildEmbedAnimating(game, all.slice(0, 2))],
       components: buildComponents(game, true),
     });
 
+    // Step 2: reveal each extra card drawn by the dealer, one at a time
     for (let i = 2; i < all.length; i++) {
       await sleep(700);
       await interaction.editReply({
@@ -318,6 +322,7 @@ async function resolveGame(
     await sleep(700);
   }
 
+  // Final result with Play Again
   await interaction.editReply({
     embeds:     [buildEmbed(game, status)],
     components: [...buildComponents(game, true), playAgainRow(game.userId, game.bet)],
@@ -369,6 +374,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     messageId:  "",
   };
 
+  // Check immediate blackjack
   const playerBJ = isBlackjack(game.playerHand);
   const dealerBJ = isBlackjack(game.dealerHand);
 
@@ -380,13 +386,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     if (playerBJ && dealerBJ) {
       status = "push";
-      payout = amount;
+      payout = amount; // return stake
     } else if (playerBJ) {
       status = "blackjack";
       payout = amount + Math.floor(amount * 1.5);
     } else {
       status = "dealer_win";
-      payout = 0;
+      payout = 0; // stake already deducted above
     }
 
     await addBalance(interaction.user.id, payout);
@@ -417,6 +423,7 @@ export async function handleHit(interaction: ButtonInteraction) {
     return resolveGame(game, interaction, "player_bust");
   }
 
+  // If 21 exactly, auto-stand
   if (handValue(game.playerHand) === 21) {
     dealerPlay(game);
     return resolveGame(game, interaction, determineOutcome(game));
@@ -447,6 +454,7 @@ export async function handleDouble(interaction: ButtonInteraction) {
   const game = activeBlackjackGames.get(interaction.user.id);
   if (!game || game.playerHand.length !== 2) return;
 
+  // Check user has enough to double
   const bal = await (await getOrCreateUser(game.userId, "")).balance;
   if (bal < game.bet) {
     await interaction.followUp({
@@ -456,9 +464,10 @@ export async function handleDouble(interaction: ButtonInteraction) {
     return;
   }
 
-  await addBalance(game.userId, -game.bet);
+  await addBalance(game.userId, -game.bet); // deduct the extra bet
   game.doubled = true;
 
+  // Take exactly one card then auto-stand
   game.playerHand.push(deal(game.deck));
 
   if (isBust(game.playerHand)) {
@@ -478,6 +487,7 @@ export async function handlePlayAgain(interaction: ButtonInteraction, userId: st
 
   const bet = parseInt(betStr, 10);
 
+  // Disable the Play Again button on the finished game immediately
   await interaction.deferUpdate();
   await interaction.editReply({ components: [playAgainRow(userId, bet, true)] });
 
@@ -511,6 +521,7 @@ export async function handlePlayAgain(interaction: ButtonInteraction, userId: st
     messageId:  "",
   };
 
+  // Check immediate blackjack
   const playerBJ = isBlackjack(game.playerHand);
   const dealerBJ = isBlackjack(game.dealerHand);
 
@@ -520,13 +531,13 @@ export async function handlePlayAgain(interaction: ButtonInteraction, userId: st
 
     if (playerBJ && dealerBJ) {
       status = "push";
-      payout = bet;
+      payout = bet; // return stake
     } else if (playerBJ) {
       status = "blackjack";
       payout = bet + Math.floor(bet * 1.5);
     } else {
       status = "dealer_win";
-      payout = 0;
+      payout = 0; // stake already deducted above
     }
 
     await addBalance(userId, payout);
@@ -544,4 +555,3 @@ export async function handlePlayAgain(interaction: ButtonInteraction, userId: st
   game.messageId = msg.id;
   activeBlackjackGames.set(userId, game);
 }
-
