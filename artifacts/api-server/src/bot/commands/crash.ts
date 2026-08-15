@@ -1,6 +1,8 @@
 import {
   SlashCommandBuilder,
-  EmbedBuilder,
+  ContainerBuilder,
+  TextDisplayBuilder,
+  SeparatorBuilder,
   ButtonBuilder,
   ButtonStyle,
   ActionRowBuilder,
@@ -14,6 +16,7 @@ import {
   COLORS,
   parseAmount,
   formatAmount,
+  formatMult,
   getOrCreateUser,
   addBalance,
   recordBet,
@@ -21,284 +24,810 @@ import {
 } from "../utils.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
 interface CrashSession {
-  userId:      string;
-  bet:         number;
-  crashPoint:  number;
-  startTime:   number;
-  status:      "flying" | "cashed" | "crashed";
-  lastMult:    number;   // multiplier shown on the last tick — used for cashout
-  gameMessage: Message;  // the flying embed message to edit
-  timer:       NodeJS.Timeout;
+  userId: string;
+  bet: number;
+  crashPoint: number;
+  startTime: number;
+  status: "flying" | "cashed" | "crashed";
+  lastMult: number;
+  gameMessage: Message;
+  timer: NodeJS.Timeout;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const HOUSE_EDGE  = 0.075;  // 7.5% house edge: P(crash > M) = 0.925/M
-const GROWTH      = 0.06;   // continuous growth rate (e^0.06 per second)
-const UPDATE_MS   = 1_000;  // refresh interval in ms
 
-// ─── Active sessions (sessionId → game) ──────────────────────────────────────
+const HOUSE_EDGE = 0.075;
+const GROWTH = 0.06;
+const UPDATE_MS = 1_000;
+
+// ─── Active sessions ──────────────────────────────────────────────────────────
+
 export const activeSessions = new Map<string, CrashSession>();
 
 // ─── Crash point generation ───────────────────────────────────────────────────
+
 function generateCrashPoint(): number {
   const r = Math.random();
+
   if (r < HOUSE_EDGE) return 1.00;
-  const raw = (1 - HOUSE_EDGE) / (1 - r);
+
+  const raw =
+    (1 - HOUSE_EDGE) /
+    (1 - r);
+
   return Math.floor(raw * 100) / 100;
 }
 
-// ─── Multiplier at elapsed time ───────────────────────────────────────────────
+// ─── Multiplier ───────────────────────────────────────────────────────────────
+
 function multAt(elapsedMs: number): number {
-  return Math.exp(GROWTH * elapsedMs / 1_000);
-}
-
-// ─── Progress bar (log scale: 1× → 10× = 0 → 10 blocks) ─────────────────────
-function buildBar(mult: number): string {
-  const filled = Math.min(10, Math.round(Math.log10(mult) * 10));
-  return "▰".repeat(filled) + "▱".repeat(10 - filled);
-}
-
-// ─── Embed helpers ────────────────────────────────────────────────────────────
-function flyingEmbed(mult: number, bet: number): EmbedBuilder {
-  const potential = Math.floor(bet * mult);
-  const color =
-    mult >= 5  ? COLORS.gold :
-    mult >= 2  ? COLORS.success :
-                 COLORS.primary;
-
-  const icon =
-    mult >= 10 ? "🌕" :
-    mult >= 5  ? "🌟" :
-    mult >= 2  ? "🚀" :
-                 "🛫";
-
-  return new EmbedBuilder()
-    .setColor(color)
-    .setTitle(`${icon}  Crash — Flying!`)
-    .setDescription(
-      [
-        `## ${mult.toFixed(2)}×`,
-        buildBar(mult),
-        ``,
-        `💎 **Bet**          \`${formatAmount(bet)}\``,
-        `💵 **Cash Out Now** \`${formatAmount(potential)}\``,
-      ].join("\n"),
-    )
-    .setTimestamp();
-}
-
-function crashedEmbed(crashPoint: number, bet: number): EmbedBuilder {
-  return new EmbedBuilder()
-    .setColor(COLORS.danger)
-    .setTitle("💥  Crash — Crashed!")
-    .setDescription(
-      [
-        `## ${crashPoint.toFixed(2)}×`,
-        ``,
-        `💎 **Bet**   \`${formatAmount(bet)}\``,
-        `💸 **Lost**  \`-${formatAmount(bet)}\``,
-      ].join("\n"),
-    )
-    .setTimestamp();
-}
-
-function cashedEmbed(mult: number, bet: number, crashPoint: number): EmbedBuilder {
-  const winnings = Math.floor(bet * mult);
-  return new EmbedBuilder()
-    .setColor(winnings > bet ? COLORS.success : COLORS.warning)
-    .setTitle("✅  Crash — Cashed Out!")
-    .setDescription(
-      [
-        `## ${mult.toFixed(2)}×  *(crashed at ${crashPoint.toFixed(2)}×)*`,
-        ``,
-        `💎 **Bet**     \`${formatAmount(bet)}\``,
-        `💰 **Payout**  \`${formatAmount(winnings)}\``,
-      ].join("\n"),
-    )
-    .setTimestamp();
-}
-
-// ─── Button rows ──────────────────────────────────────────────────────────────
-function cashOutRow(sessionId: string): ActionRowBuilder<MessageActionRowComponentBuilder> {
-  return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`crash_cashout_${sessionId}`)
-      .setLabel("Cash Out")
-      .setEmoji("💵")
-      .setStyle(ButtonStyle.Success),
+  return Math.exp(
+    GROWTH *
+      elapsedMs /
+      1_000,
   );
 }
 
-function playAgainRow(userId: string, bet: number, disabled = false): ActionRowBuilder<MessageActionRowComponentBuilder> {
+// ─── Progress bar ─────────────────────────────────────────────────────────────
+
+function buildBar(mult: number): string {
+  const filled = Math.min(
+    10,
+    Math.round(
+      Math.log10(mult) * 10,
+    ),
+  );
+
+  return (
+    "▰".repeat(filled) +
+    "▱".repeat(10 - filled)
+  );
+}
+
+// ─── Components V2 helpers ────────────────────────────────────────────────────
+
+function text(
+  content: string,
+): TextDisplayBuilder {
+  return new TextDisplayBuilder()
+    .setContent(content);
+}
+
+function separator(): SeparatorBuilder {
+  return new SeparatorBuilder();
+}
+
+// ─── Flying panel ─────────────────────────────────────────────────────────────
+
+function flyingComponents(
+  mult: number,
+  bet: number,
+  sessionId: string,
+): ContainerBuilder[] {
+  const potential = Math.floor(
+    bet * mult,
+  );
+
+  const color =
+    mult >= 5
+      ? COLORS.gold
+      : mult >= 2
+        ? COLORS.success
+        : COLORS.primary;
+
+  const icon =
+    mult >= 10
+      ? "🌕"
+      : mult >= 5
+        ? "🌟"
+        : mult >= 2
+          ? "🚀"
+          : "🛫";
+
+  const panel =
+    new ContainerBuilder()
+      .setAccentColor(color)
+
+      .addTextDisplayComponents(
+        text(
+          `## ${icon}  Crash — Flying!`,
+        ),
+      )
+
+      .addTextDisplayComponents(
+        text(
+          [
+            `💎 **Bet**  \`${formatAmount(bet)}\``,
+            `💵 **Cash Out Now**  \`${formatAmount(potential)}\``,
+          ].join("\n"),
+        ),
+      )
+
+      .addSeparatorComponents(
+        separator(),
+      )
+
+      .addTextDisplayComponents(
+        text(
+          [
+            `## ${mult.toFixed(2)}×`,
+            "",
+            buildBar(mult),
+          ].join("\n"),
+        ),
+      )
+
+      .addActionRowComponents(
+        cashOutRow(sessionId),
+      );
+
+  return [panel];
+}
+
+// ─── Crashed panel ────────────────────────────────────────────────────────────
+
+function crashedComponents(
+  crashPoint: number,
+  bet: number,
+  userId: string,
+): ContainerBuilder[] {
+  const panel =
+    new ContainerBuilder()
+      .setAccentColor(
+        COLORS.danger,
+      )
+
+      .addTextDisplayComponents(
+        text(
+          "## 💥  Crash — Crashed!",
+        ),
+      )
+
+      .addTextDisplayComponents(
+        text(
+          `💎 **Bet**  \`${formatAmount(bet)}\``,
+        ),
+      )
+
+      .addSeparatorComponents(
+        separator(),
+      )
+
+      .addTextDisplayComponents(
+        text(
+          [
+            `## ${crashPoint.toFixed(2)}×`,
+            "",
+            `***(Crashed at ${crashPoint.toFixed(2)}×)***`,
+          ].join("\n"),
+        ),
+      )
+
+      .addActionRowComponents(
+        playAgainRow(
+          userId,
+          bet,
+        ),
+      );
+
+  return [panel];
+}
+
+// ─── Cashed out panel ─────────────────────────────────────────────────────────
+
+function cashedComponents(
+  mult: number,
+  bet: number,
+  crashPoint: number,
+  userId: string,
+): ContainerBuilder[] {
+  const winnings = Math.floor(
+    bet * mult,
+  );
+
+  const panel =
+    new ContainerBuilder()
+      .setAccentColor(
+        winnings > bet
+          ? COLORS.success
+          : COLORS.warning,
+      )
+
+      .addTextDisplayComponents(
+        text(
+          "## ✅  Crash — Cashed Out!",
+        ),
+      )
+
+      .addTextDisplayComponents(
+        text(
+          [
+            `💎 **Bet**  \`${formatAmount(bet)}\``,
+            `💰 **Payout**  \`${formatAmount(winnings)}\``,
+          ].join("\n"),
+        ),
+      )
+
+      .addSeparatorComponents(
+        separator(),
+      )
+
+      .addTextDisplayComponents(
+        text(
+          [
+            `## ${mult.toFixed(2)}×`,
+            "",
+            `***(Crashed at ${crashPoint.toFixed(2)}×)***`,
+            "",
+            `> Cashed out at **${mult.toFixed(2)}×** with **${formatAmount(winnings)}**`,
+          ].join("\n"),
+        ),
+      )
+
+      .addActionRowComponents(
+        playAgainRow(
+          userId,
+          bet,
+        ),
+      );
+
+  return [panel];
+}
+
+// ─── Buttons ──────────────────────────────────────────────────────────────────
+
+function cashOutRow(
+  sessionId: string,
+): ActionRowBuilder<MessageActionRowComponentBuilder> {
   return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
     new ButtonBuilder()
-      .setCustomId(`pa_crash_${userId}_${bet}`)
-      .setLabel("🔄  Play Again")
-      .setStyle(ButtonStyle.Secondary)
+      .setCustomId(
+        `crash_cashout_${sessionId}`,
+      )
+      .setLabel("Cash Out")
+      .setEmoji("💵")
+      .setStyle(
+        ButtonStyle.Success,
+      ),
+  );
+}
+
+function playAgainRow(
+  userId: string,
+  bet: number,
+  disabled = false,
+): ActionRowBuilder<MessageActionRowComponentBuilder> {
+  return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(
+        `pa_crash_${userId}_${bet}`,
+      )
+      .setLabel(
+        "🔄  Play Again",
+      )
+      .setStyle(
+        ButtonStyle.Secondary,
+      )
       .setDisabled(disabled),
   );
 }
 
-// ─── Core session launcher (shared by /crash and Play Again) ──────────────────
-function launchCrash(userId: string, bet: number, gameMessage: Message): string {
-  const sessionId  = `${userId}_${Date.now()}`;
-  const crashPoint = generateCrashPoint();
-  const startTime  = Date.now();
+// ─── Core session launcher ────────────────────────────────────────────────────
+
+function launchCrash(
+  userId: string,
+  bet: number,
+  gameMessage: Message,
+): string {
+  const sessionId =
+    `${userId}_${Date.now()}`;
+
+  const crashPoint =
+    generateCrashPoint();
+
+  const startTime =
+    Date.now();
 
   const session: CrashSession = {
     userId,
     bet,
     crashPoint,
     startTime,
-    status:      "flying",
-    lastMult:    1.00,
+    status: "flying",
+    lastMult: 1.00,
     gameMessage,
-    timer: setInterval(async () => {
-      if (session.status !== "flying") return;
 
-      const elapsed = Date.now() - session.startTime;
-      const mult    = multAt(elapsed);
+    timer: setInterval(
+      async () => {
+        if (
+          session.status !==
+          "flying"
+        ) {
+          return;
+        }
 
-      if (mult >= crashPoint) {
-        clearInterval(session.timer);
-        session.status = "crashed";
-        activeSessions.delete(sessionId);
-        await recordBet(userId, bet, -bet, "crash");
+        const elapsed =
+          Date.now() -
+          session.startTime;
+
+        const mult =
+          multAt(elapsed);
+
+        if (
+          mult >=
+          crashPoint
+        ) {
+          clearInterval(
+            session.timer,
+          );
+
+          session.status =
+            "crashed";
+
+          activeSessions.delete(
+            sessionId,
+          );
+
+          await recordBet(
+            userId,
+            bet,
+            -bet,
+            "crash",
+          );
+
+          try {
+            await session.gameMessage.edit(
+              {
+                flags:
+                  MessageFlags.IsComponentsV2,
+                components:
+                  crashedComponents(
+                    crashPoint,
+                    bet,
+                    userId,
+                  ),
+              },
+            );
+          } catch {
+            // Message expired.
+          }
+
+          return;
+        }
+
+        session.lastMult =
+          mult;
+
         try {
-          await session.gameMessage.edit({
-            embeds:     [crashedEmbed(crashPoint, bet)],
-            components: [playAgainRow(userId, bet)],
-          });
-        } catch { /* message expired */ }
-      } else {
-        session.lastMult = mult;
-        try {
-          await session.gameMessage.edit({
-            embeds:     [flyingEmbed(mult, bet)],
-            components: [cashOutRow(sessionId)],
-          });
-        } catch { /* rate-limit miss — skip this frame */ }
-      }
-    }, UPDATE_MS),
+          await session.gameMessage.edit(
+            {
+              flags:
+                MessageFlags.IsComponentsV2,
+              components:
+                flyingComponents(
+                  mult,
+                  bet,
+                  sessionId,
+                ),
+            },
+          );
+        } catch {
+          // Rate-limit miss — skip this frame.
+        }
+      },
+      UPDATE_MS,
+    ),
   };
 
-  activeSessions.set(sessionId, session);
+  activeSessions.set(
+    sessionId,
+    session,
+  );
+
   return sessionId;
 }
 
 // ─── Command ──────────────────────────────────────────────────────────────────
-export const data = new SlashCommandBuilder()
-  .setName("crash")
-  .setDescription("Play the Crash game")
-  .addStringOption((opt) =>
-    opt.setName("amount").setDescription("Bet amount (e.g. 1m, 2.5b)").setRequired(true),
-  );
 
-export async function execute(interaction: ChatInputCommandInteraction) {
-  const amountStr = interaction.options.getString("amount", true);
-  const amount    = parseAmount(amountStr);
+export const data =
+  new SlashCommandBuilder()
+    .setName("crash")
+    .setDescription(
+      "Play the Crash game",
+    )
+    .addStringOption(
+      (opt) =>
+        opt
+          .setName("amount")
+          .setDescription(
+            "Bet amount (e.g. 1m, 2.5b)",
+          )
+          .setRequired(true),
+    );
 
-  if (!amount || amount < 1_000_000)
+export async function execute(
+  interaction: ChatInputCommandInteraction,
+) {
+  const amountStr =
+    interaction.options.getString(
+      "amount",
+      true,
+    );
+
+  const amount =
+    parseAmount(amountStr);
+
+  if (
+    !amount ||
+    amount < 1_000_000
+  ) {
     return interaction.reply({
-      embeds: [errorEmbed("Minimum bet is **1m gems**. Try `1m`, `2.5b`, `500k`.")],
-      flags: MessageFlags.Ephemeral,
+      embeds: [
+        errorEmbed(
+          "Minimum bet is **1m gems**. Try `1m`, `2.5b`, `500k`.",
+        ),
+      ],
+      flags:
+        MessageFlags.Ephemeral,
     });
+  }
 
   await interaction.deferReply();
 
-  const user = await getOrCreateUser(interaction.user.id, interaction.user.username);
-  if (user.balance < amount)
+  const user =
+    await getOrCreateUser(
+      interaction.user.id,
+      interaction.user.username,
+    );
+
+  if (
+    user.balance <
+    amount
+  ) {
     return interaction.editReply({
-      embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} gems**.`)],
+      embeds: [
+        errorEmbed(
+          `Insufficient balance. You have **${formatAmount(user.balance)} gems**.`,
+        ),
+      ],
+    });
+  }
+
+  const alreadyActive =
+    [
+      ...activeSessions.values(),
+    ].find(
+      (s) =>
+        s.userId ===
+        interaction.user.id,
+    );
+
+  if (alreadyActive) {
+    return interaction.editReply({
+      embeds: [
+        errorEmbed(
+          "You already have a Crash game in progress!",
+        ),
+      ],
+    });
+  }
+
+  await addBalance(
+    interaction.user.id,
+    -amount,
+  );
+
+  const gameMessage =
+    await interaction.editReply({
+      flags:
+        MessageFlags.IsComponentsV2,
+      components:
+        flyingComponents(
+          1.00,
+          amount,
+          `${interaction.user.id}_${Date.now()}`,
+        ),
     });
 
-  const alreadyActive = [...activeSessions.values()].find((s) => s.userId === interaction.user.id);
-  if (alreadyActive)
-    return interaction.editReply({ embeds: [errorEmbed("You already have a Crash game in progress!")] });
+  const sessionId =
+    launchCrash(
+      interaction.user.id,
+      amount,
+      gameMessage,
+    );
 
-  await addBalance(interaction.user.id, -amount);
-
-  // Show initial state, then hand the message to launchCrash
-  const gameMessage = await interaction.editReply({
-    embeds:     [flyingEmbed(1.00, amount)],
-    components: [], // sessionId not yet known — launchCrash sets up the interval
+  await gameMessage.edit({
+    flags:
+      MessageFlags.IsComponentsV2,
+    components:
+      flyingComponents(
+        1.00,
+        amount,
+        sessionId,
+      ),
   });
-
-  const sessionId = launchCrash(interaction.user.id, amount, gameMessage);
-
-  // Immediately update with the correct cashout button now that we have the sessionId
-  await gameMessage.edit({ components: [cashOutRow(sessionId)] });
 }
 
-// ─── Button: Cash Out ──────────────────────────────────────────────────────────
-export async function handleCashout(interaction: ButtonInteraction, sessionId: string) {
-  const session = activeSessions.get(sessionId);
+// ─── Button: Cash Out ─────────────────────────────────────────────────────────
 
-  if (!session || session.status !== "flying") {
+export async function handleCashout(
+  interaction: ButtonInteraction,
+  sessionId: string,
+) {
+  const session =
+    activeSessions.get(
+      sessionId,
+    );
+
+  if (
+    !session ||
+    session.status !==
+      "flying"
+  ) {
     return interaction.reply({
-      content: "💥 Too late — the rocket already crashed!",
-      flags:   MessageFlags.Ephemeral,
+      content:
+        "💥 Too late — the rocket already crashed!",
+      flags:
+        MessageFlags.Ephemeral,
     });
   }
-  if (interaction.user.id !== session.userId) {
+
+  if (
+    interaction.user.id !==
+    session.userId
+  ) {
     return interaction.reply({
-      content: "❌ This isn't your game.",
-      flags:   MessageFlags.Ephemeral,
+      content:
+        "❌ This isn't your game.",
+      flags:
+        MessageFlags.Ephemeral,
     });
   }
 
-  clearInterval(session.timer);
-  session.status = "cashed";
-  activeSessions.delete(sessionId);
+  clearInterval(
+    session.timer,
+  );
 
-  const mult     = session.lastMult;
-  const winnings = Math.floor(session.bet * mult);
+  session.status =
+    "cashed";
 
-  await addBalance(session.userId, winnings);
-  await recordBet(session.userId, session.bet, winnings - session.bet, "crash", mult);
+  activeSessions.delete(
+    sessionId,
+  );
+
+  const mult =
+    session.lastMult;
+
+  const winnings =
+    Math.floor(
+      session.bet * mult,
+    );
+
+  await addBalance(
+    session.userId,
+    winnings,
+  );
+
+  await recordBet(
+    session.userId,
+    session.bet,
+    winnings -
+      session.bet,
+    "crash",
+    mult,
+  );
 
   await interaction.update({
-    embeds:     [cashedEmbed(mult, session.bet, session.crashPoint)],
-    components: [playAgainRow(session.userId, session.bet)],
+    flags:
+      MessageFlags.IsComponentsV2,
+    components:
+      cashedComponents(
+        mult,
+        session.bet,
+        session.crashPoint,
+        session.userId,
+      ),
   });
 }
 
 // ─── Button: Play Again ───────────────────────────────────────────────────────
-export async function handlePlayAgain(interaction: ButtonInteraction, userId: string, betStr: string): Promise<void> {
-  if (interaction.user.id !== userId) {
-    return void interaction.reply({ content: "❌ This isn't your game.", flags: MessageFlags.Ephemeral });
-  }
 
-  const bet = parseInt(betStr, 10);
-
-  // Disable the Play Again button on the old result message
-  await interaction.deferUpdate();
-  await interaction.editReply({ components: [playAgainRow(userId, bet, true)] });
-
-  const alreadyActive = [...activeSessions.values()].find((s) => s.userId === userId);
-  if (alreadyActive) {
-    await interaction.followUp({ embeds: [errorEmbed("You already have a Crash game in progress!")], ephemeral: true });
-    return;
-  }
-
-  const user = await getOrCreateUser(userId, interaction.user.username);
-  if (user.balance < bet) {
-    await interaction.followUp({
-      embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} gems**.`)],
-      ephemeral: true,
+export async function handlePlayAgain(
+  interaction: ButtonInteraction,
+  userId: string,
+  betStr: string,
+): Promise<void> {
+  if (
+    interaction.user.id !==
+    userId
+  ) {
+    return void interaction.reply({
+      content:
+        "❌ This isn't your game.",
+      flags:
+        MessageFlags.Ephemeral,
     });
-    return;
   }
 
-  await addBalance(userId, -bet);
+  const bet =
+    parseInt(
+      betStr,
+      10,
+    );
 
-  // Create the new game message via followUp
-  const gameMessage: Message = await interaction.followUp({
-    embeds:     [flyingEmbed(1.00, bet)],
-    components: [],
+  if (
+    !Number.isSafeInteger(
+      bet,
+    ) ||
+    bet < 1
+  ) {
+    return void interaction.reply({
+      content:
+        "❌ Invalid bet.",
+      flags:
+        MessageFlags.Ephemeral,
+    });
+  }
+
+  // ── Disable only the clicked Play Again button ─────────────────────────────
+  // Keep the entire previous Components V2 panel unchanged.
+
+  const components =
+    interaction.message.components.map(
+      (component: any) =>
+        component.toJSON
+          ? component.toJSON()
+          : component,
+    );
+
+  const disablePlayAgain = (
+    component: any,
+  ): any => {
+    if (
+      component?.type === 1 &&
+      Array.isArray(
+        component.components,
+      )
+    ) {
+      return {
+        ...component,
+        components:
+          component.components.map(
+            (button: any) => {
+              if (
+                button.type === 2 &&
+                typeof button.custom_id ===
+                  "string" &&
+                button.custom_id ===
+                  `pa_crash_${userId}_${bet}`
+              ) {
+                return {
+                  ...button,
+                  disabled: true,
+                };
+              }
+
+              return button;
+            },
+          ),
+      };
+    }
+
+    if (
+      Array.isArray(
+        component?.components,
+      )
+    ) {
+      return {
+        ...component,
+        components:
+          component.components.map(
+            disablePlayAgain,
+          ),
+      };
+    }
+
+    return component;
+  };
+
+  const updatedComponents =
+    components.map(
+      disablePlayAgain,
+    );
+
+  await interaction.update({
+    flags:
+      MessageFlags.IsComponentsV2,
+    components:
+      updatedComponents as any,
   });
 
-  const sessionId = launchCrash(userId, bet, gameMessage);
-  await gameMessage.edit({ components: [cashOutRow(sessionId)] });
+  // ── Check for another active game ──────────────────────────────────────────
+
+  const alreadyActive =
+    [
+      ...activeSessions.values(),
+    ].find(
+      (s) =>
+        s.userId ===
+        userId,
+    );
+
+  if (alreadyActive) {
+    await interaction.followUp({
+      embeds: [
+        errorEmbed(
+          "You already have a Crash game in progress!",
+        ),
+      ],
+      flags:
+        MessageFlags.Ephemeral,
+    });
+
+    return;
+  }
+
+  // ── Check balance ──────────────────────────────────────────────────────────
+
+  const user =
+    await getOrCreateUser(
+      userId,
+      interaction.user.username,
+    );
+
+  if (
+    user.balance <
+    bet
+  ) {
+    await interaction.followUp({
+      embeds: [
+        errorEmbed(
+          `Insufficient balance. You have **${formatAmount(user.balance)} gems**.`,
+        ),
+      ],
+      flags:
+        MessageFlags.Ephemeral,
+    });
+
+    return;
+  }
+
+  await addBalance(
+    userId,
+    -bet,
+  );
+
+  // ── Start new game in a separate message ───────────────────────────────────
+
+  const gameMessage: Message =
+    await interaction.followUp({
+      flags:
+        MessageFlags.IsComponentsV2,
+      components:
+        flyingComponents(
+          1.00,
+          bet,
+          `${userId}_${Date.now()}`,
+        ),
+    });
+
+  const sessionId =
+    launchCrash(
+      userId,
+      bet,
+      gameMessage,
+    );
+
+  await gameMessage.edit({
+    flags:
+      MessageFlags.IsComponentsV2,
+    components:
+      flyingComponents(
+        1.00,
+        bet,
+        sessionId,
+      ),
+  });
 }

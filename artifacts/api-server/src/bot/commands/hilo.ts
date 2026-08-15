@@ -1,6 +1,8 @@
 import {
   SlashCommandBuilder,
-  EmbedBuilder,
+  ContainerBuilder,
+  TextDisplayBuilder,
+  SeparatorBuilder,
   ButtonBuilder,
   ButtonStyle,
   ActionRowBuilder,
@@ -22,12 +24,28 @@ import {
 } from "../utils.js";
 
 // ─── Cards ─────────────────────────────────────────────────────────────────────
-const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"] as const;
+
+const RANKS = [
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "J",
+  "Q",
+  "K",
+  "A",
+] as const;
+
 const SUITS = [
-  { name: "Spades", symbol: "♠", offset: 0x00 },
-  { name: "Hearts", symbol: "♥", offset: 0x10 },
-  { name: "Diamonds", symbol: "♦", offset: 0x20 },
-  { name: "Clubs", symbol: "♣", offset: 0x30 },
+  { name: "Spades", symbol: "♠" },
+  { name: "Hearts", symbol: "♥" },
+  { name: "Diamonds", symbol: "♦" },
+  { name: "Clubs", symbol: "♣" },
 ] as const;
 
 export type HiloDirection = "higher" | "lower";
@@ -51,90 +69,153 @@ export interface HiloGame {
 
 export const activeHiloGames = new Map<string, HiloGame>();
 
+// ─── Card helpers ──────────────────────────────────────────────────────────────
+
 function unicodeCard(rankValue: number, suitOffset: number): string {
-  // Unicode playing cards use Ace, 2–10, Jack, Knight, Queen, King. Skip the
-  // Knight code point because the game displays Q rather than Knight.
   const unicodeRank =
-    rankValue === 14 ? 1 :
-    rankValue === 12 ? 13 :
-    rankValue;
-  return String.fromCodePoint(0x1f0a0 + suitOffset + unicodeRank);
+    rankValue === 14
+      ? 1
+      : rankValue === 12
+        ? 13
+        : rankValue;
+
+  return String.fromCodePoint(
+    0x1f0a0 + suitOffset + unicodeRank,
+  );
 }
 
 export function buildHiloDeck(): HiloCard[] {
-  return SUITS.flatMap((suit) =>
+  return SUITS.flatMap((suit, suitIndex) =>
     RANKS.map((rank, index) => ({
       rank,
       rankValue: index + 2,
       suit: suit.name,
       suitSymbol: suit.symbol,
-      glyph: unicodeCard(index + 2, suit.offset),
+      glyph: unicodeCard(
+        index + 2,
+        suitIndex * 0x10,
+      ),
     })),
   );
 }
 
 function shuffle<T>(items: T[]): T[] {
   for (let i = items.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [items[i], items[j]] = [items[j]!, items[i]!];
+    const j = Math.floor(
+      Math.random() * (i + 1),
+    );
+
+    [items[i], items[j]] = [
+      items[j]!,
+      items[i]!,
+    ];
   }
+
   return items;
 }
 
+// Only display rank + suit symbol.
+// No Unicode playing-card emoji.
 function cardLabel(card: HiloCard): string {
-  return `${card.glyph}  ${card.rank}${card.suitSymbol}`;
+  return `${card.rank}${card.suitSymbol}`;
 }
 
-function cardCount(game: HiloGame, direction: HiloDirection): number {
+// ─── Probability / multiplier ─────────────────────────────────────────────────
+
+function cardCount(
+  game: HiloGame,
+  direction: HiloDirection,
+): number {
   return game.deck.filter((card) =>
     direction === "higher"
-      ? card.rankValue > game.currentCard.rankValue
-      : card.rankValue < game.currentCard.rankValue,
+      ? card.rankValue >
+        game.currentCard.rankValue
+      : card.rankValue <
+        game.currentCard.rankValue,
   ).length;
 }
 
-function chance(game: HiloGame, direction: HiloDirection): number {
+function chance(
+  game: HiloGame,
+  direction: HiloDirection,
+): number {
   if (game.deck.length === 0) return 0;
-  return cardCount(game, direction) / game.deck.length;
+
+  return (
+    cardCount(game, direction) /
+    game.deck.length
+  );
 }
 
-/**
- * A correct guess pays the current multiplier × (90% / probability of the
- * chosen direction). Ties are not included in that probability and therefore
- * lose. This makes every guess a 90% expected-return step without hardcoded
- * random payouts.
- */
 export function nextMultiplier(
   game: HiloGame,
   direction: HiloDirection,
 ): number {
-  const probability = chance(game, direction);
+  const probability = chance(
+    game,
+    direction,
+  );
+
   if (probability <= 0) return 0;
-  return game.multiplier * (0.9 / probability);
+
+  return (
+    game.multiplier *
+    (0.9 / probability)
+  );
 }
 
 function formatChance(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
+// ─── Components V2 helpers ────────────────────────────────────────────────────
+
+function text(
+  content: string,
+): TextDisplayBuilder {
+  return new TextDisplayBuilder().setContent(
+    content,
+  );
+}
+
+function separator(): SeparatorBuilder {
+  return new SeparatorBuilder();
+}
+
+// ─── Game buttons ──────────────────────────────────────────────────────────────
+
 function gameButtons(
   game: HiloGame,
 ): ActionRowBuilder<MessageActionRowComponentBuilder> {
   const higher = new ButtonBuilder()
-    .setCustomId(`hilo_higher_${game.userId}`)
+    .setCustomId(
+      `hilo_higher_${game.userId}`,
+    )
     .setLabel("Higher")
     .setStyle(ButtonStyle.Primary)
-    .setDisabled(cardCount(game, "higher") === 0);
+    .setDisabled(
+      cardCount(game, "higher") === 0,
+    );
+
   const lower = new ButtonBuilder()
-    .setCustomId(`hilo_lower_${game.userId}`)
+    .setCustomId(
+      `hilo_lower_${game.userId}`,
+    )
     .setLabel("Lower")
     .setStyle(ButtonStyle.Primary)
-    .setDisabled(cardCount(game, "lower") === 0);
+    .setDisabled(
+      cardCount(game, "lower") === 0,
+    );
+
   const cashout = new ButtonBuilder()
-    .setCustomId(`hilo_cashout_${game.userId}`)
+    .setCustomId(
+      `hilo_cashout_${game.userId}`,
+    )
     .setLabel("Cashout")
     .setStyle(ButtonStyle.Success)
-    .setDisabled(game.correctGuesses === 0);
+    .setDisabled(
+      game.correctGuesses === 0,
+    );
 
   return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
     higher,
@@ -150,119 +231,268 @@ function playAgainRow(
 ): ActionRowBuilder<MessageActionRowComponentBuilder> {
   return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
     new ButtonBuilder()
-      .setCustomId(`pa_hilo_${userId}_${bet}`)
+      .setCustomId(
+        `pa_hilo_${userId}_${bet}`,
+      )
       .setLabel("🔄  Play Again")
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(disabled),
   );
 }
 
-function buildActiveEmbed(game: HiloGame): EmbedBuilder {
-  const higher = chance(game, "higher");
-  const lower = chance(game, "lower");
-  const potential = Math.floor(game.bet * game.multiplier);
+// ─── Active game panel ─────────────────────────────────────────────────────────
 
-  return new EmbedBuilder()
-    .setColor(COLORS.primary)
-    .setTitle("🃏  Hi-Lo")
-    .setDescription(
-      [
-        `💎 **Bet**  \`${formatAmount(game.bet)}\``,
-        `✨ **Multiplier**  \`${formatMult(game.multiplier)}\``,
-        `🔺 **Higher**  \`${formatChance(higher)}\``,
-        `🔻 **Lower**  \`${formatChance(lower)}\``,
-        `💰 **Potential Win**  \`${formatAmount(potential)}\``,
-        `━━━━━━━━━━━━━━━━━━━━`,
-        `## Current Card`,
-        `# ${cardLabel(game.currentCard)}`,
-        `Rank \`${game.currentCard.rank}\` · \`${game.deck.length}\` cards left in the deck`,
-      ].join("\n"),
+function buildActiveComponents(
+  game: HiloGame,
+): ContainerBuilder[] {
+  const higher = chance(
+    game,
+    "higher",
+  );
+
+  const lower = chance(
+    game,
+    "lower",
+  );
+
+  const potential = Math.floor(
+    game.bet *
+      game.multiplier,
+  );
+
+  const panel = new ContainerBuilder()
+    .setAccentColor(
+      COLORS.primary,
     )
-    .setFooter({ text: "Choose Higher or Lower. Ties lose." })
-    .setTimestamp();
+
+    .addTextDisplayComponents(
+      text(
+        [
+          "# 🃏 Hi-Lo",
+          "",
+          `💎 **Bet**  \`${formatAmount(game.bet)}\``,
+          `✨ **Multiplier**  \`${formatMult(game.multiplier)}\``,
+          `🔺 **Higher**  \`${formatChance(higher)}\``,
+          `🔻 **Lower**  \`${formatChance(lower)}\``,
+          `💰 **Potential Win**  \`${formatAmount(potential)}\``,
+        ].join("\n"),
+      ),
+    )
+
+    .addSeparatorComponents(
+      separator(),
+    )
+
+    .addTextDisplayComponents(
+      text(
+        [
+          "## Current Card",
+          "",
+          `# ${cardLabel(game.currentCard)}`,
+          `Rank \`${game.currentCard.rank}\` · \`${game.deck.length}\` cards left in the deck`,
+        ].join("\n"),
+      ),
+    )
+
+    .addSeparatorComponents(
+      separator(),
+    )
+
+    .addTextDisplayComponents(
+      text(
+        "Choose **Higher** or **Lower**. Ties lose.",
+      ),
+    )
+
+    .addActionRowComponents(
+      gameButtons(game),
+    );
+
+  return [panel];
 }
 
-function buildWinEmbed(
+// ─── Win panel ─────────────────────────────────────────────────────────────────
+
+function buildWinComponents(
   game: HiloGame,
   previousCard: HiloCard,
   newCard: HiloCard,
-): EmbedBuilder {
-  const payout = Math.floor(game.bet * game.multiplier);
-  return new EmbedBuilder()
-    .setColor(COLORS.success)
-    .setTitle("🃏  Hi-Lo — Correct Guess!")
-    .setDescription(
-      [
-        `✅ **${cardLabel(previousCard)}** → **${cardLabel(newCard)}**`,
-        "",
-        `✨ **Multiplier**  \`${formatMult(game.multiplier)}\``,
-        `💰 **Payout**  \`${formatAmount(payout)}\``,
-        `📈 **Profit**  \`+${formatAmount(payout - game.bet)}\``,
-        `🎯 **Correct Guesses**  \`${game.correctGuesses}\``,
-        "",
-        "The game continues — cash out or guess again.",
-      ].join("\n"),
+  deckComplete = false,
+  playAgainDisabled = false,
+): ContainerBuilder[] {
+  const payout = Math.floor(
+    game.bet *
+      game.multiplier,
+  );
+
+  const panel = new ContainerBuilder()
+    .setAccentColor(
+      COLORS.success,
     )
-    .setTimestamp();
+
+    .addTextDisplayComponents(
+      text(
+        [
+          `# 🃏 Hi-Lo — ${
+            deckComplete
+              ? "Deck Complete!"
+              : "Correct Guess!"
+          }`,
+          "",
+          `✅ **${cardLabel(previousCard)}** → **${cardLabel(newCard)}**`,
+          "",
+          `✨ **Multiplier**  \`${formatMult(game.multiplier)}\``,
+          `💰 **Payout**  \`${formatAmount(payout)}\``,
+          `📈 **Profit**  \`+${formatAmount(payout - game.bet)}\``,
+          `🎯 **Correct Guesses**  \`${game.correctGuesses}\``,
+        ].join("\n"),
+      ),
+    )
+
+    .addSeparatorComponents(
+      separator(),
+    )
+
+    .addTextDisplayComponents(
+      text(
+        deckComplete
+          ? "The deck is complete."
+          : "The game continues — cash out or guess again.",
+      ),
+    )
+
+    .addActionRowComponents(
+      playAgainRow(
+        game.userId,
+        game.bet,
+        playAgainDisabled,
+      ),
+    );
+
+  return [panel];
 }
 
-function buildLossEmbed(
+// ─── Loss panel ────────────────────────────────────────────────────────────────
+
+function buildLossComponents(
   game: HiloGame,
   previousCard: HiloCard,
   newCard: HiloCard,
   reason: "wrong" | "tie",
-): EmbedBuilder {
+  playAgainDisabled = false,
+): ContainerBuilder[] {
   const reasonText =
     reason === "tie"
-      ? "The cards tied. Ties count as a loss."
-      : "The next card went the wrong way.";
+      ? `The next card went the wrong way after ${game.correctGuesses} correct guesses.`
+      : `The next card went the wrong way after ${game.correctGuesses} correct guesses.`;
 
-  return new EmbedBuilder()
-    .setColor(COLORS.danger)
-    .setTitle("🃏  Hi-Lo — You Lose")
-    .setDescription(
-      [
-        `❌ **${cardLabel(previousCard)}** → **${cardLabel(newCard)}**`,
-        "",
-        reasonText,
-        `💀 **Loss**  \`-${formatAmount(game.bet)}\``,
-        `🎯 **Correct Guesses Achieved**  \`${game.correctGuesses}\``,
-      ].join("\n"),
+  const panel = new ContainerBuilder()
+    .setAccentColor(
+      COLORS.danger,
     )
-    .setTimestamp();
+
+    .addTextDisplayComponents(
+      text(
+        [
+          "# 🃏 Hi-Lo — You Lose",
+          "",
+          `💎 **Bet**  \`${formatAmount(game.bet)}\``,
+          `✨ **Multiplier**  \`${formatMult(game.multiplier)}\``,
+        ].join("\n"),
+      ),
+    )
+
+    .addSeparatorComponents(
+      separator(),
+    )
+
+    .addTextDisplayComponents(
+      text(
+        [
+          `**Your card:** ${cardLabel(previousCard)}`,
+          `**Revealed:** ${cardLabel(newCard)}`,
+          "",
+          `> ${reasonText}`,
+        ].join("\n"),
+      ),
+    )
+
+    .addActionRowComponents(
+      playAgainRow(
+        game.userId,
+        game.bet,
+        playAgainDisabled,
+      ),
+    );
+
+  return [panel];
 }
 
-function buildCashoutEmbed(game: HiloGame): EmbedBuilder {
-  const payout = Math.floor(game.bet * game.multiplier);
-  return new EmbedBuilder()
-    .setColor(COLORS.success)
-    .setTitle("🃏  Hi-Lo — Cashed Out!")
-    .setDescription(
-      [
-        `💰 **Payout**  \`${formatAmount(payout)}\``,
-        `✨ **Multiplier**  \`${formatMult(game.multiplier)}\``,
-        `📈 **Profit**  \`${payout >= game.bet ? "+" : ""}${formatAmount(payout - game.bet)}\``,
-        `🎯 **Correct Guesses**  \`${game.correctGuesses}\``,
-        "",
-        `Last card: **${cardLabel(game.currentCard)}**`,
-      ].join("\n"),
-    )
-    .setTimestamp();
-}
+// ─── Cashout panel ─────────────────────────────────────────────────────────────
 
-// ─── Command ──────────────────────────────────────────────────────────────────
-export const data = new SlashCommandBuilder()
-  .setName("hilo")
-  .setDescription("Play Hi-Lo with a standard 52-card deck")
-  .addStringOption((opt) =>
-    opt
-      .setName("amount")
-      .setDescription("Bet amount (e.g. 1m, 2.5b)")
-      .setRequired(true),
+function buildCashoutComponents(
+  game: HiloGame,
+  playAgainDisabled = false,
+): ContainerBuilder[] {
+  const payout = Math.floor(
+    game.bet *
+      game.multiplier,
   );
 
-function newGame(userId: string, bet: number): HiloGame {
-  const deck = shuffle(buildHiloDeck());
+  const multiplierText =
+    formatMult(game.multiplier);
+
+  const panel = new ContainerBuilder()
+    .setAccentColor(
+      COLORS.success,
+    )
+
+    .addTextDisplayComponents(
+      text(
+        [
+          "# 🃏 Hi-Lo",
+          "",
+          `💎 **Bet**  \`${formatAmount(game.bet)}\``,
+          `✨ **Multiplier**  \`${multiplierText}\`  \`(${formatAmount(payout)})\``,
+        ].join("\n"),
+      ),
+    )
+
+    .addSeparatorComponents(
+      separator(),
+    )
+
+    .addTextDisplayComponents(
+      text(
+        [
+          `**Final Card:**  ${cardLabel(game.currentCard)}`,
+          "",
+          `> Cashed out at **${multiplierText} (${formatAmount(payout)})** with **${game.correctGuesses} correct guesses**`,
+        ].join("\n"),
+      ),
+    )
+
+    .addActionRowComponents(
+      playAgainRow(
+        game.userId,
+        game.bet,
+        playAgainDisabled,
+      ),
+    );
+
+  return [panel];
+}
+
+// ─── New game ──────────────────────────────────────────────────────────────────
+
+function newGame(
+  userId: string,
+  bet: number,
+): HiloGame {
+  const deck = shuffle(
+    buildHiloDeck(),
+  );
+
   return {
     userId,
     bet,
@@ -273,25 +503,64 @@ function newGame(userId: string, bet: number): HiloGame {
   };
 }
 
+// ─── Start game ────────────────────────────────────────────────────────────────
+
 async function startGame(
   userId: string,
   bet: number,
   editFn: (data: {
-    embeds: EmbedBuilder[];
-    components?: ActionRowBuilder<MessageActionRowComponentBuilder>[];
+    flags?: MessageFlags;
+    components?: ContainerBuilder[];
   }) => Promise<unknown>,
 ): Promise<void> {
-  const game = newGame(userId, bet);
-  await addBalance(userId, -bet);
-  activeHiloGames.set(userId, game);
+  const game = newGame(
+    userId,
+    bet,
+  );
+
+  await addBalance(
+    userId,
+    -bet,
+  );
+
+  activeHiloGames.set(
+    userId,
+    game,
+  );
+
   await editFn({
-    embeds: [buildActiveEmbed(game)],
-    components: [gameButtons(game)],
+    flags: MessageFlags.IsComponentsV2,
+    components:
+      buildActiveComponents(game),
   });
 }
 
-export async function execute(interaction: ChatInputCommandInteraction) {
-  const amount = parseAmount(interaction.options.getString("amount", true));
+// ─── Command ──────────────────────────────────────────────────────────────────
+
+export const data = new SlashCommandBuilder()
+  .setName("hilo")
+  .setDescription(
+    "Play Hi-Lo with a standard 52-card deck",
+  )
+  .addStringOption((opt) =>
+    opt
+      .setName("amount")
+      .setDescription(
+        "Bet amount (e.g. 1m, 2.5b)",
+      )
+      .setRequired(true),
+  );
+
+export async function execute(
+  interaction: ChatInputCommandInteraction,
+) {
+  const amount = parseAmount(
+    interaction.options.getString(
+      "amount",
+      true,
+    ),
+  );
+
   if (!amount || amount < 1_000_000) {
     return interaction.reply({
       embeds: [
@@ -305,16 +574,26 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   await interaction.deferReply();
 
-  if (activeHiloGames.has(interaction.user.id)) {
+  if (
+    activeHiloGames.has(
+      interaction.user.id,
+    )
+  ) {
     return interaction.editReply({
-      embeds: [errorEmbed("You already have an active Hi-Lo game!")],
+      embeds: [
+        errorEmbed(
+          "You already have an active Hi-Lo game!",
+        ),
+      ],
     });
   }
 
-  const user = await getOrCreateUser(
-    interaction.user.id,
-    interaction.user.username,
-  );
+  const user =
+    await getOrCreateUser(
+      interaction.user.id,
+      interaction.user.username,
+    );
+
   if (user.balance < amount) {
     return interaction.editReply({
       embeds: [
@@ -325,128 +604,403 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     });
   }
 
-  await startGame(interaction.user.id, amount, (payload) =>
-    interaction.editReply(payload),
+  await startGame(
+    interaction.user.id,
+    amount,
+    (payload) =>
+      interaction.editReply(payload),
   );
 }
 
-// ─── Buttons: guesses and cashout ─────────────────────────────────────────────
+// ─── Guess buttons ─────────────────────────────────────────────────────────────
+
 export async function handleGuess(
   interaction: ButtonInteraction,
   direction: HiloDirection,
 ): Promise<void> {
   await interaction.deferUpdate();
-  const game = activeHiloGames.get(interaction.user.id);
+
+  const game =
+    activeHiloGames.get(
+      interaction.user.id,
+    );
+
   if (!game) {
     await interaction.followUp({
-      content: "❌ This Hi-Lo game has already ended.",
+      content:
+        "❌ This Hi-Lo game has already ended.",
       flags: MessageFlags.Ephemeral,
     });
+
     return;
   }
 
-  const previousCard = game.currentCard;
-  const nextCardIndex = Math.floor(Math.random() * game.deck.length);
-  const nextCard = game.deck.splice(nextCardIndex, 1)[0]!;
-  const isTie = nextCard.rankValue === previousCard.rankValue;
-  const isCorrect =
-    direction === "higher"
-      ? nextCard.rankValue > previousCard.rankValue
-      : nextCard.rankValue < previousCard.rankValue;
+  const previousCard =
+    game.currentCard;
 
-  if (!isCorrect || isTie) {
-    activeHiloGames.delete(game.userId);
-    await recordBet(game.userId, game.bet, -game.bet, "hilo");
-    await interaction.editReply({
-      embeds: [buildLossEmbed(game, previousCard, nextCard)],
-      components: [playAgainRow(game.userId, game.bet)],
-    });
-    return;
-  }
-
-  game.currentCard = nextCard;
-  game.correctGuesses += 1;
-  game.multiplier = nextMultiplier(
-    { ...game, currentCard: previousCard, deck: [nextCard, ...game.deck] },
-    direction,
+  const nextCardIndex = Math.floor(
+    Math.random() *
+      game.deck.length,
   );
 
-  if (game.deck.length === 0) {
-    activeHiloGames.delete(game.userId);
-    const payout = Math.floor(game.bet * game.multiplier);
-    await addBalance(game.userId, payout);
-    await recordBet(game.userId, game.bet, payout - game.bet, "hilo", game.multiplier);
+  const nextCard =
+    game.deck.splice(
+      nextCardIndex,
+      1,
+    )[0]!;
+
+  const isTie =
+    nextCard.rankValue ===
+    previousCard.rankValue;
+
+  const isCorrect =
+    direction === "higher"
+      ? nextCard.rankValue >
+        previousCard.rankValue
+      : nextCard.rankValue <
+        previousCard.rankValue;
+
+  // ── Loss ───────────────────────────────────────────────────────────────────
+
+  if (!isCorrect || isTie) {
+    activeHiloGames.delete(
+      game.userId,
+    );
+
+    await recordBet(
+      game.userId,
+      game.bet,
+      -game.bet,
+      "hilo",
+    );
+
     await interaction.editReply({
-      embeds: [
-        buildWinEmbed(game, previousCard, nextCard).setTitle(
-          "🃏  Hi-Lo — Deck Complete!",
+      components:
+        buildLossComponents(
+          game,
+          previousCard,
+          nextCard,
+          isTie
+            ? "tie"
+            : "wrong",
         ),
-      ],
-      components: [playAgainRow(game.userId, game.bet)],
     });
+
     return;
   }
 
+  // ── Correct guess ──────────────────────────────────────────────────────────
+
+  game.currentCard =
+    nextCard;
+
+  game.correctGuesses += 1;
+
+  game.multiplier =
+    nextMultiplier(
+      {
+        ...game,
+        currentCard:
+          previousCard,
+        deck: [
+          nextCard,
+          ...game.deck,
+        ],
+      },
+      direction,
+    );
+
+  // ── Deck complete ──────────────────────────────────────────────────────────
+
+  if (game.deck.length === 0) {
+    activeHiloGames.delete(
+      game.userId,
+    );
+
+    const payout = Math.floor(
+      game.bet *
+        game.multiplier,
+    );
+
+    await addBalance(
+      game.userId,
+      payout,
+    );
+
+    await recordBet(
+      game.userId,
+      game.bet,
+      payout - game.bet,
+      "hilo",
+      game.multiplier,
+    );
+
+    await interaction.editReply({
+      components:
+        buildWinComponents(
+          game,
+          previousCard,
+          nextCard,
+          true,
+        ),
+    });
+
+    return;
+  }
+
+  // ── Continue game ──────────────────────────────────────────────────────────
+
   await interaction.editReply({
-    embeds: [buildActiveEmbed(game)],
-    components: [gameButtons(game)],
+    components:
+      buildActiveComponents(game),
   });
 }
 
-export async function handleCashout(interaction: ButtonInteraction): Promise<void> {
+// ─── Cashout ───────────────────────────────────────────────────────────────────
+
+export async function handleCashout(
+  interaction: ButtonInteraction,
+): Promise<void> {
   await interaction.deferUpdate();
-  const game = activeHiloGames.get(interaction.user.id);
+
+  const game =
+    activeHiloGames.get(
+      interaction.user.id,
+    );
+
   if (!game) {
     await interaction.followUp({
-      content: "❌ This Hi-Lo game has already ended.",
+      content:
+        "❌ This Hi-Lo game has already ended.",
       flags: MessageFlags.Ephemeral,
     });
+
     return;
   }
 
-  activeHiloGames.delete(game.userId);
-  const payout = Math.floor(game.bet * game.multiplier);
-  await addBalance(game.userId, payout);
-  await recordBet(game.userId, game.bet, payout - game.bet, "hilo", game.multiplier);
+  activeHiloGames.delete(
+    game.userId,
+  );
+
+  const payout = Math.floor(
+    game.bet *
+      game.multiplier,
+  );
+
+  await addBalance(
+    game.userId,
+    payout,
+  );
+
+  await recordBet(
+    game.userId,
+    game.bet,
+    payout - game.bet,
+    "hilo",
+    game.multiplier,
+  );
+
   await interaction.editReply({
-    embeds: [buildCashoutEmbed(game)],
-    components: [playAgainRow(game.userId, game.bet)],
+    components:
+      buildCashoutComponents(game),
   });
 }
 
-// ─── Button: Play Again ───────────────────────────────────────────────────────
+// ─── Play Again ────────────────────────────────────────────────────────────────
+
 export async function handlePlayAgain(
   interaction: ButtonInteraction,
   userId: string,
   betStr: string,
 ): Promise<void> {
-  if (interaction.user.id !== userId) {
+  if (
+    interaction.user.id !==
+    userId
+  ) {
     return void interaction.reply({
-      content: "❌ This isn't your game.",
-      flags: MessageFlags.Ephemeral,
-    });
-  }
-  if (activeHiloGames.has(userId)) {
-    return void interaction.reply({
-      embeds: [errorEmbed("You already have an active Hi-Lo game!")],
+      content:
+        "❌ This isn't your game.",
       flags: MessageFlags.Ephemeral,
     });
   }
 
-  const bet = parseInt(betStr, 10);
-  if (!Number.isSafeInteger(bet) || bet < 1) {
+  if (
+    activeHiloGames.has(userId)
+  ) {
     return void interaction.reply({
-      content: "❌ Invalid bet.",
+      embeds: [
+        errorEmbed(
+          "You already have an active Hi-Lo game!",
+        ),
+      ],
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
+  const bet = parseInt(
+    betStr,
+    10,
+  );
+
+  if (
+    !Number.isSafeInteger(bet) ||
+    bet < 1
+  ) {
+    return void interaction.reply({
+      content:
+        "❌ Invalid bet.",
       flags: MessageFlags.Ephemeral,
     });
   }
 
   await interaction.deferUpdate();
-  await interaction.editReply({
-    components: [playAgainRow(userId, bet, true)],
-  });
 
-  const user = await getOrCreateUser(userId, interaction.user.username);
+  // IMPORTANT:
+  // Keep the old result panel exactly as it was.
+  // We only need to replace its Play Again button with
+  // the visually disabled version.
+  //
+  // We do NOT show "Game ended" and we do NOT replace
+  // the previous panel with a new panel.
+
+  const oldMessage =
+    interaction.message;
+
+  const oldComponents =
+    oldMessage.components;
+
+  // Rebuild the previous result panel with only the
+  // Play Again button disabled.
+  //
+  // Since the original message is one of our result panels,
+  // determine which result panel it is from its buttons/content.
+  const firstContainer =
+    oldComponents[0];
+
+  let previousPanel:
+    | ContainerBuilder
+    | null = null;
+
+  // ── Reconstruct the loss panel ─────────────────────────────────────────────
+
+  const gameState =
+    activeHiloGames.get(userId);
+
+  // The game is already ended here, so there should be
+  // no active game. We use the original message structure
+  // instead of changing its visible content.
+
+  if (firstContainer) {
+    const componentsData =
+      firstContainer.components;
+
+    // Clone the existing V2 container structure.
+    // The only component we replace is the final Play Again row.
+    const rebuilt =
+      new ContainerBuilder();
+
+    // Preserve the original accent color from the message
+    // by using the appropriate result color based on the
+    // existing panel type.
+    //
+    // The result panels are either success or danger.
+    const isDanger =
+      componentsData.some(
+        (component: any) =>
+          component?.type === 10 &&
+          typeof component.content === "string" &&
+          component.content.includes(
+            "You Lose",
+          ),
+      );
+
+    rebuilt.setAccentColor(
+      isDanger
+        ? COLORS.danger
+        : COLORS.success,
+    );
+
+    // Re-create the existing content exactly.
+    for (
+      let i = 0;
+      i < componentsData.length;
+      i++
+    ) {
+      const component: any =
+        componentsData[i];
+
+      // The final Action Row is the Play Again row.
+      if (
+        component?.type === 1 &&
+        i ===
+          componentsData.length - 1
+      ) {
+        rebuilt.addActionRowComponents(
+          new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+            new ButtonBuilder()
+              .setCustomId(
+                `pa_hilo_${userId}_${bet}`,
+              )
+              .setLabel(
+                "🔄  Play Again",
+              )
+              .setStyle(
+                ButtonStyle.Secondary,
+              )
+              .setDisabled(true),
+          ),
+        );
+
+        continue;
+      }
+
+      // Preserve text displays.
+      if (
+        component?.type === 10
+      ) {
+        rebuilt.addTextDisplayComponents(
+          text(
+            component.content ?? "",
+          ),
+        );
+
+        continue;
+      }
+
+      // Preserve separators.
+      if (
+        component?.type === 14
+      ) {
+        rebuilt.addSeparatorComponents(
+          separator(),
+        );
+
+        continue;
+      }
+    }
+
+    previousPanel = rebuilt;
+  }
+
+  // Update only the button on the previous result panel.
+  // No V2 flags are sent here because the interaction
+  // has already been acknowledged with deferUpdate().
+  if (previousPanel) {
+    await interaction.editReply({
+      components: [
+        previousPanel,
+      ],
+    });
+  }
+
+  // ── Check balance ──────────────────────────────────────────────────────────
+
+  const user =
+    await getOrCreateUser(
+      userId,
+      interaction.user.username,
+    );
+
   if (user.balance < bet) {
     await interaction.followUp({
       embeds: [
@@ -456,16 +1010,37 @@ export async function handlePlayAgain(
       ],
       flags: MessageFlags.Ephemeral,
     });
+
     return;
   }
 
-  const gameMessage: Message = await interaction.followUp({
-    embeds: [
-      new EmbedBuilder()
-        .setColor(COLORS.primary)
-        .setTitle("🃏  Hi-Lo")
-        .setDescription("Shuffling a new 52-card deck…"),
-    ],
-  });
-  await startGame(userId, bet, (payload) => gameMessage.edit(payload));
+  // ── Start the new game as a separate message ───────────────────────────────
+
+  const gameMessage: Message =
+    await interaction.followUp({
+      flags:
+        MessageFlags.IsComponentsV2,
+      components: [
+        new ContainerBuilder()
+          .setAccentColor(
+            COLORS.primary,
+          )
+          .addTextDisplayComponents(
+            text(
+              [
+                "# 🃏 Hi-Lo",
+                "",
+                "Shuffling a new 52-card deck…",
+              ].join("\n"),
+            ),
+          ),
+      ],
+    });
+
+  await startGame(
+    userId,
+    bet,
+    (payload) =>
+      gameMessage.edit(payload),
+  );
 }
