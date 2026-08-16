@@ -490,3 +490,10 @@ uri = "file://exports/wispbyte-chicken-crossing-vertical-lanes-2026-08-16.zip"
 type = "unspecified"
 title = "WispByte update — vertical Chicken Crossing lanes"
 description = "Updated WispByte-ready ZIP with the vertical five-lane Chicken Crossing image panel. Includes the rebuilt dist and runtime metadata; excludes secrets, production database, server configuration, admin files, and node_modules."
+
+[[outputs]]
+id = "hkSeQoAtDtHwrdtyAPClz"
+uri = "file://exports/wispbyte-chicken-crossing-polished-board-2026-08-16.zip"
+type = "unspecified"
+title = "WispByte update — polished Chicken Crossing board"
+description = "Polished vertical Chicken Crossing image panel with a continuous start sidewalk, connected lane route, improved checkpoint circles, SAFE/NEXT/RISK/CRASH states, and clearer multiplier badges. Includes rebuilt dist and runtime metadata only; excludes secrets and production data."

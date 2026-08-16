@@ -246,6 +246,14 @@ function drawTarget(
     future: { fill: "#263750", stroke: "#7283a0", text: "?" },
     hit: { fill: "#a93643", stroke: "#ff7771", text: "×" },
   }[state];
+  const caption =
+    state === "safe"
+      ? "SAFE"
+      : state === "current"
+        ? "NEXT"
+        : state === "hit"
+          ? "CRASH"
+          : "RISK";
 
   ctx.save();
   const glow = state === "current" || state === "hit" ? 20 : 8;
@@ -277,10 +285,14 @@ function drawTarget(
   ctx.fill();
   ctx.globalAlpha = 1;
 
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "900 36px Arial";
+  ctx.fillStyle = colors.stroke;
+  ctx.font = "900 13px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+  ctx.fillText(caption, x, y - 73);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "900 36px Arial";
   ctx.fillText(colors.text, x, y - 2);
 
   const badgeWidth = 116;
@@ -302,6 +314,32 @@ function drawTarget(
   ctx.fillStyle = state === "future" ? "#a5b4c8" : "#ffe08a";
   ctx.font = "900 20px Arial";
   ctx.fillText(multiplier, x, badgeY + badgeHeight / 2 + 1);
+  ctx.restore();
+}
+
+function drawRouteArrow(
+  ctx: CanvasRenderingContext2D,
+  fromX: number,
+  toX: number,
+  y: number,
+  active: boolean,
+): void {
+  ctx.save();
+  ctx.strokeStyle = active ? "#ffd166" : "#56708f";
+  ctx.fillStyle = active ? "#ffd166" : "#56708f";
+  ctx.globalAlpha = active ? 0.95 : 0.55;
+  ctx.lineWidth = active ? 4 : 3;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(fromX, y);
+  ctx.lineTo(toX - 11, y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(toX - 18, y - 8);
+  ctx.lineTo(toX - 6, y);
+  ctx.lineTo(toX - 18, y + 8);
+  ctx.closePath();
+  ctx.fill();
   ctx.restore();
 }
 
@@ -360,6 +398,9 @@ function chickenCrossingImage(
   ctx.textBaseline = "top";
   ctx.font = "900 32px Arial";
   ctx.fillText("CHICKEN CROSSING", 84, 70);
+  ctx.fillStyle = "#91abc9";
+  ctx.font = "700 14px Arial";
+  ctx.fillText("CROSS LEFT  →  RIGHT", 86, 108);
 
   const windowEnd = Math.min(TOTAL_LANES, windowStart + 5);
   ctx.fillStyle = "#90a8c8";
@@ -394,6 +435,19 @@ function chickenCrossingImage(
     SIDEWALK_LEFT + SIDEWALK_WIDTH / 2,
     LANE_TOP + 28,
   );
+  ctx.fillStyle = "rgba(255, 246, 214, 0.5)";
+  for (
+    let stripeY = LANE_TOP + 78;
+    stripeY < LANE_BOTTOM - 20;
+    stripeY += 54
+  ) {
+    ctx.fillRect(
+      SIDEWALK_LEFT + 17,
+      stripeY,
+      SIDEWALK_WIDTH - 34,
+      9,
+    );
+  }
   ctx.save();
   ctx.translate(
     SIDEWALK_LEFT + SIDEWALK_WIDTH / 2,
@@ -486,13 +540,36 @@ function chickenCrossingImage(
       const chickenX =
         game.lanesCrossed === 0
           ? SIDEWALK_LEFT + SIDEWALK_WIDTH / 2
-          : laneX + 33;
-      drawChicken(ctx, chickenX, TARGET_Y - 7, 0.62);
+          : laneX - 7;
+      drawChicken(ctx, chickenX, TARGET_Y - 7, 0.48);
     }
   }
 
+  // Connect the five vertical lanes into one readable left-to-right route.
+  for (let column = 0; column < 4; column++) {
+    const fromX =
+      LANE_LEFT +
+      column * (LANE_WIDTH + LANE_GAP) +
+      LANE_WIDTH / 2 +
+      56;
+    const toX =
+      LANE_LEFT +
+      (column + 1) * (LANE_WIDTH + LANE_GAP) +
+      LANE_WIDTH / 2 -
+      56;
+    const fromLane = windowStart + column + 1;
+    drawRouteArrow(
+      ctx,
+      fromX,
+      toX,
+      TARGET_Y,
+      fromLane === game.lanesCrossed ||
+        fromLane === game.lanesCrossed + 1,
+    );
+  }
+
   ctx.fillStyle = "#8da4c4";
-  ctx.font = "600 18px Arial";
+  ctx.font = "700 16px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
   ctx.fillText(
@@ -502,7 +579,7 @@ function chickenCrossingImage(
         ? "Safe crossing — payout locked in."
         : "Choose Forward to cross the highlighted lane.",
     IMAGE_WIDTH / 2,
-    IMAGE_HEIGHT - 27,
+    IMAGE_HEIGHT - 26,
   );
 
   return canvas.toBuffer("image/png");
