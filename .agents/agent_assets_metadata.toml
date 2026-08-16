@@ -483,3 +483,10 @@ uri = "file://wispbyte-blackjack-scratchcard-update-2026-08-13.zip"
 type = "unspecified"
 title = "WispByte Blackjack and Scratchcard update"
 description = "Blackjack losses no longer show a multiplier, dealer reveal no longer shows temporary ellipsis points, Scratchcard now includes rare large multipliers including an occasional 500x jackpot while targeting the same 88% RTP, and duplicate loss payout text was removed. Secrets, databases, production configuration, admin files, and node_modules are excluded."
+
+[[outputs]]
+id = "5VvoP4YD-kfdWAqX48XyZ"
+uri = "file://exports/wispbyte-chicken-crossing-vertical-lanes-2026-08-16.zip"
+type = "unspecified"
+title = "WispByte update — vertical Chicken Crossing lanes"
+description = "Updated WispByte-ready ZIP with the vertical five-lane Chicken Crossing image panel. Includes the rebuilt dist and runtime metadata; excludes secrets, production database, server configuration, admin files, and node_modules."
