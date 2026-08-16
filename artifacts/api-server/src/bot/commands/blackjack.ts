@@ -1,3 +1,4 @@
+
 import {
   SlashCommandBuilder,
   ButtonBuilder,
@@ -6,11 +7,18 @@ import {
   ContainerBuilder,
   TextDisplayBuilder,
   SeparatorBuilder,
+  MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
+  AttachmentBuilder,
   MessageFlags,
   type ChatInputCommandInteraction,
   type ButtonInteraction,
   type MessageActionRowComponentBuilder,
 } from "discord.js";
+import {
+  createCanvas,
+  type CanvasRenderingContext2D,
+} from "@napi-rs/canvas";
 import {
   COLORS,
   parseAmount,
@@ -30,6 +38,7 @@ interface Card {
 
 export interface BlackjackGame {
   userId: string;
+  displayName: string;
   bet: number;
   deck: Card[];
   playerHand: Card[];
@@ -52,12 +61,11 @@ interface FinishedBlackjackGame {
   status: GameStatus;
 }
 
-export const activeBlackjackGames = new Map<string, BlackjackGame>();
+export const activeBlackjackGames =
+  new Map<string, BlackjackGame>();
 
-const finishedBlackjackGames = new Map<
-  string,
-  FinishedBlackjackGame
->();
+const finishedBlackjackGames =
+  new Map<string, FinishedBlackjackGame>();
 
 // ─── Deck helpers ──────────────────────────────────────────────────────────────
 
@@ -98,7 +106,9 @@ function shuffle(deck: Card[]): Card[] {
   const d = [...deck];
 
   for (let i = d.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(
+      Math.random() * (i + 1),
+    );
 
     [d[i], d[j]] = [d[j]!, d[i]!];
   }
@@ -153,65 +163,863 @@ function isBust(hand: Card[]): boolean {
 }
 
 const sleep = (ms: number) =>
-  new Promise<void>((resolve) => setTimeout(resolve, ms));
+  new Promise<void>((resolve) =>
+    setTimeout(resolve, ms),
+  );
 
-// ─── Card display ──────────────────────────────────────────────────────────────
+// ─── Blackjack image renderer ─────────────────────────────────────────────────
 
-function cardStr(card: Card): string {
-  return `${card.rank}${card.suit}`;
+const IMAGE_WIDTH = 1200;
+const IMAGE_HEIGHT = 650;
+
+const CARD_WIDTH = 125;
+const CARD_HEIGHT = 175;
+const CARD_GAP = 12;
+
+const DEALER_Y = 125;
+const PLAYER_Y = 405;
+
+const CARD_TEXT_SAFE_RIGHT = 300;
+const CARD_RIGHT_MARGIN = 70;
+
+// ─── Drawing helpers ───────────────────────────────────────────────────────────
+
+function suitColor(suit: string): string {
+  return suit === "♥" || suit === "♦"
+    ? "#e53935"
+    : "#111111";
 }
 
-function handDisplay(hand: Card[]): string {
-  return hand
-    .map((card) => `\`${cardStr(card)}\``)
-    .join("  ");
+function drawRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+) {
+  ctx.beginPath();
+  ctx.roundRect(
+    x,
+    y,
+    width,
+    height,
+    radius,
+  );
+  ctx.fill();
 }
 
-// ─── UI ────────────────────────────────────────────────────────────────────────
+// ─── Card renderer ─────────────────────────────────────────────────────────────
 
-const CARDS_EMOJI = "🃏";
-const DIAMOND_EMOJI = "💎";
-const KNOWN_EMOJI = "✨";
+function drawCard(
+  ctx: CanvasRenderingContext2D,
+  card: Card,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  ctx.save();
 
-function dealerDisplayLine(
-  hand: Card[],
-  showFull: boolean,
-): string {
-  if (showFull && isBlackjack(hand)) {
-    return "### Dealer's Blackjack";
+  const color = suitColor(card.suit);
+
+  ctx.fillStyle = "rgba(0, 0, 0, 0.32)";
+
+  drawRoundedRect(
+    ctx,
+    x + 6,
+    y + 8,
+    width,
+    height,
+    16,
+  );
+
+  ctx.fillStyle = "#ffffff";
+
+  drawRoundedRect(
+    ctx,
+    x,
+    y,
+    width,
+    height,
+    16,
+  );
+
+  ctx.strokeStyle = "#d1d5db";
+  ctx.lineWidth = 2.5;
+
+  ctx.beginPath();
+  ctx.roundRect(
+    x,
+    y,
+    width,
+    height,
+    16,
+  );
+  ctx.stroke();
+
+  ctx.fillStyle = color;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+
+  const topRankFont =
+    card.rank === "10"
+      ? "bold 31px Arial"
+      : "bold 35px Arial";
+
+  ctx.font = topRankFont;
+
+  ctx.fillText(
+    card.rank,
+    x + 15,
+    y + 13,
+  );
+
+  const rankWidth =
+    ctx.measureText(card.rank).width;
+
+  ctx.font = "27px Arial";
+
+  ctx.fillText(
+    card.suit,
+    x + 18 + rankWidth,
+    y + 16,
+  );
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = "82px Arial";
+
+  ctx.fillText(
+    card.suit,
+    x + width / 2,
+    y + height / 2 + 2,
+  );
+
+  ctx.textAlign = "right";
+  ctx.textBaseline = "bottom";
+
+  const bottomRankFont =
+    card.rank === "10"
+      ? "bold 31px Arial"
+      : "bold 35px Arial";
+
+  ctx.font = bottomRankFont;
+
+  ctx.fillText(
+    card.rank,
+    x + width - 15,
+    y + height - 13,
+  );
+
+  const bottomRankWidth =
+    ctx.measureText(card.rank).width;
+
+  ctx.font = "27px Arial";
+
+  ctx.fillText(
+    card.suit,
+    x + width - 18 - bottomRankWidth,
+    y + height - 16,
+  );
+
+  ctx.restore();
+}
+
+// ─── Hidden card ───────────────────────────────────────────────────────────────
+
+function drawHiddenCard(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  ctx.save();
+
+  ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+
+  drawRoundedRect(
+    ctx,
+    x + 6,
+    y + 8,
+    width,
+    height,
+    16,
+  );
+
+  ctx.fillStyle = "#172554";
+
+  drawRoundedRect(
+    ctx,
+    x,
+    y,
+    width,
+    height,
+    16,
+  );
+
+  ctx.strokeStyle = "#60a5fa";
+  ctx.lineWidth = 4;
+
+  ctx.beginPath();
+  ctx.roundRect(
+    x + 9,
+    y + 9,
+    width - 18,
+    height - 18,
+    11,
+  );
+  ctx.stroke();
+
+  ctx.strokeStyle =
+    "rgba(255,255,255,0.18)";
+  ctx.lineWidth = 1.5;
+
+  for (
+    let i = -height;
+    i < width;
+    i += 22
+  ) {
+    ctx.beginPath();
+
+    ctx.moveTo(
+      x + i,
+      y,
+    );
+
+    ctx.lineTo(
+      x + i + height,
+      y + height,
+    );
+
+    ctx.stroke();
   }
 
-  const score = showFull
-    ? handValue(hand)
-    : "?";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 58px Arial";
 
-  const suffix =
-    showFull && handValue(hand) > 21
-      ? " • Bust"
-      : "";
+  ctx.fillText(
+    "♠",
+    x + width / 2,
+    y + height / 2,
+  );
 
-  return `### Dealer  \`${score}${suffix}\``;
+  ctx.restore();
 }
+
+// ─── Card row renderer ─────────────────────────────────────────────────────────
+
+function drawCards(
+  ctx: CanvasRenderingContext2D,
+  hand: Card[],
+  y: number,
+  hiddenSecondCard: boolean,
+) {
+  if (hand.length === 0) {
+    return;
+  }
+
+  let cardWidth = CARD_WIDTH;
+  let cardHeight = CARD_HEIGHT;
+  let gap = CARD_GAP;
+
+  const rightEdge =
+    IMAGE_WIDTH - CARD_RIGHT_MARGIN;
+
+  let totalWidth =
+    hand.length * cardWidth +
+    Math.max(0, hand.length - 1) * gap;
+
+  let startX =
+    (IMAGE_WIDTH - totalWidth) / 2;
+
+  if (
+    startX < CARD_TEXT_SAFE_RIGHT
+  ) {
+    const availableWidth =
+      rightEdge -
+      CARD_TEXT_SAFE_RIGHT;
+
+    const availableForCards =
+      availableWidth -
+      Math.max(0, hand.length - 1) * gap;
+
+    if (availableForCards > 0) {
+      const requiredCardWidth =
+        availableForCards /
+        hand.length;
+
+      if (
+        requiredCardWidth <
+        cardWidth
+      ) {
+        cardWidth =
+          Math.floor(
+            requiredCardWidth,
+          );
+
+        cardHeight =
+          Math.floor(
+            cardWidth * 1.4,
+          );
+
+        totalWidth =
+          hand.length * cardWidth +
+          Math.max(0, hand.length - 1) *
+            gap;
+
+        startX =
+          (IMAGE_WIDTH -
+            totalWidth) /
+          2;
+      }
+    }
+  }
+
+  if (
+    startX < CARD_TEXT_SAFE_RIGHT
+  ) {
+    gap = 7;
+
+    const availableWidth =
+      rightEdge -
+      CARD_TEXT_SAFE_RIGHT;
+
+    const availableForCards =
+      availableWidth -
+      Math.max(0, hand.length - 1) * gap;
+
+    if (availableForCards > 0) {
+      const requiredCardWidth =
+        availableForCards /
+        hand.length;
+
+      if (
+        requiredCardWidth <
+        cardWidth
+      ) {
+        cardWidth =
+          Math.floor(
+            requiredCardWidth,
+          );
+
+        cardHeight =
+          Math.floor(
+            cardWidth * 1.4,
+          );
+      }
+
+      totalWidth =
+        hand.length * cardWidth +
+        Math.max(0, hand.length - 1) *
+          gap;
+
+      startX =
+        (IMAGE_WIDTH -
+          totalWidth) /
+        2;
+    }
+  }
+
+  hand.forEach(
+    (card, index) => {
+      const x =
+        startX +
+        index *
+          (cardWidth + gap);
+
+      if (
+        hiddenSecondCard &&
+        index === 1
+      ) {
+        drawHiddenCard(
+          ctx,
+          x,
+          y,
+          cardWidth,
+          cardHeight,
+        );
+      } else {
+        drawCard(
+          ctx,
+          card,
+          x,
+          y,
+          cardWidth,
+          cardHeight,
+        );
+      }
+    },
+  );
+}
+
+// ─── Result helpers ────────────────────────────────────────────────────────────
+
+function getImageResult(
+  status: GameStatus,
+): string {
+  switch (status) {
+    case "player_win":
+    case "dealer_bust":
+    case "blackjack":
+      return "- YOU WON";
+
+    case "dealer_win":
+    case "player_bust":
+      return "- YOU LOST";
+
+    case "push":
+      return "- PUSH";
+
+    default:
+      return "";
+  }
+}
+
+function getResultText(
+  game: BlackjackGame,
+  status: GameStatus,
+): string {
+  const pv = handValue(
+    game.playerHand,
+  );
+
+  const dv = handValue(
+    game.dealerHand,
+  );
+
+  switch (status) {
+    case "player_bust":
+      return `You busted with ${pv}.`;
+
+    case "dealer_bust":
+      return `The dealer busted with ${dv}.`;
+
+    case "player_win":
+      return `You beat the dealer, ${pv} to ${dv}.`;
+
+    case "dealer_win":
+      if (
+        isBlackjack(game.dealerHand) &&
+        pv === 21 &&
+        !isBlackjack(game.playerHand)
+      ) {
+        return "The dealer beat you, natural blackjack to 21.";
+      }
+
+      return `The dealer beat you, ${dv} to ${pv}.`;
+
+    case "push":
+      return `Push - you and the dealer both had ${pv}.`;
+
+    case "blackjack":
+      return `Blackjack! You beat the dealer, ${pv} to ${dv}.`;
+
+    default:
+      return "";
+  }
+}
+
+function getHandLabelColors(
+  status: GameStatus,
+): {
+  dealer: string;
+  player: string;
+} {
+  if (status === "active") {
+    return {
+      dealer: "#ffffff",
+      player: "#ffffff",
+    };
+  }
+
+  if (
+    status === "dealer_win" ||
+    status === "player_bust"
+  ) {
+    return {
+      dealer: "#4ade80",
+      player: "#ff5c5c",
+    };
+  }
+
+  if (
+    status === "player_win" ||
+    status === "dealer_bust" ||
+    status === "blackjack"
+  ) {
+    return {
+      dealer: "#ff5c5c",
+      player: "#4ade80",
+    };
+  }
+
+  if (status === "push") {
+    return {
+      dealer: "#4ade80",
+      player: "#4ade80",
+    };
+  }
+
+  return {
+    dealer: "#ffffff",
+    player: "#ffffff",
+  };
+}
+
+// ─── Result overlay ────────────────────────────────────────────────────────────
+
+function drawResultOverlay(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+) {
+  if (!text) {
+    return;
+  }
+
+  ctx.save();
+
+  ctx.font = "bold 23px Arial";
+
+  const paddingX = 24;
+  const paddingY = 12;
+
+  const textWidth =
+    ctx.measureText(text).width;
+
+  const boxWidth =
+    textWidth + paddingX * 2;
+
+  const boxHeight = 48;
+
+  const x =
+    (IMAGE_WIDTH - boxWidth) / 2;
+
+  const y = 592;
+
+  ctx.fillStyle =
+    "rgba(0, 0, 0, 0.38)";
+
+  drawRoundedRect(
+    ctx,
+    x,
+    y,
+    boxWidth,
+    boxHeight,
+    14,
+  );
+
+  ctx.strokeStyle =
+    "rgba(255,255,255,0.16)";
+  ctx.lineWidth = 1.5;
+
+  ctx.beginPath();
+  ctx.roundRect(
+    x,
+    y,
+    boxWidth,
+    boxHeight,
+    14,
+  );
+  ctx.stroke();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = "bold 23px Arial";
+
+  ctx.fillText(
+    text,
+    IMAGE_WIDTH / 2,
+    y + boxHeight / 2,
+  );
+
+  ctx.restore();
+}
+
+// ─── Blackjack image ───────────────────────────────────────────────────────────
+
+function blackjackImage(
+  game: BlackjackGame,
+  status: GameStatus,
+  showDealerFull: boolean,
+): Buffer {
+  const canvas =
+    createCanvas(
+      IMAGE_WIDTH,
+      IMAGE_HEIGHT,
+    );
+
+  const ctx =
+    canvas.getContext("2d");
+
+  ctx.fillStyle = "#071a12";
+
+  ctx.fillRect(
+    0,
+    0,
+    IMAGE_WIDTH,
+    IMAGE_HEIGHT,
+  );
+
+  ctx.fillStyle = "#0b3d2e";
+
+  ctx.beginPath();
+
+  ctx.roundRect(
+    25,
+    25,
+    IMAGE_WIDTH - 50,
+    IMAGE_HEIGHT - 50,
+    30,
+  );
+
+  ctx.fill();
+
+  ctx.strokeStyle = "#c9a227";
+  ctx.lineWidth = 4;
+
+  ctx.stroke();
+
+  // ── Title ────────────────────────────────────────────────────────────────
+
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.font = "bold 34px Arial";
+
+  const title =
+    status === "active"
+      ? "BLACKJACK"
+      : `BLACKJACK ${getImageResult(status)}`;
+
+  ctx.fillText(
+    title,
+    IMAGE_WIDTH / 2,
+    43,
+  );
+
+  // ── Bet ──────────────────────────────────────────────────────────────────
+
+  const displayedBet =
+    game.bet *
+    (game.doubled ? 2 : 1);
+
+  const betText =
+    `Bet: ${formatAmount(displayedBet)}${
+      game.doubled
+        ? " (doubled)"
+        : ""
+    }`;
+
+  ctx.font = "bold 21px Arial";
+
+  const betPaddingX = 18;
+  const betPaddingY = 8;
+  const betTextWidth =
+    ctx.measureText(betText).width;
+
+  const betBoxWidth =
+    betTextWidth +
+    betPaddingX * 2;
+
+  const betBoxHeight =
+    21 +
+    betPaddingY * 2;
+
+  const betBoxX =
+    (IMAGE_WIDTH - betBoxWidth) / 2;
+
+  const betBoxY = 78;
+
+  ctx.fillStyle =
+    "rgba(0, 0, 0, 0.28)";
+
+  drawRoundedRect(
+    ctx,
+    betBoxX,
+    betBoxY,
+    betBoxWidth,
+    betBoxHeight,
+    10,
+  );
+
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  ctx.fillText(
+    betText,
+    IMAGE_WIDTH / 2,
+    betBoxY +
+      betBoxHeight / 2,
+  );
+
+  // ── Dealer information ──────────────────────────────────────────────────
+
+  const handColors =
+    getHandLabelColors(status);
+
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.font = "bold 25px Arial";
+
+  ctx.fillStyle =
+    handColors.dealer;
+
+  ctx.fillText(
+    "DEALER",
+    70,
+    88 + 36,
+  );
+
+  const dealerValue =
+    showDealerFull
+      ? handValue(
+          game.dealerHand,
+        )
+      : "?";
+
+  ctx.font = "bold 22px Arial";
+
+  ctx.fillText(
+    `Value: ${dealerValue}`,
+    70,
+    159,
+  );
+
+  if (
+    showDealerFull &&
+    isBust(game.dealerHand)
+  ) {
+    ctx.fillStyle = "#ff5c5c";
+
+    ctx.fillText(
+      "BUST",
+      205,
+      159,
+    );
+  }
+
+  drawCards(
+    ctx,
+    game.dealerHand,
+    DEALER_Y,
+    !showDealerFull,
+  );
+
+  // ── Divider ──────────────────────────────────────────────────────────────
+
+  ctx.strokeStyle =
+    "rgba(255,255,255,0.18)";
+
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    70,
+    335,
+  );
+
+  ctx.lineTo(
+    IMAGE_WIDTH - 70,
+    335,
+  );
+
+  ctx.stroke();
+
+  // ── Player information ──────────────────────────────────────────────────
+
+  ctx.fillStyle =
+    handColors.player;
+
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.font = "bold 25px Arial";
+
+  ctx.fillText(
+    "YOUR HAND",
+    70,
+    350,
+  );
+
+  const playerValue =
+    handValue(
+      game.playerHand,
+    );
+
+  ctx.font = "bold 22px Arial";
+
+  ctx.fillText(
+    `Value: ${playerValue}`,
+    70,
+    378,
+  );
+
+  if (
+    isBust(
+      game.playerHand,
+    )
+  ) {
+    ctx.fillStyle = "#ff5c5c";
+
+    ctx.fillText(
+      "BUST",
+      205,
+      378,
+    );
+  }
+
+  drawCards(
+    ctx,
+    game.playerHand,
+    PLAYER_Y,
+    false,
+  );
+
+  if (status !== "active") {
+    drawResultOverlay(
+      ctx,
+      getResultText(
+        game,
+        status,
+      ),
+    );
+  }
+
+  return canvas.toBuffer(
+    "image/png",
+  );
+}
+
+// ─── Image component ──────────────────────────────────────────────────────────
+
+function imageComponent(): MediaGalleryBuilder {
+  return new MediaGalleryBuilder().addItems(
+    new MediaGalleryItemBuilder().setURL(
+      "attachment://blackjack.png",
+    ),
+  );
+}
+
+// ─── Text helpers ──────────────────────────────────────────────────────────────
 
 function createText(
   content: string,
 ): TextDisplayBuilder {
-  return new TextDisplayBuilder().setContent(
-    content,
-  );
+  return new TextDisplayBuilder()
+    .setContent(content);
 }
 
-/**
- * Discord Components V2 divider.
- *
- * This is the same type of clean horizontal divider
- * used to separate sections in the /balance layout.
- */
 function createDivider(): SeparatorBuilder {
   return new SeparatorBuilder();
 }
 
-// ─── Main gameplay buttons ─────────────────────────────────────────────────────
+// ─── Buttons ───────────────────────────────────────────────────────────────────
 
 function buildComponents(
   game: BlackjackGame,
@@ -243,8 +1051,6 @@ function buildComponents(
   );
 }
 
-// ─── Play Again button ─────────────────────────────────────────────────────────
-
 function playAgainRow(
   userId: string,
   bet: number,
@@ -269,21 +1075,6 @@ function buildBlackjackContainer(
   showGameplayButtons: boolean,
   playAgainDisabled = false,
 ): ContainerBuilder {
-  const pv = handValue(
-    game.playerHand,
-  );
-
-  const dv = handValue(
-    game.dealerHand,
-  );
-
-  const showDealerFull =
-    status !== "active";
-
-  const dealerCards = showDealerFull
-    ? handDisplay(game.dealerHand)
-    : `\`${cardStr(game.dealerHand[0]!)}\`  \`?\``;
-
   const bet =
     game.bet *
     (game.doubled ? 2 : 1);
@@ -291,7 +1082,9 @@ function buildBlackjackContainer(
   const payout =
     status === "blackjack"
       ? game.bet +
-        Math.floor(game.bet * 1.5)
+        Math.floor(
+          game.bet * 1.5,
+        )
       : status === "player_win" ||
           status === "dealer_bust"
         ? bet * 2
@@ -304,63 +1097,46 @@ function buildBlackjackContainer(
       ? payout / bet
       : 0;
 
-  const dealerNaturalBeatPlayer21 =
-    status === "dealer_win" &&
-    isBlackjack(game.dealerHand) &&
-    pv === 21 &&
-    !isBlackjack(game.playerHand);
-
   const statusMeta: Record<
     GameStatus,
     {
       color: number;
       title: string;
-      resultLine: string;
     }
   > = {
     active: {
       color: COLORS.primary,
-      title: `${CARDS_EMOJI} Blackjack`,
-      resultLine: "",
+      title: `🃏 ${game.displayName}'s Blackjack game`,
     },
 
     player_bust: {
       color: COLORS.danger,
-      title: `${CARDS_EMOJI} Blackjack - YOU LOST`,
-      resultLine: `> You busted with ${pv}.`,
+      title: "🃏 Blackjack - YOU LOST",
     },
 
     dealer_bust: {
       color: COLORS.success,
-      title: `${CARDS_EMOJI} Blackjack - YOU WON`,
-      resultLine: `> The dealer busted with ${dv}.`,
+      title: "🃏 Blackjack - YOU WON",
     },
 
     player_win: {
       color: COLORS.success,
-      title: `${CARDS_EMOJI} Blackjack - YOU WON`,
-      resultLine: `> You beat the dealer, ${pv} to ${dv}.`,
+      title: "🃏 Blackjack - YOU WON",
     },
 
     dealer_win: {
       color: COLORS.danger,
-      title: `${CARDS_EMOJI} Blackjack - YOU LOST`,
-      resultLine:
-        dealerNaturalBeatPlayer21
-          ? "> The dealer beat you, natural blackjack to 21."
-          : `> The dealer beat you, ${dv} to ${pv}.`,
+      title: "🃏 Blackjack - YOU LOST",
     },
 
     push: {
       color: COLORS.warning,
-      title: `${CARDS_EMOJI} Blackjack - PUSH`,
-      resultLine: `> Push — you and the dealer both had ${pv}.`,
+      title: "🃏 Blackjack - PUSH",
     },
 
     blackjack: {
       color: COLORS.gold,
-      title: `${CARDS_EMOJI} Blackjack - BLACKJACK`,
-      resultLine: `> Blackjack! You beat the dealer, ${pv} to ${dv}.`,
+      title: "🃏 Blackjack - BLACKJACK WIN",
     },
   };
 
@@ -369,26 +1145,15 @@ function buildBlackjackContainer(
 
   const container =
     new ContainerBuilder()
-      .setAccentColor(meta.color);
-
-  // ─── Title ────────────────────────────────────────────────────────────────
+      .setAccentColor(
+        meta.color,
+      );
 
   container.addTextDisplayComponents(
     createText(
       `## ${meta.title}`,
     ),
   );
-
-  // ─── Bet ──────────────────────────────────────────────────────────────────
-
-  container.addTextDisplayComponents(
-    createText(
-      `${DIAMOND_EMOJI} **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  (doubled)" : ""}`,
-    ),
-  );
-
-  // ─── Multiplier ───────────────────────────────────────────────────────────
-  // If multiplier exists, the divider goes AFTER it.
 
   if (
     status === "player_win" ||
@@ -398,53 +1163,34 @@ function buildBlackjackContainer(
   ) {
     container.addTextDisplayComponents(
       createText(
-        `${KNOWN_EMOJI} **Multiplier**  \`${multiplier.toFixed(2)}x (${formatAmount(payout)})\``,
+        `💎 **Bet:** \`${formatAmount(
+          bet,
+        )}\`${game.doubled ? "  *(doubled)*" : ""}\n` +
+        `✨ **Multiplier:** \`${multiplier.toFixed(
+          2,
+        )}x (${formatAmount(
+          payout,
+        )})\``,
+      ),
+    );
+  } else {
+    container.addTextDisplayComponents(
+      createText(
+        `💎 **Bet:** \`${formatAmount(
+          bet,
+        )}\`${game.doubled ? "  *(doubled)*" : ""}`,
       ),
     );
   }
-
-  // ─── Divider ──────────────────────────────────────────────────────────────
-  // Clean Discord Components V2 separator, exactly like /balance.
 
   container.addSeparatorComponents(
     createDivider(),
   );
 
-  // ─── Dealer ───────────────────────────────────────────────────────────────
-
-  container.addTextDisplayComponents(
-    createText(
-      [
-        dealerDisplayLine(
-          game.dealerHand,
-          showDealerFull,
-        ),
-
-        dealerCards,
-
-        `### Your hand  \`${pv}${pv > 21 ? " • Bust" : ""}\``,
-
-        handDisplay(
-          game.playerHand,
-        ),
-
-        "",
-
-        ...(meta.resultLine
-          ? [meta.resultLine]
-          : []),
-      ].join("\n"),
-    ),
+  container.addMediaGalleryComponents(
+    imageComponent(),
   );
 
-  // ─── Buttons ───────────────────────────────────────────────────────────────
-
-  container.addTextDisplayComponents(
-    createText("\u200b"),
-  );
-
-  // Active game:
-  // Hit / Stand / Double
   if (showGameplayButtons) {
     container.addActionRowComponents(
       buildComponents(
@@ -452,11 +1198,7 @@ function buildBlackjackContainer(
         false,
       ),
     );
-  }
-
-  // Finished game:
-  // ONLY Play Again
-  if (!showGameplayButtons) {
+  } else {
     container.addActionRowComponents(
       playAgainRow(
         game.userId,
@@ -469,33 +1211,21 @@ function buildBlackjackContainer(
   return container;
 }
 
-// ─── Animated dealer reveal ────────────────────────────────────────────────────
+// ─── Animated dealer image container ───────────────────────────────────────────
 
 function buildContainerAnimating(
   game: BlackjackGame,
   shownDealerCards: Card[],
 ): ContainerBuilder {
-  const pv =
-    handValue(game.playerHand);
-
   const bet =
     game.bet *
     (game.doubled ? 2 : 1);
 
-  const more =
-    shownDealerCards.length <
-    game.dealerHand.length;
-
-  const dealerLine =
-    !more &&
-    isBlackjack(
+  const tempGame: BlackjackGame = {
+    ...game,
+    dealerHand:
       shownDealerCards,
-    )
-      ? dealerDisplayLine(
-          shownDealerCards,
-          true,
-        )
-      : `### Dealer  \`${handValue(shownDealerCards)}\``;
+  };
 
   const container =
     new ContainerBuilder()
@@ -503,62 +1233,55 @@ function buildContainerAnimating(
         COLORS.primary,
       );
 
-  // ─── Title ────────────────────────────────────────────────────────────────
-
   container.addTextDisplayComponents(
     createText(
-      `## ${CARDS_EMOJI} Blackjack`,
+      `## 🃏 ${game.displayName}'s Blackjack game`,
     ),
   );
 
-  // ─── Bet ──────────────────────────────────────────────────────────────────
-
   container.addTextDisplayComponents(
     createText(
-      `${DIAMOND_EMOJI} **Bet**  \`${formatAmount(bet)}\`${game.doubled ? "  (doubled)" : ""}`,
+      `💎 **Bet:** \`${formatAmount(
+        bet,
+      )}\`${game.doubled ? "  *(doubled)*" : ""}`,
     ),
   );
-
-  // ─── Divider ──────────────────────────────────────────────────────────────
 
   container.addSeparatorComponents(
     createDivider(),
   );
 
-  // ─── Dealer + player ──────────────────────────────────────────────────────
-
-  container.addTextDisplayComponents(
-    createText(
-      [
-        dealerLine,
-
-        handDisplay(
-          shownDealerCards,
-        ),
-
-        `### Your hand  \`${pv}\``,
-
-        handDisplay(
-          game.playerHand,
-        ),
-      ].join("\n"),
-    ),
-  );
-
-  // ─── Disabled buttons during animation ────────────────────────────────────
-
-  container.addTextDisplayComponents(
-    createText("\u200b"),
+  container.addMediaGalleryComponents(
+    imageComponent(),
   );
 
   container.addActionRowComponents(
     buildComponents(
-      game,
+      tempGame,
       true,
     ),
   );
 
   return container;
+}
+
+// ─── Message edit helper ───────────────────────────────────────────────────────
+
+function imageFile(
+  game: BlackjackGame,
+  status: GameStatus,
+  showDealerFull: boolean,
+): AttachmentBuilder {
+  return new AttachmentBuilder(
+    blackjackImage(
+      game,
+      status,
+      showDealerFull,
+    ),
+    {
+      name: "blackjack.png",
+    },
+  );
 }
 
 // ─── Dealer play ───────────────────────────────────────────────────────────────
@@ -567,8 +1290,7 @@ function dealerPlay(
   game: BlackjackGame,
 ): void {
   while (
-    handValue(game.dealerHand) <
-    17
+    handValue(game.dealerHand) < 17
   ) {
     game.dealerHand.push(
       deal(game.deck),
@@ -702,52 +1424,109 @@ async function resolveGame(
     },
   );
 
-  // Player busts immediately — no dealer animation.
   if (
-    status !== "player_bust"
+    status === "player_bust"
   ) {
-    const all =
-      game.dealerHand;
-
     await interaction.editReply({
       flags:
         MessageFlags.IsComponentsV2,
-      components: [
-        buildContainerAnimating(
+      files: [
+        imageFile(
           game,
-          all.slice(0, 2),
+          status,
+          true,
+        ),
+      ],
+      components: [
+        buildBlackjackContainer(
+          game,
+          status,
+          false,
+          false,
         ),
       ],
     });
 
-    for (
-      let i = 2;
-      i < all.length;
-      i++
-    ) {
-      await sleep(700);
-
-      await interaction.editReply({
-        flags:
-          MessageFlags.IsComponentsV2,
-        components: [
-          buildContainerAnimating(
-            game,
-            all.slice(
-              0,
-              i + 1,
-            ),
-          ),
-        ],
-      });
-    }
-
-    await sleep(700);
+    return;
   }
+
+  const all =
+    game.dealerHand;
+
+  const firstRevealGame: BlackjackGame = {
+    ...game,
+    dealerHand:
+      all.slice(0, 2),
+  };
 
   await interaction.editReply({
     flags:
       MessageFlags.IsComponentsV2,
+    files: [
+      imageFile(
+        firstRevealGame,
+        "active",
+        true,
+      ),
+    ],
+    components: [
+      buildContainerAnimating(
+        firstRevealGame,
+        all.slice(0, 2),
+      ),
+    ],
+  });
+
+  for (
+    let i = 2;
+    i < all.length;
+    i++
+  ) {
+    await sleep(700);
+
+    const revealGame: BlackjackGame = {
+      ...game,
+      dealerHand:
+        all.slice(
+          0,
+          i + 1,
+        ),
+    };
+
+    await interaction.editReply({
+      flags:
+        MessageFlags.IsComponentsV2,
+      files: [
+        imageFile(
+          revealGame,
+          "active",
+          true,
+        ),
+      ],
+      components: [
+        buildContainerAnimating(
+          revealGame,
+          all.slice(
+            0,
+            i + 1,
+          ),
+        ),
+      ],
+    });
+  }
+
+  await sleep(700);
+
+  await interaction.editReply({
+    flags:
+      MessageFlags.IsComponentsV2,
+    files: [
+      imageFile(
+        game,
+        status,
+        true,
+      ),
+    ],
     components: [
       buildBlackjackContainer(
         game,
@@ -853,6 +1632,12 @@ export async function execute(
   const game: BlackjackGame = {
     userId:
       interaction.user.id,
+    displayName:
+      interaction.member &&
+      "displayName" in interaction.member
+        ? interaction.member.displayName
+        : interaction.user.globalName ??
+          interaction.user.username,
     bet: amount,
     deck,
     playerHand: [
@@ -891,7 +1676,7 @@ export async function execute(
     ) {
       status = "push";
       payout = amount;
-    } else if (playerBJ) {
+    } else {
       status = "blackjack";
 
       payout =
@@ -899,11 +1684,6 @@ export async function execute(
         Math.floor(
           amount * 1.5,
         );
-    } else {
-      status =
-        "dealer_win";
-
-      payout = 0;
     }
 
     await addBalance(
@@ -915,6 +1695,13 @@ export async function execute(
       await interaction.editReply({
         flags:
           MessageFlags.IsComponentsV2,
+        files: [
+          imageFile(
+            game,
+            status,
+            true,
+          ),
+        ],
         components: [
           buildBlackjackContainer(
             game,
@@ -954,6 +1741,13 @@ export async function execute(
     await interaction.editReply({
       flags:
         MessageFlags.IsComponentsV2,
+      files: [
+        imageFile(
+          game,
+          "active",
+          false,
+        ),
+      ],
       components: [
         buildBlackjackContainer(
           game,
@@ -1021,6 +1815,13 @@ export async function handleHit(
   await interaction.editReply({
     flags:
       MessageFlags.IsComponentsV2,
+    files: [
+      imageFile(
+        game,
+        "active",
+        false,
+      ),
+    ],
     components: [
       buildBlackjackContainer(
         game,
@@ -1075,13 +1876,13 @@ export async function handleDouble(
     return;
   }
 
-  const bal =
-    await (
-      await getOrCreateUser(
-        game.userId,
-        "",
-      )
-    ).balance;
+  const user =
+    await getOrCreateUser(
+      game.userId,
+      "",
+    );
+
+  const bal = user.balance;
 
   if (
     bal < game.bet
@@ -1175,6 +1976,7 @@ export async function handlePlayAgain(
     });
   }
 
+  // Disable the old Play Again button.
   await interaction.update({
     flags:
       MessageFlags.IsComponentsV2,
@@ -1193,7 +1995,7 @@ export async function handlePlayAgain(
       userId,
     )
   ) {
-    await interaction.followUp({
+    return void interaction.followUp({
       embeds: [
         errorEmbed(
           "You already have an active Blackjack game!",
@@ -1202,8 +2004,6 @@ export async function handlePlayAgain(
       flags:
         MessageFlags.Ephemeral,
     });
-
-    return;
   }
 
   const user =
@@ -1215,7 +2015,7 @@ export async function handlePlayAgain(
   if (
     user.balance < bet
   ) {
-    await interaction.followUp({
+    return void interaction.followUp({
       embeds: [
         errorEmbed(
           `Insufficient balance. You have **${formatAmount(
@@ -1226,8 +2026,6 @@ export async function handlePlayAgain(
       flags:
         MessageFlags.Ephemeral,
     });
-
-    return;
   }
 
   await addBalance(
@@ -1242,6 +2040,12 @@ export async function handlePlayAgain(
 
   const game: BlackjackGame = {
     userId,
+    displayName:
+      interaction.member &&
+      "displayName" in interaction.member
+        ? interaction.member.displayName
+        : interaction.user.globalName ??
+          interaction.user.username,
     bet,
     deck,
     playerHand: [
@@ -1291,10 +2095,30 @@ export async function handlePlayAgain(
       payout,
     );
 
+    /*
+     * IMPORTANT:
+     * Use interaction.channel.send() instead of
+     * interaction.followUp().
+     *
+     * This creates a completely normal new Discord
+     * message rather than another response/follow-up
+     * to the button interaction.
+     */
+    if (!interaction.channel) {
+      return;
+    }
+
     const msg =
-      await interaction.followUp({
+      await interaction.channel.send({
         flags:
           MessageFlags.IsComponentsV2,
+        files: [
+          imageFile(
+            game,
+            status,
+            true,
+          ),
+        ],
         components: [
           buildBlackjackContainer(
             game,
@@ -1330,10 +2154,26 @@ export async function handlePlayAgain(
     return;
   }
 
+  /*
+   * IMPORTANT:
+   * This is also a normal channel message.
+   * It does NOT reply to the old Blackjack game.
+   */
+  if (!interaction.channel) {
+    return;
+  }
+
   const msg =
-    await interaction.followUp({
+    await interaction.channel.send({
       flags:
         MessageFlags.IsComponentsV2,
+      files: [
+        imageFile(
+          game,
+          "active",
+          false,
+        ),
+      ],
       components: [
         buildBlackjackContainer(
           game,
