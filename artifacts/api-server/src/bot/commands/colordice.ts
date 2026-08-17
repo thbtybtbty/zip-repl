@@ -5,10 +5,17 @@ import {
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
   MessageFlags,
+  AttachmentBuilder,
   type ChatInputCommandInteraction,
   type StringSelectMenuInteraction,
   type MessageActionRowComponentBuilder,
 } from "discord.js";
+
+import {
+  createCanvas,
+  type CanvasRenderingContext2D,
+} from "@napi-rs/canvas";
+
 import {
   COLORS,
   parseAmount,
@@ -20,22 +27,48 @@ import {
 } from "../utils.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-const COLORS_LIST = ["red", "blue", "green", "orange", "yellow", "purple", "white", "brown"] as const;
+
+const COLORS_LIST = [
+  "red",
+  "blue",
+  "green",
+  "orange",
+  "yellow",
+  "purple",
+  "black",
+] as const;
+
 type DiceColor = (typeof COLORS_LIST)[number];
 
+// ─── Dice colors ──────────────────────────────────────────────────────────────
+
+const DICE_COLOR: Record<DiceColor, string> = {
+  red: "#d93434",
+  blue: "#3678d4",
+  green: "#31965a",
+  orange: "#df792d",
+  yellow: "#d6a62e",
+  purple: "#8152b8",
+  black: "#171a1c",
+};
+
 const COLOR_EMOJI: Record<DiceColor, string> = {
-  red:    "🟥",
-  blue:   "🟦",
-  green:  "🟩",
+  red: "🟥",
+  blue: "🟦",
+  green: "🟩",
   orange: "🟧",
   yellow: "🟨",
   purple: "🟪",
-  white:  "⬜",
-  brown:  "🟫",
+  black: "⬛",
 };
 
-// Payout table (multiplier applied to bet)
-// 0 matches → 0x, 1 match → 2x, 2 matches → 0.48x, 3 matches → 3x, 4+ matches → 4x
+// ─── Payout table ─────────────────────────────────────────────────────────────
+// 0 matches → 0x
+// 1 match  → 2x
+// 2 matches → 0.48x
+// 3 matches → 3x
+// 4+ matches → 4x
+
 const PAYOUT_TABLE: [number, number][] = [
   [0, 0],
   [1, 2],
@@ -46,73 +79,716 @@ const PAYOUT_TABLE: [number, number][] = [
 
 function getPayout(matches: number): number {
   if (matches >= 4) return 4;
-  const entry = PAYOUT_TABLE.find(([m]) => m === matches);
+
+  const entry = PAYOUT_TABLE.find(
+    ([m]) => m === matches,
+  );
+
   return entry ? entry[1] : 0;
 }
 
-// ─── Pending games (waiting for color selection) ───────────────────────────────
+// ─── Pending games ────────────────────────────────────────────────────────────
+
 interface PendingColorDice {
   userId: string;
   bet: number;
 }
 
-export const pendingColorDice = new Map<string, PendingColorDice>();
+export const pendingColorDice =
+  new Map<string, PendingColorDice>();
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Game helpers ─────────────────────────────────────────────────────────────
+
 function rollDice(): DiceColor[] {
-  return Array.from({ length: 6 }, () => COLORS_LIST[Math.floor(Math.random() * COLORS_LIST.length)]!);
-}
-
-function countMatches(dice: DiceColor[], pick: DiceColor): number {
-  return dice.filter((d) => d === pick).length;
-}
-
-// ─── Rolling animation embed ──────────────────────────────────────────────────
-const PROGRESS_BARS = [
-  "▰▱▱▱▱▱▱▱▱▱",
-  "▰▰▰▱▱▱▱▱▱▱",
-  "▰▰▰▰▰▱▱▱▱▱",
-  "▰▰▰▰▰▰▰▱▱▱",
-  "▰▰▰▰▰▰▰▰▰▱",
-  "▰▰▰▰▰▰▰▰▰▰",
-];
-
-function randomDiceRow(): string {
   return Array.from(
     { length: 6 },
-    () => COLOR_EMOJI[COLORS_LIST[Math.floor(Math.random() * COLORS_LIST.length)]!],
-  ).join("");
+    () =>
+      COLORS_LIST[
+        Math.floor(
+          Math.random() * COLORS_LIST.length,
+        )
+      ]!,
+  );
 }
 
-function rollingEmbed(bet: number, pick: DiceColor, frame: number): EmbedBuilder {
-  const bar = PROGRESS_BARS[Math.min(frame, PROGRESS_BARS.length - 1)]!;
+function countMatches(
+  dice: DiceColor[],
+  pick: DiceColor,
+): number {
+  return dice.filter(
+    (d) => d === pick,
+  ).length;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IMAGE CONFIG
+// ─────────────────────────────────────────────────────────────────────────────
+
+const IMAGE_WIDTH = 1200;
+const IMAGE_HEIGHT = 700;
+
+// Casino-style colors
+const FELT_TOP = "#063b2d";
+const FELT_BOTTOM = "#042e24";
+const FELT_LIGHT = "#0b4937";
+
+const GOLD = "#caa62c";
+const GOLD_DARK = "#8e711b";
+
+const WHITE = "#f4f2e8";
+const TEXT = "#f4f3ec";
+const MUTED = "#b9c9c1";
+
+const PANEL = "rgba(3, 24, 18, 0.45)";
+const PANEL_BORDER = "rgba(202, 166, 44, 0.32)";
+
+const DICE_SHADOW = "rgba(0, 0, 0, 0.38)";
+const PIP = "#f8f8f2";
+
+// Fixed dice positions.
+// These NEVER change between animation frames.
+const DICE_POSITIONS = [
+  { x: 300, y: 360 },
+  { x: 465, y: 360 },
+  { x: 630, y: 360 },
+  { x: 795, y: 360 },
+  { x: 960, y: 360 },
+  { x: 1125, y: 360 },
+];
+
+const DIE_SIZE = 120;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DRAWING HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+function roundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+): void {
+  ctx.beginPath();
+  ctx.roundRect(
+    x,
+    y,
+    width,
+    height,
+    radius,
+  );
+}
+
+// ─── Background ───────────────────────────────────────────────────────────────
+
+function drawCasinoBackground(
+  ctx: CanvasRenderingContext2D,
+): void {
+  const gradient =
+    ctx.createLinearGradient(
+      0,
+      0,
+      0,
+      IMAGE_HEIGHT,
+    );
+
+  gradient.addColorStop(
+    0,
+    FELT_TOP,
+  );
+
+  gradient.addColorStop(
+    1,
+    FELT_BOTTOM,
+  );
+
+  ctx.fillStyle = gradient;
+
+  ctx.fillRect(
+    0,
+    0,
+    IMAGE_WIDTH,
+    IMAGE_HEIGHT,
+  );
+
+  // Very subtle felt texture.
+  ctx.save();
+
+  for (
+    let y = 0;
+    y < IMAGE_HEIGHT;
+    y += 8
+  ) {
+    ctx.globalAlpha =
+      y % 16 === 0
+        ? 0.018
+        : 0.010;
+
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(
+      IMAGE_WIDTH,
+      y,
+    );
+    ctx.stroke();
+  }
+
+  ctx.restore();
+
+  // Outer casino border.
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 5;
+
+  roundedRect(
+    ctx,
+    24,
+    24,
+    IMAGE_WIDTH - 48,
+    IMAGE_HEIGHT - 48,
+    30,
+  );
+
+  ctx.stroke();
+
+  // Inner subtle border.
+  ctx.strokeStyle =
+    "rgba(202,166,44,0.18)";
+
+  ctx.lineWidth = 1;
+
+  roundedRect(
+    ctx,
+    34,
+    34,
+    IMAGE_WIDTH - 68,
+    IMAGE_HEIGHT - 68,
+    23,
+  );
+
+  ctx.stroke();
+}
+
+// ─── Top title ───────────────────────────────────────────────────────────────
+
+function drawHeader(
+  ctx: CanvasRenderingContext2D,
+  bet: number,
+): void {
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  ctx.fillStyle = TEXT;
+  ctx.font =
+    "900 38px Arial";
+
+  ctx.fillText(
+    "COLOR DICE",
+    IMAGE_WIDTH / 2,
+    67,
+  );
+
+  // Bet badge.
+  const betText =
+    `Bet: ${formatAmount(bet)}`;
+
+  ctx.font =
+    "800 22px Arial";
+
+  const textWidth =
+    ctx.measureText(
+      betText,
+    ).width;
+
+  const badgeWidth =
+    textWidth + 38;
+
+  const badgeX =
+    IMAGE_WIDTH / 2 -
+    badgeWidth / 2;
+
+  const badgeY = 91;
+
+  ctx.fillStyle =
+    "rgba(2, 27, 21, 0.9)";
+
+  roundedRect(
+    ctx,
+    badgeX,
+    badgeY,
+    badgeWidth,
+    42,
+    12,
+  );
+
+  ctx.fill();
+
+  ctx.strokeStyle =
+    "rgba(202,166,44,0.35)";
+
+  ctx.lineWidth = 1;
+
+  roundedRect(
+    ctx,
+    badgeX,
+    badgeY,
+    badgeWidth,
+    42,
+    12,
+  );
+
+  ctx.stroke();
+
+  ctx.fillStyle = TEXT;
+
+  ctx.fillText(
+    betText,
+    IMAGE_WIDTH / 2,
+    badgeY + 21,
+  );
+}
+
+// ─── Dice table area ──────────────────────────────────────────────────────────
+
+function drawDiceArea(
+  ctx: CanvasRenderingContext2D,
+): void {
+  ctx.fillStyle = PANEL;
+
+  roundedRect(
+    ctx,
+    60,
+    165,
+    IMAGE_WIDTH - 120,
+    300,
+    22,
+  );
+
+  ctx.fill();
+
+  ctx.strokeStyle =
+    PANEL_BORDER;
+
+  ctx.lineWidth = 2;
+
+  roundedRect(
+    ctx,
+    60,
+    165,
+    IMAGE_WIDTH - 120,
+    300,
+    22,
+  );
+
+  ctx.stroke();
+
+  // Small label.
+  ctx.fillStyle = MUTED;
+  ctx.font =
+    "700 16px Arial";
+
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+
+  ctx.fillText(
+    "DICE",
+    85,
+    192,
+  );
+}
+
+// ─── One die ──────────────────────────────────────────────────────────────────
+
+function drawDie(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: DiceColor,
+): void {
+  ctx.save();
+
+  const half =
+    DIE_SIZE / 2;
+
+  const left =
+    x - half;
+
+  const top =
+    y - half;
+
+  // Shadow.
+  ctx.save();
+
+  ctx.globalAlpha = 0.45;
+  ctx.fillStyle = DICE_SHADOW;
+
+  roundedRect(
+    ctx,
+    left + 5,
+    top + 8,
+    DIE_SIZE,
+    DIE_SIZE,
+    18,
+  );
+
+  ctx.fill();
+
+  ctx.restore();
+
+  // Die body.
+  ctx.fillStyle =
+    DICE_COLOR[color];
+
+  roundedRect(
+    ctx,
+    left,
+    top,
+    DIE_SIZE,
+    DIE_SIZE,
+    18,
+  );
+
+  ctx.fill();
+
+  // Dark edge.
+  ctx.strokeStyle =
+    color === "black"
+      ? "#303437"
+      : "rgba(0,0,0,0.35)";
+
+  ctx.lineWidth = 4;
+
+  roundedRect(
+    ctx,
+    left,
+    top,
+    DIE_SIZE,
+    DIE_SIZE,
+    18,
+  );
+
+  ctx.stroke();
+
+  // Very subtle top highlight.
+  ctx.save();
+
+  ctx.globalAlpha = 0.12;
+  ctx.fillStyle = "#ffffff";
+
+  roundedRect(
+    ctx,
+    left + 7,
+    top + 6,
+    DIE_SIZE - 14,
+    25,
+    10,
+  );
+
+  ctx.fill();
+
+  ctx.restore();
+
+  // ONE centered white pip.
+  ctx.fillStyle = PIP;
+
+  ctx.beginPath();
+
+  ctx.arc(
+    x,
+    y,
+    16,
+    0,
+    Math.PI * 2,
+  );
+
+  ctx.fill();
+
+  // Tiny pip shadow for depth.
+  ctx.save();
+
+  ctx.globalAlpha = 0.12;
+  ctx.fillStyle = "#000000";
+
+  ctx.beginPath();
+
+  ctx.arc(
+    x + 2,
+    y + 3,
+    13,
+    0,
+    Math.PI * 2,
+  );
+
+  ctx.fill();
+
+  ctx.restore();
+
+  // Re-draw the clean white center over the shadow.
+  ctx.fillStyle = PIP;
+
+  ctx.beginPath();
+
+  ctx.arc(
+    x,
+    y,
+    14,
+    0,
+    Math.PI * 2,
+  );
+
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ─── Draw six dice ────────────────────────────────────────────────────────────
+
+function drawDice(
+  ctx: CanvasRenderingContext2D,
+  dice: DiceColor[],
+): void {
+  for (
+    let i = 0;
+    i < 6;
+    i++
+  ) {
+    const position =
+      DICE_POSITIONS[i]!;
+
+    drawDie(
+      ctx,
+      position.x,
+      position.y,
+      dice[i]!,
+    );
+  }
+}
+
+// ─── Bottom information ───────────────────────────────────────────────────────
+
+function drawBottomInfo(
+  ctx: CanvasRenderingContext2D,
+  pick: DiceColor,
+  showResult: boolean,
+  matches: number,
+  mult: number,
+  payout: number,
+): void {
+  const pickName =
+    pick.charAt(0).toUpperCase() +
+    pick.slice(1);
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  if (!showResult) {
+    ctx.fillStyle = TEXT;
+    ctx.font =
+      "800 22px Arial";
+
+    ctx.fillText(
+      `Your pick: ${pickName}`,
+      IMAGE_WIDTH / 2,
+      525,
+    );
+
+    ctx.fillStyle = MUTED;
+    ctx.font =
+      "600 16px Arial";
+
+    ctx.fillText(
+      "Six dice • One matching color can win",
+      IMAGE_WIDTH / 2,
+      555,
+    );
+
+    return;
+  }
+
+  const resultColor =
+    payout > 0
+      ? payout >= 1
+        ? "#55d887"
+        : "#e0b94a"
+      : "#df4c4c";
+
+  const resultText =
+    payout > 0
+      ? payout >= 1
+        ? "WIN"
+        : "PARTIAL RETURN"
+      : "NO MATCH";
+
+  ctx.fillStyle =
+    resultColor;
+
+  ctx.font =
+    "900 30px Arial";
+
+  ctx.fillText(
+    resultText,
+    IMAGE_WIDTH / 2,
+    515,
+  );
+
+  ctx.fillStyle = TEXT;
+
+  ctx.font =
+    "700 19px Arial";
+
+  ctx.fillText(
+    `Your pick: ${pickName}   •   Matches: ${matches}`,
+    IMAGE_WIDTH / 2,
+    550,
+  );
+
+  ctx.fillStyle = MUTED;
+
+  ctx.font =
+    "600 17px Arial";
+
+  ctx.fillText(
+    `${mult}x   •   Payout: ${formatAmount(payout)}`,
+    IMAGE_WIDTH / 2,
+    580,
+  );
+}
+
+// ─── Main image ───────────────────────────────────────────────────────────────
+
+function colorDiceImage(
+  bet: number,
+  pick: DiceColor,
+  dice: DiceColor[],
+  showResult: boolean,
+  matches: number,
+  mult: number,
+  payout: number,
+): Buffer {
+  const canvas =
+    createCanvas(
+      IMAGE_WIDTH,
+      IMAGE_HEIGHT,
+    );
+
+  const ctx =
+    canvas.getContext("2d");
+
+  drawCasinoBackground(ctx);
+
+  drawHeader(
+    ctx,
+    bet,
+  );
+
+  drawDiceArea(ctx);
+
+  drawDice(
+    ctx,
+    dice,
+  );
+
+  drawBottomInfo(
+    ctx,
+    pick,
+    showResult,
+    matches,
+    mult,
+    payout,
+  );
+
+  return canvas.toBuffer(
+    "image/png",
+  );
+}
+
+// ─── Attachment ───────────────────────────────────────────────────────────────
+
+function imageFile(
+  bet: number,
+  pick: DiceColor,
+  dice: DiceColor[],
+  showResult: boolean,
+  matches = 0,
+  mult = 0,
+  payout = 0,
+): AttachmentBuilder {
+  return new AttachmentBuilder(
+    colorDiceImage(
+      bet,
+      pick,
+      dice,
+      showResult,
+      matches,
+      mult,
+      payout,
+    ),
+    {
+      name:
+        "color-dice.png",
+    },
+  );
+}
+
+// ─── Rolling animation ────────────────────────────────────────────────────────
+
+function randomDiceRow(): DiceColor[] {
+  return rollDice();
+}
+
+function rollingEmbed(
+  bet: number,
+  pick: DiceColor,
+): EmbedBuilder {
+  const pickName =
+    pick.charAt(0).toUpperCase() +
+    pick.slice(1);
+
   return new EmbedBuilder()
-    .setColor(COLORS.primary)
-    .setTitle("🎲  Color Dice")
+    .setColor(
+      COLORS.primary,
+    )
+    .setTitle(
+      "🎲  Color Dice",
+    )
     .setDescription(
       [
         `💎 **Bet**  \`${formatAmount(bet)}\``,
-        `${COLOR_EMOJI[pick]} **Your pick**  ${pick.charAt(0).toUpperCase() + pick.slice(1)}`,
+        `${COLOR_EMOJI[pick]} **Your pick**  ${pickName}`,
         "",
-        randomDiceRow(),
-        "",
-        "🕐 **Rolling the dice…**",
-        bar,
+        "🎲 **Rolling…**",
       ].join("\n"),
     )
     .setTimestamp();
 }
 
-// ─── Embeds ───────────────────────────────────────────────────────────────────
-function payoutEmbed(bet: number): EmbedBuilder {
-  const payoutLines = PAYOUT_TABLE.map(([matches, mult]) => {
-    const label = matches === 4 ? "4+" : String(matches);
-    return `• **${label} match${matches !== 1 ? "es" : ""}**  →  \`${mult}x\``;
-  }).join("\n");
+// ─── Payout panel ─────────────────────────────────────────────────────────────
+
+function payoutEmbed(
+  bet: number,
+): EmbedBuilder {
+  const payoutLines =
+    PAYOUT_TABLE.map(
+      ([matches, mult]) => {
+        const label =
+          matches === 4
+            ? "4+"
+            : String(matches);
+
+        return `• **${label} match${matches !== 1 ? "es" : ""}** → \`${mult}x\``;
+      },
+    ).join("\n");
 
   return new EmbedBuilder()
-    .setColor(COLORS.primary)
-    .setTitle("🎲  Color Dice")
+    .setColor(
+      COLORS.primary,
+    )
+    .setTitle(
+      "🎲  Color Dice",
+    )
     .setDescription(
       [
         `💎 **Bet**  \`${formatAmount(bet)}\``,
@@ -120,144 +796,390 @@ function payoutEmbed(bet: number): EmbedBuilder {
         "**Payout table**",
         payoutLines,
         "",
-        "✨ *Six dice roll*",
+        "✨ *Choose a color to roll six dice.*",
       ].join("\n"),
     )
     .setTimestamp();
 }
 
+// ─── Result embed ─────────────────────────────────────────────────────────────
+
 function resultEmbed(
   bet: number,
   pick: DiceColor,
-  dice: DiceColor[],
   matches: number,
   mult: number,
   payout: number,
 ): EmbedBuilder {
-  const isWin  = payout > 0;
-  const color  = isWin ? (payout >= bet ? COLORS.success : COLORS.warning) : COLORS.danger;
+  const isWin =
+    payout > 0;
 
-  const diceRow  = dice.map((c) => COLOR_EMOJI[c]).join("");
-  const pickRow  = COLOR_EMOJI[pick];
-  const pickName = pick.charAt(0).toUpperCase() + pick.slice(1);
+  const color =
+    isWin
+      ? payout >= bet
+        ? COLORS.success
+        : COLORS.warning
+      : COLORS.danger;
+
+  const pickName =
+    pick.charAt(0).toUpperCase() +
+    pick.slice(1);
+
+  const resultTitle =
+    payout > 0
+      ? payout >= bet
+        ? "🎉  You Won!"
+        : "💰  Partial Return"
+      : "❌  No Match";
 
   return new EmbedBuilder()
     .setColor(color)
-    .setTitle("🎲  Color Dice")
+    .setTitle(
+      resultTitle,
+    )
     .setDescription(
       [
         `💎 **Bet**  \`${formatAmount(bet)}\``,
-        `✨ **Multiplier**  \`${mult}x  (${formatAmount(payout)})\``,
+        `${COLOR_EMOJI[pick]} **Your pick**  ${pickName}`,
         "",
-        `**Dice roll**  ${diceRow}`,
-        `**Your pick**  ${pickRow} ${pickName}`,
-        `**Matches**  ${matches}  (${mult}x)`,
+        `🎯 **Matches**  \`${matches}\``,
+        `📈 **Multiplier**  \`${mult}x\``,
+        `💰 **Payout**  \`${formatAmount(payout)}\``,
       ].join("\n"),
     )
     .setTimestamp();
 }
 
 // ─── Select menu ──────────────────────────────────────────────────────────────
-function buildColorSelect(userId: string): ActionRowBuilder<MessageActionRowComponentBuilder> {
-  const menu = new StringSelectMenuBuilder()
-    .setCustomId(`cd_pick_${userId}`)
-    .setPlaceholder("Choose your color…")
-    .addOptions(
-      COLORS_LIST.map((c) =>
-        new StringSelectMenuOptionBuilder()
-          .setLabel(c.charAt(0).toUpperCase() + c.slice(1))
-          .setValue(c)
-          .setEmoji(COLOR_EMOJI[c]),
-      ),
-    );
 
-  return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(menu);
+function buildColorSelect(
+  userId: string,
+): ActionRowBuilder<MessageActionRowComponentBuilder> {
+  const menu =
+    new StringSelectMenuBuilder()
+      .setCustomId(
+        `cd_pick_${userId}`,
+      )
+      .setPlaceholder(
+        "Choose your color…",
+      )
+      .addOptions(
+        COLORS_LIST.map(
+          (c) =>
+            new StringSelectMenuOptionBuilder()
+              .setLabel(
+                c.charAt(0).toUpperCase() +
+                  c.slice(1),
+              )
+              .setValue(c)
+              .setEmoji(
+                COLOR_EMOJI[c],
+              ),
+        ),
+      );
+
+  return new ActionRowBuilder<MessageActionRowComponentBuilder>()
+    .addComponents(
+      menu,
+    );
 }
 
 // ─── Command ──────────────────────────────────────────────────────────────────
-export const data = new SlashCommandBuilder()
-  .setName("colordice")
-  .setDescription("Six dice roll")
-  .addStringOption((o) =>
-    o.setName("bet").setDescription("Bet amount (e.g. 1m, 2.5b, 500k)").setRequired(true),
-  );
 
-export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
-  const userId = interaction.user.id;
+export const data =
+  new SlashCommandBuilder()
+    .setName("colordice")
+    .setDescription(
+      "Six dice roll",
+    )
+    .addStringOption(
+      (o) =>
+        o
+          .setName("bet")
+          .setDescription(
+            "Bet amount (e.g. 1m, 2.5b, 500k)",
+          )
+          .setRequired(true),
+    );
 
-  if (pendingColorDice.has(userId)) {
+// ─── Execute ─────────────────────────────────────────────────────────────────
+
+export async function execute(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  const userId =
+    interaction.user.id;
+
+  if (
+    pendingColorDice.has(
+      userId,
+    )
+  ) {
     return void interaction.reply({
-      embeds: [errorEmbed("You already have a Color Dice game waiting! Choose your color.")],
-      flags: MessageFlags.Ephemeral,
+      embeds: [
+        errorEmbed(
+          "You already have a Color Dice game waiting! Choose your color.",
+        ),
+      ],
+      flags:
+        MessageFlags.Ephemeral,
     });
   }
 
-  const betStr = interaction.options.getString("bet", true);
-  const bet    = parseAmount(betStr);
+  const betStr =
+    interaction.options.getString(
+      "bet",
+      true,
+    );
 
-  if (!bet || bet < 1_000_000) {
-    return void interaction.reply({ embeds: [errorEmbed("Minimum bet is **1m gems**.")], flags: MessageFlags.Ephemeral });
+  const bet =
+    parseAmount(betStr);
+
+  if (
+    !bet ||
+    bet < 1_000_000
+  ) {
+    return void interaction.reply({
+      embeds: [
+        errorEmbed(
+          "Minimum bet is **1m gems**.",
+        ),
+      ],
+      flags:
+        MessageFlags.Ephemeral,
+    });
   }
 
   await interaction.deferReply();
 
-  const user = await getOrCreateUser(userId, interaction.user.username);
-  if (user.balance < bet) {
+  const user =
+    await getOrCreateUser(
+      userId,
+      interaction.user.username,
+    );
+
+  if (
+    user.balance < bet
+  ) {
     return void interaction.editReply({
-      embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} 💎**.`)],
+      embeds: [
+        errorEmbed(
+          `Insufficient balance. You have **${formatAmount(user.balance)} 💎**.`,
+        ),
+      ],
     });
   }
 
-  await addBalance(userId, -bet);
-  pendingColorDice.set(userId, { userId, bet });
+  await addBalance(
+    userId,
+    -bet,
+  );
+
+  pendingColorDice.set(
+    userId,
+    {
+      userId,
+      bet,
+    },
+  );
 
   await interaction.editReply({
-    embeds:     [payoutEmbed(bet)],
-    components: [buildColorSelect(userId)],
+    embeds: [
+      payoutEmbed(bet),
+    ],
+    components: [
+      buildColorSelect(userId),
+    ],
   });
 }
 
 // ─── Select: color picked ─────────────────────────────────────────────────────
-export async function handleColorPick(interaction: StringSelectMenuInteraction): Promise<void> {
-  const userId  = interaction.user.id;
-  const pending = pendingColorDice.get(userId);
+
+export async function handleColorPick(
+  interaction: StringSelectMenuInteraction,
+): Promise<void> {
+  const userId =
+    interaction.user.id;
+
+  const pending =
+    pendingColorDice.get(
+      userId,
+    );
 
   if (!pending) {
-    return void interaction.reply({ embeds: [errorEmbed("No active Color Dice game.")], flags: MessageFlags.Ephemeral });
+    return void interaction.reply({
+      embeds: [
+        errorEmbed(
+          "No active Color Dice game.",
+        ),
+      ],
+      flags:
+        MessageFlags.Ephemeral,
+    });
   }
 
-  const pick = interaction.values[0] as DiceColor;
-  pendingColorDice.delete(userId);
+  const pick =
+    interaction.values[0] as DiceColor;
 
-  // Pre-roll the dice so the last animation frame IS the result
-  const dice    = rollDice();
-  const matches = countMatches(dice, pick);
-  const mult    = getPayout(matches);
-  const payout  = Math.floor(pending.bet * mult);
+  if (
+    !COLORS_LIST.includes(
+      pick,
+    )
+  ) {
+    return void interaction.reply({
+      embeds: [
+        errorEmbed(
+          "Invalid color.",
+        ),
+      ],
+      flags:
+        MessageFlags.Ephemeral,
+    });
+  }
 
-  // ── Step 1: show first rolling frame immediately ──
+  pendingColorDice.delete(
+    userId,
+  );
+
+  // Pre-roll the actual result.
+  // The animation changes colors only.
+  // Dice positions never move.
+  const dice =
+    rollDice();
+
+  const matches =
+    countMatches(
+      dice,
+      pick,
+    );
+
+  const mult =
+    getPayout(matches);
+
+  const payout =
+    Math.floor(
+      pending.bet * mult,
+    );
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // FIRST UPDATE
+  // Keep the normal Discord panel while the image animation starts.
+  // ─────────────────────────────────────────────────────────────────────────
+
   await interaction.update({
-    embeds:     [rollingEmbed(pending.bet, pick, 0)],
+    embeds: [
+      rollingEmbed(
+        pending.bet,
+        pick,
+      ),
+    ],
+    files: [
+      imageFile(
+        pending.bet,
+        pick,
+        randomDiceRow(),
+        false,
+      ),
+    ],
     components: [],
   });
 
-  // ── Step 2: intermediate frames with random dice ──
-  const FRAME_MS = 500;
-  for (let frame = 1; frame <= 4; frame++) {
-    await new Promise<void>((resolve) => setTimeout(resolve, FRAME_MS));
+  // ─────────────────────────────────────────────────────────────────────────
+  // FAST COLOR ANIMATION
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const FRAME_MS = 180;
+
+  for (
+    let frame = 0;
+    frame < 9;
+    frame++
+  ) {
+    await new Promise<void>(
+      (resolve) =>
+        setTimeout(
+          resolve,
+          FRAME_MS,
+        ),
+    );
+
+    const animatedDice =
+      randomDiceRow();
+
     try {
-      await interaction.editReply({ embeds: [rollingEmbed(pending.bet, pick, frame)] });
-    } catch { /* skip if rate-limited */ }
+      await interaction.editReply({
+        embeds: [
+          rollingEmbed(
+            pending.bet,
+            pick,
+          ),
+        ],
+        files: [
+          imageFile(
+            pending.bet,
+            pick,
+            animatedDice,
+            false,
+          ),
+        ],
+      });
+    } catch {
+      // Ignore an occasional Discord edit/rate-limit failure.
+    }
   }
 
-  // ── Step 3: last frame = actual result ──
-  await new Promise<void>((resolve) => setTimeout(resolve, FRAME_MS));
+  // Small pause before revealing the actual result.
+  await new Promise<void>(
+    (resolve) =>
+      setTimeout(
+        resolve,
+        220,
+      ),
+  );
 
-  if (payout > 0) await addBalance(userId, payout);
-  await recordBet(userId, pending.bet, payout - pending.bet, "colordice");
+  // ─────────────────────────────────────────────────────────────────────────
+  // PAYOUT
+  // ─────────────────────────────────────────────────────────────────────────
+
+  if (payout > 0) {
+    await addBalance(
+      userId,
+      payout,
+    );
+  }
+
+  await recordBet(
+    userId,
+    pending.bet,
+    payout - pending.bet,
+    "colordice",
+  );
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // FINAL RESULT IMAGE
+  // ─────────────────────────────────────────────────────────────────────────
 
   await interaction.editReply({
-    embeds:     [resultEmbed(pending.bet, pick, dice, matches, mult, payout)],
+    embeds: [
+      resultEmbed(
+        pending.bet,
+        pick,
+        matches,
+        mult,
+        payout,
+      ),
+    ],
+    files: [
+      imageFile(
+        pending.bet,
+        pick,
+        dice,
+        true,
+        matches,
+        mult,
+        payout,
+      ),
+    ],
     components: [],
   });
 }

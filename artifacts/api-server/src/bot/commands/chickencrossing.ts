@@ -13,12 +13,13 @@ import {
   type Message,
   type ChatInputCommandInteraction,
   type ButtonInteraction,
-  type MessageActionRowComponentBuilder,
 } from "discord.js";
+
 import {
   createCanvas,
   type CanvasRenderingContext2D,
 } from "@napi-rs/canvas";
+
 import {
   COLORS,
   parseAmount,
@@ -31,7 +32,9 @@ import {
 } from "../utils.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
 type Difficulty = "easy" | "medium" | "hard";
+type GameStatus = "active" | "cashed" | "dead";
 
 export interface ChickenGame {
   userId: string;
@@ -45,7 +48,8 @@ export interface ChickenGame {
 
 export const activeChickenGames = new Map<string, ChickenGame>();
 
-// ─── Config ───────────────────────────────────────────────────────────────────
+// ─── Config ──────────────────────────────────────────────────────────────────
+
 const TOTAL_LANES = 24;
 const RTP = 0.925;
 
@@ -62,6 +66,7 @@ const DIFF_EMOJI: Record<Difficulty, string> = {
 };
 
 // ─── Math ─────────────────────────────────────────────────────────────────────
+
 function calcMultiplier(
   difficulty: Difficulty,
   lanesCrossed: number,
@@ -76,22 +81,51 @@ function calcMultiplier(
   );
 }
 
-// ─── Track image ──────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// IMAGE
+// ─────────────────────────────────────────────────────────────────────────────
+
 const IMAGE_WIDTH = 1200;
 const IMAGE_HEIGHT = 760;
-const FIELD_LEFT = 45;
-const FIELD_TOP = 42;
-const FIELD_WIDTH = IMAGE_WIDTH - 90;
-const LANE_TOP = 140;
-const LANE_BOTTOM = 690;
-const SIDEWALK_LEFT = 90;
-const SIDEWALK_WIDTH = 130;
-const LANE_LEFT = 250;
-const LANE_WIDTH = 165;
-const LANE_GAP = 10;
-const TARGET_Y = 350;
 
-type GameStatus = "active" | "cashed" | "dead";
+const ROAD_TOP = 0;
+const ROAD_BOTTOM = IMAGE_HEIGHT;
+
+const SIDEWALK_WIDTH = 175;
+const ROAD_LEFT = SIDEWALK_WIDTH;
+const ROAD_WIDTH = IMAGE_WIDTH - ROAD_LEFT;
+
+const LANE_WIDTH = ROAD_WIDTH / 5;
+
+const TARGET_Y = 335;
+const DRAIN_Y = 650;
+
+const BG = "#41496f";
+const BG_DARK = "#343b5e";
+const ROAD_ALT = "#444c72";
+
+const LANE_LINE = "#b5c0e3";
+
+const MULTIPLIER_FILL = "#626da1";
+const MULTIPLIER_INNER = "#596598";
+const MULTIPLIER_RING = "#747fc0";
+const MULTIPLIER_DARK_RING = "#30385b";
+
+const OBSTACLE = "#303758";
+const OBSTACLE_HIGHLIGHT = "#363e61";
+
+const DRAIN_DARK = "#202744";
+const DRAIN_MID = "#293150";
+const DRAIN_EDGE = "#5b668f";
+
+const CHICKEN_WHITE = "#f8f8ed";
+const CHICKEN_SHADOW = "#d9ddd5";
+const CHICKEN_OUTLINE = "#20243b";
+const CHICKEN_RED = "#e92f35";
+const CHICKEN_RED_DARK = "#b91f2a";
+const CHICKEN_YELLOW = "#f5a928";
+const CHICKEN_BEAK = "#f6ae28";
+const CHICKEN_EYE = "#22243a";
 
 function roundedRect(
   ctx: CanvasRenderingContext2D,
@@ -105,243 +139,934 @@ function roundedRect(
   ctx.roundRect(x, y, width, height, radius);
 }
 
+// ─── Car behind hit chicken ───────────────────────────────────────────────────
+
+function drawHitCar(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  scale = 1,
+): void {
+  ctx.save();
+
+  ctx.globalAlpha = 0.8;
+
+  ctx.translate(x, y);
+  ctx.rotate(-Math.PI / 2);
+  ctx.scale(scale, scale);
+
+  ctx.save();
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = "#171b31";
+
+  ctx.beginPath();
+  ctx.ellipse(
+    0,
+    67,
+    125,
+    18,
+    0,
+    0,
+    Math.PI * 2,
+  );
+  ctx.fill();
+
+  ctx.restore();
+
+  ctx.fillStyle = "#262d4d";
+  ctx.strokeStyle = "#171c32";
+  ctx.lineWidth = 6;
+
+  ctx.beginPath();
+  ctx.moveTo(-115, 32);
+  ctx.lineTo(-98, -13);
+  ctx.quadraticCurveTo(-86, -47, -52, -57);
+  ctx.lineTo(48, -57);
+  ctx.quadraticCurveTo(82, -48, 98, -14);
+  ctx.lineTo(116, 32);
+  ctx.lineTo(116, 51);
+  ctx.quadraticCurveTo(116, 62, 104, 62);
+  ctx.lineTo(-104, 62);
+  ctx.quadraticCurveTo(-116, 62, -116, 51);
+  ctx.closePath();
+
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#3d466b";
+  ctx.strokeStyle = "#171c32";
+  ctx.lineWidth = 5;
+
+  ctx.beginPath();
+  ctx.moveTo(-66, -49);
+  ctx.lineTo(-42, -80);
+  ctx.quadraticCurveTo(-35, -90, -20, -91);
+  ctx.lineTo(27, -91);
+  ctx.quadraticCurveTo(42, -90, 50, -79);
+  ctx.lineTo(69, -49);
+  ctx.closePath();
+
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#202742";
+  ctx.strokeStyle = "#566184";
+  ctx.lineWidth = 3;
+
+  ctx.beginPath();
+  ctx.moveTo(-37, -76);
+  ctx.lineTo(-20, -82);
+  ctx.lineTo(20, -82);
+  ctx.lineTo(39, -76);
+  ctx.lineTo(49, -55);
+  ctx.lineTo(-47, -55);
+  ctx.closePath();
+
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.save();
+  ctx.globalAlpha = 0.13;
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 4;
+
+  ctx.beginPath();
+  ctx.moveTo(-28, -78);
+  ctx.lineTo(-12, -57);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(7, -81);
+  ctx.lineTo(24, -57);
+  ctx.stroke();
+
+  ctx.restore();
+
+  ctx.fillStyle = "#343c5d";
+
+  roundedRect(ctx, -84, -5, 168, 48, 10);
+  ctx.fill();
+
+  ctx.fillStyle = "#1d233d";
+
+  roundedRect(ctx, -112, 37, 224, 25, 9);
+  ctx.fill();
+
+  ctx.fillStyle = "#e9343e";
+  ctx.strokeStyle = "#7e202c";
+  ctx.lineWidth = 3;
+
+  roundedRect(ctx, -103, 4, 35, 18, 6);
+  ctx.fill();
+  ctx.stroke();
+
+  roundedRect(ctx, 68, 4, 35, 18, 6);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.save();
+  ctx.globalAlpha = 0.10;
+  ctx.fillStyle = "#ff4149";
+
+  ctx.beginPath();
+  ctx.arc(-86, 13, 26, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(86, 13, 26, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+
+  ctx.fillStyle = "#e4e7dc";
+  ctx.strokeStyle = "#171c32";
+  ctx.lineWidth = 3;
+
+  roundedRect(ctx, -38, 20, 76, 24, 4);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#303758";
+  ctx.font = "900 11px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  ctx.fillText("HIT", 0, 32);
+
+  ctx.fillStyle = "#11162a";
+  ctx.strokeStyle = "#080c18";
+  ctx.lineWidth = 4;
+
+  ctx.beginPath();
+  ctx.ellipse(-82, 53, 22, 28, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.ellipse(82, 53, 22, 28, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#3c4566";
+  ctx.strokeStyle = "#1a2038";
+  ctx.lineWidth = 3;
+
+  ctx.beginPath();
+  ctx.arc(-82, 53, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(82, 53, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// ─── Chicken ─────────────────────────────────────────────────────────────────
+
 function drawChicken(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  scale: number,
+  scale = 1,
   hit = false,
 ): void {
   ctx.save();
+
   ctx.translate(x, y);
   ctx.scale(scale, scale);
 
+  ctx.save();
+  ctx.globalAlpha = 0.25;
+  ctx.fillStyle = "#171b31";
+
+  ctx.beginPath();
+  ctx.ellipse(0, 45, 57, 11, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+
   if (hit) {
-    ctx.strokeStyle = "#ffcf33";
-    ctx.lineWidth = 5;
+    ctx.save();
+    ctx.strokeStyle = "#ffd34e";
+    ctx.lineWidth = 7;
     ctx.lineCap = "round";
-    for (const [dx, dy] of [
-      [-58, -35],
-      [-45, 35],
-      [50, -30],
-      [58, 30],
-    ]) {
+
+    const rays = [
+      [-65, -65, -88, -91],
+      [-75, 0, -108, 0],
+      [-58, 55, -84, 78],
+      [62, -60, 87, -86],
+      [72, 5, 108, 5],
+      [54, 58, 82, 84],
+    ];
+
+    for (const [x1, y1, x2, y2] of rays) {
       ctx.beginPath();
-      ctx.moveTo(dx * 0.6, dy * 0.6);
-      ctx.lineTo(dx, dy);
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
       ctx.stroke();
     }
 
-    ctx.fillStyle = "#f5d08a";
-    for (const [dx, dy, angle] of [
-      [-48, -22, -0.5],
-      [-42, 29, 0.7],
-      [47, -25, 0.4],
-      [48, 25, -0.6],
-    ]) {
-      ctx.save();
-      ctx.translate(dx, dy);
-      ctx.rotate(angle);
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 18, 6, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
+    ctx.restore();
   }
 
-  // Legs.
-  ctx.strokeStyle = "#e58b2c";
-  ctx.lineWidth = 5;
+  ctx.strokeStyle = "#d8871f";
+  ctx.lineWidth = 8;
   ctx.lineCap = "round";
-  for (const legX of [0, 22]) {
-    ctx.beginPath();
-    ctx.moveTo(legX, 25);
-    ctx.lineTo(legX - 4, 43);
-    ctx.moveTo(legX - 4, 43);
-    ctx.lineTo(legX - 13, 43);
-    ctx.moveTo(legX - 4, 43);
-    ctx.lineTo(legX + 5, 43);
-    ctx.stroke();
-  }
+  ctx.lineJoin = "round";
 
-  // Body and wing.
-  ctx.fillStyle = hit ? "#f4b6aa" : "#fff9e8";
-  ctx.strokeStyle = "#d9c79b";
+  ctx.beginPath();
+  ctx.moveTo(-7, 27);
+  ctx.lineTo(-9, 52);
+  ctx.lineTo(-22, 57);
+  ctx.moveTo(-9, 52);
+  ctx.lineTo(3, 58);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(24, 25);
+  ctx.lineTo(25, 51);
+  ctx.lineTo(13, 58);
+  ctx.moveTo(25, 51);
+  ctx.lineTo(37, 56);
+  ctx.stroke();
+
+  ctx.fillStyle = CHICKEN_WHITE;
+  ctx.strokeStyle = CHICKEN_OUTLINE;
+  ctx.lineWidth = 4;
+
+  ctx.beginPath();
+  ctx.moveTo(-28, -7);
+  ctx.bezierCurveTo(-55, -20, -75, -46, -65, -65);
+  ctx.bezierCurveTo(-47, -60, -35, -45, -28, -30);
+  ctx.bezierCurveTo(-65, -48, -79, -34, -74, -12);
+  ctx.bezierCurveTo(-58, -9, -43, -3, -27, 8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = hit ? "#e7aaa2" : CHICKEN_WHITE;
+  ctx.strokeStyle = CHICKEN_OUTLINE;
+  ctx.lineWidth = 4;
+
+  ctx.beginPath();
+  ctx.ellipse(0, 4, 55, 43, -0.08, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = hit ? "#cc8b84" : CHICKEN_SHADOW;
+  ctx.globalAlpha = 0.75;
+
+  ctx.beginPath();
+  ctx.ellipse(-5, 22, 40, 20, 0.05, 0, Math.PI);
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = hit ? "#d9948e" : "#eef0e9";
+  ctx.strokeStyle = CHICKEN_OUTLINE;
   ctx.lineWidth = 3;
+
   ctx.beginPath();
-  ctx.ellipse(8, 4, 39, 29, -0.08, 0, Math.PI * 2);
+  ctx.ellipse(-7, 9, 30, 25, -0.35, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = hit ? "#dc8f82" : "#e9dfc3";
-  ctx.beginPath();
-  ctx.ellipse(2, 8, 20, 13, -0.3, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.strokeStyle = "#cbd0c9";
+  ctx.lineWidth = 2.5;
 
-  // Tail feathers.
-  ctx.fillStyle = hit ? "#d8897c" : "#fff9e8";
   ctx.beginPath();
-  ctx.moveTo(-23, -7);
-  ctx.lineTo(-54, -27);
-  ctx.lineTo(-39, 2);
-  ctx.lineTo(-56, 13);
-  ctx.lineTo(-20, 17);
+  ctx.arc(-8, 10, 19, 0.2, 1.7);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(-7, 12, 13, 0.25, 1.6);
+  ctx.stroke();
+
+  ctx.fillStyle = hit ? "#e7aaa2" : CHICKEN_WHITE;
+  ctx.strokeStyle = CHICKEN_OUTLINE;
+  ctx.lineWidth = 4;
+
+  ctx.beginPath();
+  ctx.arc(38, -28, 36, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = hit ? "#c95e5c" : CHICKEN_RED;
+  ctx.strokeStyle = CHICKEN_OUTLINE;
+  ctx.lineWidth = 3;
+
+  ctx.beginPath();
+  ctx.moveTo(11, -52);
+  ctx.bezierCurveTo(4, -67, 11, -80, 23, -73);
+  ctx.bezierCurveTo(26, -88, 40, -89, 44, -74);
+  ctx.bezierCurveTo(53, -84, 66, -77, 64, -63);
+  ctx.bezierCurveTo(52, -52, 29, -49, 11, -52);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
 
-  // Head, comb, beak, and eye.
-  ctx.fillStyle = hit ? "#f4b6aa" : "#fff9e8";
+  ctx.fillStyle = "#ff5050";
+  ctx.globalAlpha = 0.5;
+
   ctx.beginPath();
-  ctx.arc(39, -17, 25, 0, Math.PI * 2);
+  ctx.arc(28, -66, 8, Math.PI, Math.PI * 1.8);
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = "#fffbe8";
+
+  ctx.beginPath();
+  ctx.ellipse(45, -25, 24, 27, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#fff6bf";
+  ctx.strokeStyle = CHICKEN_OUTLINE;
+  ctx.lineWidth = 3;
+
+  ctx.beginPath();
+  ctx.arc(48, -34, 13, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = "#e94b4b";
+  ctx.fillStyle = CHICKEN_EYE;
+
   ctx.beginPath();
-  ctx.arc(31, -43, 7, 0, Math.PI * 2);
-  ctx.arc(42, -46, 8, 0, Math.PI * 2);
-  ctx.arc(52, -41, 6, 0, Math.PI * 2);
+  ctx.arc(51, -35, 5, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = "#f29b38";
-  ctx.beginPath();
-  ctx.moveTo(61, -17);
-  ctx.lineTo(86, -8);
-  ctx.lineTo(61, -1);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = "#222b3a";
-  ctx.beginPath();
-  ctx.arc(47, -23, 4, 0, Math.PI * 2);
-  ctx.fill();
   ctx.fillStyle = "#ffffff";
+
   ctx.beginPath();
-  ctx.arc(48, -24, 1.5, 0, Math.PI * 2);
+  ctx.arc(53, -37, 2, 0, Math.PI * 2);
   ctx.fill();
+
+  ctx.fillStyle = CHICKEN_BEAK;
+  ctx.strokeStyle = CHICKEN_OUTLINE;
+  ctx.lineWidth = 3;
+
+  ctx.beginPath();
+  ctx.moveTo(66, -27);
+  ctx.lineTo(98, -15);
+  ctx.lineTo(67, -5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = "#d57f16";
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+  ctx.moveTo(69, -16);
+  ctx.lineTo(91, -15);
+  ctx.stroke();
+
+  ctx.fillStyle = "#e63238";
+  ctx.strokeStyle = CHICKEN_OUTLINE;
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+  ctx.ellipse(66, -1, 8, 14, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.ellipse(57, -2, 7, 11, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
 
   if (hit) {
-    ctx.fillStyle = "#f04f45";
-    ctx.font = "900 32px Arial";
+    ctx.fillStyle = "#ff4a42";
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 3;
+    ctx.font = "900 31px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("HIT!", 4, -73);
+    ctx.strokeText("HIT!", 0, -98);
+    ctx.fillText("HIT!", 0, -98);
   }
 
   ctx.restore();
 }
 
-function drawTarget(
+// ─── Golden passed-lane coin ─────────────────────────────────────────────────
+
+function drawGoldenCoin(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  state: "safe" | "current" | "future" | "hit",
-  multiplier: string,
 ): void {
-  const colors = {
-    safe: { fill: "#1f9d68", stroke: "#70f0b0", text: "✓" },
-    current: { fill: "#c47b22", stroke: "#ffd166", text: "→" },
-    future: { fill: "#263750", stroke: "#7283a0", text: "?" },
-    hit: { fill: "#a93643", stroke: "#ff7771", text: "×" },
-  }[state];
-  const caption =
-    state === "safe"
-      ? "SAFE"
-      : state === "current"
-        ? "NEXT"
-        : state === "hit"
-          ? "CRASH"
-          : "RISK";
-
   ctx.save();
-  const glow = state === "current" || state === "hit" ? 20 : 8;
-  ctx.shadowColor = colors.stroke;
-  ctx.shadowBlur = glow;
-  ctx.fillStyle = colors.fill;
-  ctx.strokeStyle = colors.stroke;
-  ctx.lineWidth = 5;
+
+  ctx.shadowColor = "#ffd84a";
+  ctx.shadowBlur = 24;
+
+  ctx.fillStyle = "#d89b18";
   ctx.beginPath();
-  ctx.arc(x, y, 43, 0, Math.PI * 2);
+  ctx.arc(x, y, 82, 0, Math.PI * 2);
   ctx.fill();
-  ctx.stroke();
+
   ctx.shadowBlur = 0;
 
-  ctx.strokeStyle = colors.stroke;
-  ctx.globalAlpha = 0.55;
-  ctx.lineWidth = 2;
-  ctx.setLineDash([6, 7]);
+  ctx.strokeStyle = "#8f6410";
+  ctx.lineWidth = 10;
+
   ctx.beginPath();
-  ctx.arc(x, y, 52, 0, Math.PI * 2);
+  ctx.arc(x, y, 82, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.setLineDash([]);
+
+  ctx.strokeStyle = "#ffdc55";
+  ctx.lineWidth = 8;
+
+  ctx.beginPath();
+  ctx.arc(
+    x,
+    y,
+    70,
+    -Math.PI * 0.8,
+    Math.PI * 0.55,
+  );
+  ctx.stroke();
+
+  ctx.fillStyle = "#f0b92d";
+  ctx.strokeStyle = "#a96f0d";
+  ctx.lineWidth = 6;
+
+  ctx.beginPath();
+  ctx.arc(x, y, 57, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.save();
+  ctx.globalAlpha = 0.24;
+  ctx.fillStyle = "#fff4a8";
+
+  ctx.beginPath();
+  ctx.arc(
+    x - 18,
+    y - 18,
+    35,
+    Math.PI * 1.05,
+    Math.PI * 1.75,
+  );
+  ctx.lineTo(x - 18, y - 18);
+  ctx.fill();
+
+  ctx.restore();
+
+  ctx.strokeStyle = "#9a690e";
+  ctx.lineWidth = 17;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  ctx.beginPath();
+  ctx.moveTo(x - 31, y + 2);
+  ctx.lineTo(x - 8, y + 25);
+  ctx.lineTo(x + 37, y - 28);
+  ctx.stroke();
+
+  ctx.strokeStyle = "#fff8cf";
+  ctx.lineWidth = 11;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  ctx.beginPath();
+  ctx.moveTo(x - 31, y + 2);
+  ctx.lineTo(x - 8, y + 25);
+  ctx.lineTo(x + 37, y - 28);
+  ctx.stroke();
+
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 4;
+  ctx.globalAlpha = 0.75;
+
+  ctx.beginPath();
+  ctx.moveTo(x - 27, y - 1);
+  ctx.lineTo(x - 9, y + 17);
+  ctx.stroke();
+
   ctx.globalAlpha = 1;
+
+  ctx.restore();
+}
+
+// ─── Multiplier target ───────────────────────────────────────────────────────
+
+function drawMultiplier(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  multiplier: string,
+  state: "future" | "current" | "safe" | "hit",
+): void {
+  const isCurrent = state === "current";
+  const isSafe = state === "safe";
+  const isHit = state === "hit";
+
+  ctx.save();
+
+  if (isSafe) {
+    drawGoldenCoin(
+      ctx,
+      x,
+      y,
+    );
+  } else {
+    ctx.shadowColor = isCurrent
+      ? "#18ff55"
+      : isHit
+        ? "#ff3030"
+        : "#202745";
+
+    ctx.shadowBlur =
+      isCurrent || isHit
+        ? 20
+        : 10;
+
+    ctx.fillStyle = isCurrent
+      ? "#2fb34f"
+      : isHit
+        ? "#c32d32"
+        : MULTIPLIER_FILL;
+
+    ctx.beginPath();
+    ctx.arc(x, y, 82, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+    ctx.strokeStyle = isCurrent
+      ? "#168f3b"
+      : isHit
+        ? "#8f2025"
+        : MULTIPLIER_DARK_RING;
+
+    ctx.lineWidth = 10;
+
+    ctx.beginPath();
+    ctx.arc(x, y, 82, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = isCurrent
+      ? "#42ff63"
+      : isHit
+        ? "#ff5555"
+        : MULTIPLIER_RING;
+
+    ctx.lineWidth = 8;
+
+    ctx.beginPath();
+    ctx.arc(
+      x,
+      y,
+      70,
+      -Math.PI * 0.8,
+      Math.PI * 0.55,
+    );
+    ctx.stroke();
+
+    ctx.strokeStyle = isCurrent
+      ? "#168f3b"
+      : isHit
+        ? "#8f2025"
+        : "#343d69";
+
+    ctx.lineWidth = 7;
+
+    ctx.beginPath();
+    ctx.arc(x, y, 60, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = "#ffffff";
+
+    ctx.beginPath();
+    ctx.moveTo(x - 55, y - 47);
+    ctx.arc(
+      x,
+      y,
+      75,
+      Math.PI * 1.05,
+      Math.PI * 1.7,
+    );
+    ctx.lineTo(x - 55, y - 47);
+    ctx.fill();
+
+    ctx.globalAlpha = 1;
+  }
+
+  if (isCurrent) {
+    drawChicken(
+      ctx,
+      x,
+      y - 4,
+      0.47,
+      false,
+    );
+  }
 
   ctx.fillStyle = "#ffffff";
-  ctx.globalAlpha = 0.12;
-  ctx.beginPath();
-  ctx.arc(x - 12, y - 14, 18, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 1;
+  ctx.strokeStyle = "#313754";
+  ctx.lineWidth = 2;
 
-  ctx.fillStyle = colors.stroke;
-  ctx.font = "900 13px Arial";
+  ctx.font = "900 35px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(caption, x, y - 73);
 
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "900 36px Arial";
-  ctx.fillText(colors.text, x, y - 2);
-
-  const badgeWidth = 116;
-  const badgeHeight = 34;
-  const badgeY = y + 61;
-  ctx.fillStyle = state === "future" ? "#1c2b42" : "#0c1728";
-  ctx.strokeStyle = state === "future" ? "#536783" : colors.stroke;
-  ctx.lineWidth = 2;
-  roundedRect(
-    ctx,
-    x - badgeWidth / 2,
-    badgeY,
-    badgeWidth,
-    badgeHeight,
-    17,
+  ctx.strokeText(
+    multiplier,
+    x,
+    y + 112,
   );
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = state === "future" ? "#a5b4c8" : "#ffe08a";
-  ctx.font = "900 20px Arial";
-  ctx.fillText(multiplier, x, badgeY + badgeHeight / 2 + 1);
+
+  ctx.fillText(
+    multiplier,
+    x,
+    y + 112,
+  );
+
   ctx.restore();
 }
 
-function drawRouteArrow(
+// ─── Lane obstacle ───────────────────────────────────────────────────────────
+
+function drawObstacle(
   ctx: CanvasRenderingContext2D,
-  fromX: number,
-  toX: number,
+  x: number,
   y: number,
-  active: boolean,
+  width: number,
+  height: number,
 ): void {
   ctx.save();
-  ctx.strokeStyle = active ? "#ffd166" : "#56708f";
-  ctx.fillStyle = active ? "#ffd166" : "#56708f";
-  ctx.globalAlpha = active ? 0.95 : 0.55;
-  ctx.lineWidth = active ? 4 : 3;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(fromX, y);
-  ctx.lineTo(toX - 11, y);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(toX - 18, y - 8);
-  ctx.lineTo(toX - 6, y);
-  ctx.lineTo(toX - 18, y + 8);
-  ctx.closePath();
+
+  ctx.fillStyle = OBSTACLE;
+
+  roundedRect(
+    ctx,
+    x,
+    y,
+    width,
+    height,
+    17,
+  );
+
   ctx.fill();
+
+  ctx.fillStyle = OBSTACLE_HIGHLIGHT;
+  ctx.globalAlpha = 0.42;
+
+  roundedRect(
+    ctx,
+    x + 4,
+    y + 3,
+    width - 8,
+    height * 0.35,
+    14,
+  );
+
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+
   ctx.restore();
 }
+
+// ─── Sewer / drain ───────────────────────────────────────────────────────────
+
+function drawDrain(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+): void {
+  ctx.save();
+
+  ctx.fillStyle = "#555f8a";
+
+  roundedRect(
+    ctx,
+    x - 67,
+    y - 8,
+    134,
+    17,
+    8,
+  );
+
+  ctx.fill();
+
+  ctx.fillStyle = DRAIN_DARK;
+  ctx.strokeStyle = "#252b49";
+  ctx.lineWidth = 5;
+
+  ctx.beginPath();
+  ctx.moveTo(x - 57, y - 5);
+  ctx.lineTo(x - 57, y - 72);
+  ctx.quadraticCurveTo(
+    x,
+    y - 105,
+    x + 57,
+    y - 72,
+  );
+  ctx.lineTo(x + 57, y - 5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = DRAIN_MID;
+  ctx.lineWidth = 8;
+  ctx.lineCap = "round";
+
+  for (let i = -42; i <= 42; i += 15) {
+    const topY =
+      y -
+      63 +
+      Math.abs(i) * 0.22;
+
+    ctx.beginPath();
+    ctx.moveTo(x + i, y - 10);
+    ctx.lineTo(x + i, topY);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = DRAIN_EDGE;
+  ctx.lineWidth = 4;
+
+  ctx.beginPath();
+  ctx.arc(
+    x,
+    y - 8,
+    57,
+    Math.PI,
+    Math.PI * 2,
+  );
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// ─── Sidewalk ────────────────────────────────────────────────────────────────
+
+function drawSidewalk(
+  ctx: CanvasRenderingContext2D,
+): void {
+  ctx.save();
+
+  ctx.fillStyle = "#222741";
+  ctx.fillRect(
+    0,
+    0,
+    SIDEWALK_WIDTH,
+    IMAGE_HEIGHT,
+  );
+
+  ctx.fillStyle = "#2c314d";
+  ctx.fillRect(
+    8,
+    0,
+    SIDEWALK_WIDTH - 8,
+    IMAGE_HEIGHT,
+  );
+
+  const gradient =
+    ctx.createLinearGradient(
+      0,
+      0,
+      SIDEWALK_WIDTH,
+      0,
+    );
+
+  gradient.addColorStop(
+    0,
+    "rgba(255,255,255,0.025)",
+  );
+
+  gradient.addColorStop(
+    1,
+    "rgba(0,0,0,0.12)",
+  );
+
+  ctx.fillStyle = gradient;
+
+  ctx.fillRect(
+    8,
+    0,
+    SIDEWALK_WIDTH - 8,
+    IMAGE_HEIGHT,
+  );
+
+  ctx.strokeStyle = "#3a405d";
+  ctx.lineWidth = 3;
+
+  for (
+    let y = 70;
+    y < IMAGE_HEIGHT;
+    y += 120
+  ) {
+    ctx.beginPath();
+    ctx.moveTo(8, y);
+    ctx.lineTo(SIDEWALK_WIDTH, y);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = "#505875";
+
+  ctx.fillRect(
+    SIDEWALK_WIDTH - 9,
+    0,
+    9,
+    IMAGE_HEIGHT,
+  );
+
+  ctx.fillStyle = "#68718f";
+
+  ctx.fillRect(
+    SIDEWALK_WIDTH - 4,
+    0,
+    4,
+    IMAGE_HEIGHT,
+  );
+
+  ctx.restore();
+}
+
+// ─── Traffic light ───────────────────────────────────────────────────────────
+
+function drawTrafficLight(
+  ctx: CanvasRenderingContext2D,
+): void {
+  const x = 47;
+  const y = 45;
+
+  ctx.save();
+
+  ctx.fillStyle = "#181d31";
+
+  ctx.fillRect(
+    x + 22,
+    y + 115,
+    8,
+    165,
+  );
+
+  ctx.fillStyle = "#151a2d";
+  ctx.strokeStyle = "#0d1120";
+  ctx.lineWidth = 4;
+
+  roundedRect(
+    ctx,
+    x,
+    y,
+    52,
+    124,
+    14,
+  );
+
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#ef3c45";
+
+  ctx.beginPath();
+  ctx.arc(
+    x + 26,
+    y + 26,
+    10,
+    0,
+    Math.PI * 2,
+  );
+  ctx.fill();
+
+  ctx.fillStyle = "#e8a82d";
+
+  ctx.beginPath();
+  ctx.arc(
+    x + 26,
+    y + 62,
+    10,
+    0,
+    Math.PI * 2,
+  );
+  ctx.fill();
+
+  ctx.fillStyle = "#35c765";
+
+  ctx.beginPath();
+  ctx.arc(
+    x + 26,
+    y + 98,
+    10,
+    0,
+    Math.PI * 2,
+  );
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ─── Image window ─────────────────────────────────────────────────────────────
 
 function imageWindowStart(
   lanesCrossed: number,
@@ -350,240 +1075,354 @@ function imageWindowStart(
   const focusLane =
     status === "dead"
       ? lanesCrossed + 1
-      : status === "cashed"
-        ? Math.max(1, lanesCrossed)
-        : lanesCrossed + 1;
+      : Math.max(1, lanesCrossed);
 
-  return Math.floor((focusLane - 1) / 5) * 5;
+  return (
+    Math.floor((focusLane - 1) / 5) * 5
+  );
 }
+
+// ─── Main image ──────────────────────────────────────────────────────────────
 
 function chickenCrossingImage(
   game: ChickenGame,
   status: GameStatus,
 ): Buffer {
-  const canvas = createCanvas(IMAGE_WIDTH, IMAGE_HEIGHT);
-  const ctx = canvas.getContext("2d");
-  const windowStart = imageWindowStart(
-    game.lanesCrossed,
-    status,
+  const canvas = createCanvas(
+    IMAGE_WIDTH,
+    IMAGE_HEIGHT,
   );
 
-  const background = ctx.createLinearGradient(
+  const ctx =
+    canvas.getContext("2d");
+
+  const windowStart =
+    imageWindowStart(
+      game.lanesCrossed,
+      status,
+    );
+
+  ctx.fillStyle = BG;
+
+  ctx.fillRect(
     0,
     0,
     IMAGE_WIDTH,
     IMAGE_HEIGHT,
   );
-  background.addColorStop(0, "#071628");
-  background.addColorStop(1, "#101c34");
-  ctx.fillStyle = background;
-  ctx.fillRect(0, 0, IMAGE_WIDTH, IMAGE_HEIGHT);
 
-  ctx.fillStyle = "#152945";
-  roundedRect(
-    ctx,
-    FIELD_LEFT,
-    FIELD_TOP,
-    FIELD_WIDTH,
-    IMAGE_HEIGHT - 84,
-    30,
-  );
-  ctx.fill();
-  ctx.strokeStyle = "#28466c";
-  ctx.lineWidth = 3;
-  ctx.stroke();
+  ctx.fillStyle = BG_DARK;
 
-  ctx.fillStyle = "#f6fbff";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  ctx.font = "900 32px Arial";
-  ctx.fillText("CHICKEN CROSSING", 84, 70);
-  ctx.fillStyle = "#91abc9";
-  ctx.font = "700 14px Arial";
-  ctx.fillText("CROSS LEFT  →  RIGHT", 86, 108);
-
-  const windowEnd = Math.min(TOTAL_LANES, windowStart + 5);
-  ctx.fillStyle = "#90a8c8";
-  ctx.textAlign = "right";
-  ctx.font = "700 21px Arial";
-  ctx.fillText(
-    `LANES ${windowStart + 1}–${windowEnd}`,
-    IMAGE_WIDTH - 84,
-    78,
-  );
-
-  // One continuous vertical sidewalk is the chicken's starting area.
-  ctx.fillStyle = "#b69870";
-  roundedRect(
-    ctx,
-    SIDEWALK_LEFT,
-    LANE_TOP,
-    SIDEWALK_WIDTH,
-    LANE_BOTTOM - LANE_TOP,
+  ctx.fillRect(
+    0,
+    IMAGE_HEIGHT - 18,
+    IMAGE_WIDTH,
     18,
   );
-  ctx.fill();
-  ctx.strokeStyle = "#e0c493";
-  ctx.lineWidth = 3;
-  ctx.stroke();
-  ctx.fillStyle = "#765f46";
-  ctx.font = "900 17px Arial";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(
-    "START",
-    SIDEWALK_LEFT + SIDEWALK_WIDTH / 2,
-    LANE_TOP + 28,
-  );
-  ctx.fillStyle = "rgba(255, 246, 214, 0.5)";
-  for (
-    let stripeY = LANE_TOP + 78;
-    stripeY < LANE_BOTTOM - 20;
-    stripeY += 54
-  ) {
-    ctx.fillRect(
-      SIDEWALK_LEFT + 17,
-      stripeY,
-      SIDEWALK_WIDTH - 34,
-      9,
-    );
-  }
-  ctx.save();
-  ctx.translate(
-    SIDEWALK_LEFT + SIDEWALK_WIDTH / 2,
-    LANE_BOTTOM - 95,
-  );
-  ctx.rotate(-Math.PI / 2);
-  ctx.fillText("SIDEWALK", 0, 0);
-  ctx.restore();
 
-  for (let column = 0; column < 5; column++) {
-    const lane = windowStart + column + 1;
-    const laneX =
-      LANE_LEFT +
-      column * (LANE_WIDTH + LANE_GAP);
-    const targetX = laneX + LANE_WIDTH / 2;
+  drawSidewalk(ctx);
+  drawTrafficLight(ctx);
+
+  ctx.fillStyle = BG;
+
+  ctx.fillRect(
+    ROAD_LEFT,
+    ROAD_TOP,
+    ROAD_WIDTH,
+    ROAD_BOTTOM,
+  );
+
+  for (let i = 0; i < 5; i++) {
+    if (i % 2 === 1) {
+      ctx.fillStyle = ROAD_ALT;
+
+      ctx.fillRect(
+        ROAD_LEFT + i * LANE_WIDTH,
+        0,
+        LANE_WIDTH,
+        IMAGE_HEIGHT,
+      );
+    }
+  }
+
+  for (let i = 0; i <= 5; i++) {
+    const x =
+      ROAD_LEFT +
+      i * LANE_WIDTH;
+
+    ctx.strokeStyle = LANE_LINE;
+    ctx.globalAlpha = 0.92;
+    ctx.lineWidth = 6;
+    ctx.setLineDash([30, 30]);
+
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, IMAGE_HEIGHT);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+  }
+
+  const windowEnd = Math.min(
+    TOTAL_LANES,
+    windowStart + 5,
+  );
+
+  for (
+    let column = 0;
+    column < 5;
+    column++
+  ) {
+    const lane =
+      windowStart +
+      column +
+      1;
+
+    const laneLeft =
+      ROAD_LEFT +
+      column * LANE_WIDTH;
+
+    const laneCenter =
+      laneLeft +
+      LANE_WIDTH / 2;
 
     if (lane > TOTAL_LANES) {
-      ctx.fillStyle = "#14243a";
-      roundedRect(
-        ctx,
-        laneX,
-        LANE_TOP,
-        LANE_WIDTH,
-        LANE_BOTTOM - LANE_TOP,
-        18,
-      );
-      ctx.fill();
       continue;
     }
 
-    const currentLane = game.lanesCrossed + 1;
-    const isSafe = lane <= game.lanesCrossed;
-    const isHit = status === "dead" && lane === currentLane;
-    const isCurrent = status === "active" && lane === currentLane;
+    /*
+     * Lane state:
+     *
+     * - At game start (lanesCrossed === 0):
+     *   NO chicken appears on lane 1.
+     *   The chicken stays on the sidewalk.
+     *
+     * - Current lane after crossing:
+     *   GREEN with chicken.
+     *
+     * - Previously completed lanes:
+     *   GOLDEN COIN with checkmark.
+     *
+     * - Hit lane:
+     *   RED.
+     *
+     * - Future lanes:
+     *   Normal multiplier.
+     */
 
-    ctx.fillStyle =
-      column % 2 === 0 ? "#1a3350" : "#1d3958";
-    roundedRect(
+    const currentLane =
+      game.lanesCrossed;
+
+    // IMPORTANT:
+    // Do not show a chicken on lane 1 when
+    // the game has just started.
+    const isCurrent =
+      status === "active" &&
+      game.lanesCrossed > 0 &&
+      lane === currentLane;
+
+    const isCashedCurrent =
+      status === "cashed" &&
+      game.lanesCrossed > 0 &&
+      lane === game.lanesCrossed;
+
+    const isSafe =
+      status === "dead"
+        ? lane <= game.lanesCrossed
+        : lane < game.lanesCrossed;
+
+    const isHit =
+      status === "dead" &&
+      lane === game.lanesCrossed + 1;
+
+    const obstaclePattern =
+      lane % 5;
+
+    const topObstacleY =
+      obstaclePattern === 0
+        ? 27
+        : obstaclePattern === 1
+          ? 91
+          : obstaclePattern === 2
+            ? 50
+            : obstaclePattern === 3
+              ? 120
+              : 30;
+
+    const obstacleOffset =
+      ((lane * 37) % 55) - 27;
+
+    drawObstacle(
       ctx,
-      laneX,
-      LANE_TOP,
-      LANE_WIDTH,
-      LANE_BOTTOM - LANE_TOP,
-      18,
+      laneCenter - 38 + obstacleOffset,
+      topObstacleY,
+      76,
+      62,
     );
-    ctx.fill();
-    ctx.strokeStyle = "#385276";
-    ctx.lineWidth = 3;
-    ctx.stroke();
 
-    // Vertical crossing lane with a subtle dashed center line.
-    ctx.strokeStyle = "#49617e";
-    ctx.lineWidth = 2;
-    ctx.setLineDash([18, 16]);
-    ctx.beginPath();
-    ctx.moveTo(targetX, LANE_TOP + 18);
-    ctx.lineTo(targetX, LANE_BOTTOM - 18);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    if (lane % 3 === 0) {
+      drawObstacle(
+        ctx,
+        laneCenter - 45,
+        500,
+        90,
+        62,
+      );
+    }
 
-    // Lane label.
-    ctx.fillStyle = "#d9e7f7";
-    ctx.textAlign = "center";
-    ctx.font = "900 17px Arial";
-    ctx.fillText(`LANE ${lane}`, targetX, LANE_TOP + 28);
+    const multiplier =
+      formatMult(
+        calcMultiplier(
+          game.difficulty,
+          lane,
+        ),
+      );
 
-    const laneMultiplier = formatMult(
-      calcMultiplier(game.difficulty, lane),
-    );
-    const targetState = isHit
-      ? "hit"
-      : isSafe
-        ? "safe"
-        : isCurrent
+    const targetState =
+      isHit
+        ? "hit"
+        : isCurrent || isCashedCurrent
           ? "current"
-          : "future";
-    drawTarget(
+          : isSafe
+            ? "safe"
+            : "future";
+
+    drawMultiplier(
       ctx,
-      targetX,
+      laneCenter,
       TARGET_Y,
+      multiplier,
       targetState,
-      laneMultiplier,
     );
 
-    if (isHit) {
-      drawChicken(ctx, targetX, TARGET_Y - 2, 0.72, true);
-    } else if (isSafe && lane === game.lanesCrossed) {
-      drawChicken(ctx, targetX, TARGET_Y - 2, 0.58);
-    } else if (isCurrent) {
-      const chickenX =
-        game.lanesCrossed === 0
-          ? SIDEWALK_LEFT + SIDEWALK_WIDTH / 2
-          : laneX - 7;
-      drawChicken(ctx, chickenX, TARGET_Y - 7, 0.48);
+    drawDrain(
+      ctx,
+      laneCenter,
+      DRAIN_Y,
+    );
+  }
+
+  // Hit state: show the hit car + large hit chicken.
+  if (status === "dead") {
+    const hitLane =
+      game.lanesCrossed + 1;
+
+    const hitColumn =
+      hitLane -
+      windowStart -
+      1;
+
+    if (
+      hitColumn >= 0 &&
+      hitColumn < 5
+    ) {
+      const hitLaneLeft =
+        ROAD_LEFT +
+        hitColumn * LANE_WIDTH;
+
+      const hitCenter =
+        hitLaneLeft +
+        LANE_WIDTH / 2;
+
+      drawHitCar(
+        ctx,
+        hitCenter,
+        TARGET_Y + 5,
+        0.82,
+      );
+
+      drawChicken(
+        ctx,
+        hitCenter,
+        TARGET_Y,
+        0.86,
+        true,
+      );
     }
   }
 
-  // Connect the five vertical lanes into one readable left-to-right route.
-  for (let column = 0; column < 4; column++) {
-    const fromX =
-      LANE_LEFT +
-      column * (LANE_WIDTH + LANE_GAP) +
-      LANE_WIDTH / 2 +
-      56;
-    const toX =
-      LANE_LEFT +
-      (column + 1) * (LANE_WIDTH + LANE_GAP) +
-      LANE_WIDTH / 2 -
-      56;
-    const fromLane = windowStart + column + 1;
-    drawRouteArrow(
+  // At the beginning of the game, the chicken is ONLY on the sidewalk.
+  else if (
+    game.lanesCrossed === 0
+  ) {
+    drawChicken(
       ctx,
-      fromX,
-      toX,
+      SIDEWALK_WIDTH / 2 - 4,
       TARGET_Y,
-      fromLane === game.lanesCrossed ||
-        fromLane === game.lanesCrossed + 1,
+      0.86,
     );
   }
 
-  ctx.fillStyle = "#8da4c4";
-  ctx.font = "700 16px Arial";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "alphabetic";
-  ctx.fillText(
-    status === "dead"
-      ? "The chicken got hit — the crossing ends here."
-      : status === "cashed"
-        ? "Safe crossing — payout locked in."
-        : "Choose Forward to cross the highlighted lane.",
-    IMAGE_WIDTH / 2,
-    IMAGE_HEIGHT - 26,
+  // After crossing at least one lane, place the chicken
+  // on the lane currently occupied.
+  else {
+    const chickenLane =
+      game.lanesCrossed;
+
+    const chickenColumn =
+      chickenLane -
+      windowStart -
+      1;
+
+    if (
+      chickenColumn >= 0 &&
+      chickenColumn < 5
+    ) {
+      const chickenLaneLeft =
+        ROAD_LEFT +
+        chickenColumn * LANE_WIDTH;
+
+      const chickenCenter =
+        chickenLaneLeft +
+        LANE_WIDTH / 2;
+
+      drawChicken(
+        ctx,
+        chickenCenter,
+        TARGET_Y,
+        0.86,
+      );
+    }
+  }
+
+  ctx.fillStyle =
+    "rgba(17, 21, 40, 0.12)";
+
+  ctx.fillRect(
+    ROAD_LEFT,
+    0,
+    ROAD_WIDTH,
+    10,
   );
 
-  return canvas.toBuffer("image/png");
+  ctx.fillStyle =
+    "rgba(18, 22, 40, 0.20)";
+
+  ctx.fillRect(
+    ROAD_LEFT,
+    IMAGE_HEIGHT - 17,
+    ROAD_WIDTH,
+    17,
+  );
+
+  ctx.fillStyle = "#e3e9ff";
+  ctx.font = "800 16px Arial";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "alphabetic";
+
+  ctx.fillText(
+    `LANES ${windowStart + 1}–${windowEnd}`,
+    IMAGE_WIDTH - 24,
+    29,
+  );
+
+  return canvas.toBuffer(
+    "image/png",
+  );
 }
+
+// ─── Image attachment ────────────────────────────────────────────────────────
 
 function imageComponent(): MediaGalleryBuilder {
   return new MediaGalleryBuilder().addItems(
@@ -598,57 +1437,68 @@ function imageFile(
   status: GameStatus,
 ): AttachmentBuilder {
   return new AttachmentBuilder(
-    chickenCrossingImage(game, status),
-    { name: "chicken-crossing.png" },
+    chickenCrossingImage(
+      game,
+      status,
+    ),
+    {
+      name: "chicken-crossing.png",
+    },
   );
 }
 
-// ─── Components V2 helpers ────────────────────────────────────────────────────
-function text(content: string): TextDisplayBuilder {
-  return new TextDisplayBuilder().setContent(content);
+// ─── Components V2 helpers ───────────────────────────────────────────────────
+
+function text(
+  content: string,
+): TextDisplayBuilder {
+  return new TextDisplayBuilder().setContent(
+    content,
+  );
 }
 
 function separator(): SeparatorBuilder {
   return new SeparatorBuilder();
 }
 
-// ─── Main panel ───────────────────────────────────────────────────────────────
+// ─── Main panel ──────────────────────────────────────────────────────────────
+
 function buildComponents(
   game: ChickenGame,
-  status: "active" | "cashed" | "dead",
+  status: GameStatus,
 ): ContainerBuilder[] {
-  const mult = calcMultiplier(
-    game.difficulty,
-    game.lanesCrossed,
-  );
+  const mult =
+    calcMultiplier(
+      game.difficulty,
+      game.lanesCrossed,
+    );
 
-  const nextMult = calcMultiplier(
-    game.difficulty,
-    game.lanesCrossed + 1,
-  );
+  const nextMult =
+    calcMultiplier(
+      game.difficulty,
+      game.lanesCrossed + 1,
+    );
 
-  const nextWin = Math.floor(
-    game.bet * nextMult,
-  );
+  const nextWin =
+    Math.floor(
+      game.bet * nextMult,
+    );
 
-  const currentWin = Math.floor(
-    game.bet * mult,
-  );
-
-  const maxWin = Math.floor(
-    game.bet *
-      calcMultiplier(
-        game.difficulty,
-        TOTAL_LANES,
-      ),
-  );
+  const currentWin =
+    Math.floor(
+      game.bet * mult,
+    );
 
   const diffLabel =
-    game.difficulty.charAt(0).toUpperCase() +
+    game.difficulty
+      .charAt(0)
+      .toUpperCase() +
     game.difficulty.slice(1);
 
   const diffEmoji =
-    DIFF_EMOJI[game.difficulty];
+    DIFF_EMOJI[
+      game.difficulty
+    ];
 
   const color =
     status === "active"
@@ -664,57 +1514,39 @@ function buildComponents(
         ? "🐔  Chicken Crossing — 💸 CASHED OUT"
         : "🐔  Chicken Crossing — 🚗 Hit!";
 
-  const panel = new ContainerBuilder()
-    .setAccentColor(color)
+  const panel =
+    new ContainerBuilder()
+      .setAccentColor(color)
 
-    // ── Smaller title ───────────────────────────────────────────────────────
-    .addTextDisplayComponents(
-      text(`## ${title}`),
-    )
+      .addMediaGalleryComponents(
+        imageComponent(),
+      )
 
-    // ── Bet / payout / difficulty section ───────────────────────────────────
-    .addTextDisplayComponents(
-      text(
-        [
-          `💎 **Bet**  \`${formatAmount(game.bet)}\``,
-          status === "active"
-            ? `💰 **If you cash**  \`${formatAmount(currentWin)}\``
-            : status === "dead"
-              ? `💰 **Lost Payout**  \`${formatAmount(currentWin)}\``
-              : `💰 **Payout**  \`${formatAmount(currentWin)}\``,
-          `${diffEmoji} **Difficulty**  \`${diffLabel}\``,
-          status === "active"
-            ? `💰 **Last lane**  \`${formatAmount(maxWin)}\``
-            : status === "dead"
-              ? `❌ **Lost on lane**  \`${game.lanesCrossed + 1} of ${TOTAL_LANES}\``
-              : "",
-        ]
-          .filter(Boolean)
-          .join("\n"),
-      ),
-    )
+      .addTextDisplayComponents(
+        text(`## ${title}`),
+      )
 
-    .addSeparatorComponents(
-      separator(),
-    )
+      .addTextDisplayComponents(
+        text(
+          [
+            `💎 **Bet**  \`${formatAmount(game.bet)}\``,
+            `${diffEmoji} **Mode**  \`${diffLabel}\``,
+            status === "active"
+              ? `💰 **Potential**  \`${formatAmount(currentWin)}\``
+              : status === "dead"
+                ? `💰 **Potential**  \`${formatAmount(currentWin)}\``
+                : `💰 **Payout**  \`${formatAmount(currentWin)}\``,
+            status === "active"
+              ? `💰 **Next lane**  \`${formatAmount(nextWin)}\``
+              : status === "dead"
+                ? `❌ **Lost on lane**  \`${game.lanesCrossed + 1} of ${TOTAL_LANES}\``
+                : "",
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        ),
+      );
 
-    // ── Five-lane visual field ───────────────────────────────────────────────
-    .addMediaGalleryComponents(
-      imageComponent(),
-    )
-
-    // ── Track status ─────────────────────────────────────────────────────────
-    .addTextDisplayComponents(
-      text(
-        [
-          status === "active"
-            ? `## 🐔  Lane ${game.lanesCrossed + 1} of ${TOTAL_LANES}`
-            : `## 🏁  Crossed ${game.lanesCrossed} lane${game.lanesCrossed !== 1 ? "s" : ""}`,
-        ].join("\n"),
-      ),
-    );
-
-  // ── Buttons / status ──────────────────────────────────────────────────────
   if (
     status === "active" &&
     game.lanesCrossed < TOTAL_LANES
@@ -734,7 +1566,9 @@ function buildComponents(
           game.lanesCrossed > 0,
         ),
       );
-  } else if (status === "cashed") {
+  } else if (
+    status === "cashed"
+  ) {
     panel
       .addSeparatorComponents(
         separator(),
@@ -751,7 +1585,9 @@ function buildComponents(
           game.bet,
         ),
       );
-  } else if (status === "dead") {
+  } else if (
+    status === "dead"
+  ) {
     panel.addActionRowComponents(
       buildPlayAgainRow(
         game.userId,
@@ -764,12 +1600,13 @@ function buildComponents(
   return [panel];
 }
 
-// ─── Buttons ──────────────────────────────────────────────────────────────────
+// ─── Buttons ─────────────────────────────────────────────────────────────────
+
 function buildGameButtons(
   userId: string,
   canCashout: boolean,
-): ActionRowBuilder<MessageActionRowComponentBuilder> {
-  return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+): ActionRowBuilder {
+  return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(
         `cc_fwd_${userId}`,
@@ -794,8 +1631,8 @@ function buildPlayAgainRow(
   difficulty: string,
   bet: number,
   disabled = false,
-): ActionRowBuilder<MessageActionRowComponentBuilder> {
-  return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+): ActionRowBuilder {
+  return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(
         `pa_cc_${userId}_${difficulty}_${bet}`,
@@ -806,54 +1643,62 @@ function buildPlayAgainRow(
   );
 }
 
-// ─── Command ──────────────────────────────────────────────────────────────────
-export const data = new SlashCommandBuilder()
-  .setName("chickencrossing")
-  .setDescription(
-    "Cross lanes with your chicken — cash out before getting hit!",
-  )
-  .addStringOption((o) =>
-    o
-      .setName("bet")
-      .setDescription("Amount to bet")
-      .setRequired(true),
-  )
-  .addStringOption((o) =>
-    o
-      .setName("difficulty")
-      .setDescription(
-        "Lane difficulty (default: easy)",
-      )
-      .setRequired(false)
-      .addChoices(
-        {
-          name: "Easy",
-          value: "easy",
-        },
-        {
-          name: "Medium",
-          value: "medium",
-        },
-        {
-          name: "Hard",
-          value: "hard",
-        },
-      ),
-  );
+// ─── Command ─────────────────────────────────────────────────────────────────
+
+export const data =
+  new SlashCommandBuilder()
+    .setName("chickencrossing")
+    .setDescription(
+      "Cross lanes with your chicken — cash out before getting hit!",
+    )
+    .addStringOption((o) =>
+      o
+        .setName("bet")
+        .setDescription("Amount to bet")
+        .setRequired(true),
+    )
+    .addStringOption((o) =>
+      o
+        .setName("difficulty")
+        .setDescription("Lane difficulty")
+        .setRequired(true)
+        .addChoices(
+          {
+            name: "Easy",
+            value: "easy",
+          },
+          {
+            name: "Medium",
+            value: "medium",
+          },
+          {
+            name: "Hard",
+            value: "hard",
+          },
+        ),
+    );
+
+// ─── Execute ─────────────────────────────────────────────────────────────────
 
 export async function execute(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
-  const userId = interaction.user.id;
+  const userId =
+    interaction.user.id;
 
-  if (activeChickenGames.has(userId)) {
+  if (
+    activeChickenGames.has(
+      userId,
+    )
+  ) {
     return void interaction.reply({
       embeds: [
         errorEmbed(
           "You already have an active Chicken Crossing game!",
         ),
       ],
-      flags: MessageFlags.Ephemeral,
+      flags:
+        MessageFlags.Ephemeral,
     });
   }
 
@@ -864,20 +1709,26 @@ export async function execute(
     );
 
   const difficulty =
-    (interaction.options.getString(
+    interaction.options.getString(
       "difficulty",
-    ) ?? "easy") as Difficulty;
+      true,
+    ) as Difficulty;
 
-  const bet = parseAmount(betStr);
+  const bet =
+    parseAmount(betStr);
 
-  if (!bet || bet < 1_000_000) {
+  if (
+    !bet ||
+    bet < 1_000_000
+  ) {
     return void interaction.reply({
       embeds: [
         errorEmbed(
-          "Minimum bet is **1m gems**.",
+          "Minimum bet is 1m gems.",
         ),
       ],
-      flags: MessageFlags.Ephemeral,
+      flags:
+        MessageFlags.Ephemeral,
     });
   }
 
@@ -889,7 +1740,9 @@ export async function execute(
       interaction.user.username,
     );
 
-  if (user.balance < bet) {
+  if (
+    user.balance < bet
+  ) {
     return void interaction.editReply({
       embeds: [
         errorEmbed(
@@ -932,7 +1785,8 @@ export async function execute(
         ),
     });
 
-  game.messageId = msg.id;
+  game.messageId =
+    msg.id;
 
   activeChickenGames.set(
     userId,
@@ -940,7 +1794,8 @@ export async function execute(
   );
 }
 
-// ─── Button: Forward ──────────────────────────────────────────────────────────
+// ─── Button: Forward ─────────────────────────────────────────────────────────
+
 export async function handleForward(
   interaction: ButtonInteraction,
 ): Promise<void> {
@@ -1009,7 +1864,7 @@ export async function handleForward(
     const winnings =
       Math.floor(
         game.bet *
-          game.multiplier,
+        game.multiplier,
       );
 
     await addBalance(
@@ -1061,7 +1916,8 @@ export async function handleForward(
   });
 }
 
-// ─── Button: Cashout ──────────────────────────────────────────────────────────
+// ─── Button: Cashout ─────────────────────────────────────────────────────────
+
 export async function handleCashout(
   interaction: ButtonInteraction,
 ): Promise<void> {
@@ -1086,7 +1942,7 @@ export async function handleCashout(
   const winnings =
     Math.floor(
       game.bet *
-        game.multiplier,
+      game.multiplier,
     );
 
   await addBalance(
@@ -1119,101 +1975,127 @@ export async function handleCashout(
   });
 }
 
-// ─── Button: Play Again ───────────────────────────────────────────────────────
+// ─── Button: Play Again ──────────────────────────────────────────────────────
+
 export async function handlePlayAgain(
   interaction: ButtonInteraction,
   userId: string,
   difficulty: string,
   betStr: string,
 ): Promise<void> {
-  if (interaction.user.id !== userId) {
+  if (
+    interaction.user.id !==
+    userId
+  ) {
     return void interaction.reply({
-      content: "❌ This isn't your game.",
-      flags: MessageFlags.Ephemeral,
+      content:
+        "❌ This isn’t your game.",
+      flags:
+        MessageFlags.Ephemeral,
     });
   }
 
-  if (activeChickenGames.has(userId)) {
+  if (
+    activeChickenGames.has(
+      userId,
+    )
+  ) {
     return void interaction.reply({
       embeds: [
         errorEmbed(
           "You already have an active Chicken Crossing game!",
         ),
       ],
-      flags: MessageFlags.Ephemeral,
+      flags:
+        MessageFlags.Ephemeral,
     });
   }
 
-  const bet = parseInt(betStr, 10);
+  const bet =
+    parseInt(
+      betStr,
+      10,
+    );
 
-  if (!Number.isSafeInteger(bet) || bet < 1) {
+  if (
+    !Number.isSafeInteger(
+      bet,
+    ) ||
+    bet < 1
+  ) {
     return void interaction.reply({
-      content: "❌ Invalid bet.",
-      flags: MessageFlags.Ephemeral,
+      content:
+        "❌ Invalid bet.",
+      flags:
+        MessageFlags.Ephemeral,
     });
   }
 
-  // Acknowledge the button interaction.
   await interaction.deferUpdate();
 
-  /*
-   * Keep the COMPLETE previous panel exactly as it was.
-   *
-   * We only replace the ActionRow containing the Play Again button
-   * with the same row, but with that button disabled.
-   *
-   * The previous title, bet, payout, difficulty, track, separators,
-   * and all other text remain unchanged.
-   */
-  const message = interaction.message;
+  const message =
+    interaction.message;
 
-  const disabledPlayAgainRow = buildPlayAgainRow(
-    userId,
-    difficulty,
-    bet,
-    true,
-  );
+  const disabledPlayAgainRow =
+    buildPlayAgainRow(
+      userId,
+      difficulty,
+      bet,
+      true,
+    );
 
-  const existingComponents = message.components.map(
-    (component) => component.toJSON(),
-  );
+  const existingComponents =
+    message.components.map(
+      (component) =>
+        component.toJSON(),
+    );
 
-  const updatedComponents = existingComponents.map(
-    (component: any) => {
-      if (
-        component.type !== 17 ||
-        !Array.isArray(component.components)
-      ) {
-        return component;
-      }
+  const updatedComponents =
+    existingComponents.map(
+      (component: any) => {
+        if (
+          component.type !==
+            17 ||
+          !Array.isArray(
+            component.components,
+          )
+        ) {
+          return component;
+        }
 
-      return {
-        ...component,
-        components: component.components.map(
-          (child: any) => {
-            if (
-              child.type === 1 &&
-              Array.isArray(child.components) &&
-              child.components.some(
-                (button: any) =>
-                  button.custom_id ===
-                  `pa_cc_${userId}_${difficulty}_${bet}`,
-              )
-            ) {
-              return disabledPlayAgainRow.toJSON();
-            }
+        return {
+          ...component,
+          components:
+            component.components.map(
+              (child: any) => {
+                if (
+                  child.type === 1 &&
+                  Array.isArray(
+                    child.components,
+                  ) &&
+                  child.components.some(
+                    (
+                      button: any,
+                    ) =>
+                      button.custom_id ===
+                      `pa_cc_${userId}_${difficulty}_${bet}`,
+                  )
+                ) {
+                  return disabledPlayAgainRow.toJSON();
+                }
 
-            return child;
-          },
-        ),
-      };
-    },
-  );
+                return child;
+              },
+            ),
+        };
+      },
+    );
 
-  // Edit the original message while preserving the entire panel.
   await interaction.editReply({
-    flags: MessageFlags.IsComponentsV2,
-    components: updatedComponents as any,
+    flags:
+      MessageFlags.IsComponentsV2,
+    components:
+      updatedComponents as any,
   });
 
   const user =
@@ -1222,14 +2104,17 @@ export async function handlePlayAgain(
       interaction.user.username,
     );
 
-  if (user.balance < bet) {
+  if (
+    user.balance < bet
+  ) {
     await interaction.followUp({
       embeds: [
         errorEmbed(
           `Insufficient balance. You have **${formatAmount(user.balance)} 💎**.`,
         ),
       ],
-      flags: MessageFlags.Ephemeral,
+      flags:
+        MessageFlags.Ephemeral,
     });
 
     return;
@@ -1252,7 +2137,6 @@ export async function handlePlayAgain(
       interaction.channelId,
   };
 
-  // The new game is a separate message.
   const msg: Message =
     await interaction.followUp({
       flags:
@@ -1270,7 +2154,8 @@ export async function handlePlayAgain(
         ),
     });
 
-  game.messageId = msg.id;
+  game.messageId =
+    msg.id;
 
   activeChickenGames.set(
     userId,
