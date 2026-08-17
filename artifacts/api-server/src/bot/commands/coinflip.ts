@@ -9,6 +9,11 @@ import {
   MessageFlags,
   type ChatInputCommandInteraction,
 } from "discord.js";
+import {
+  createCanvas,
+  loadImage,
+  type Image,
+} from "@napi-rs/canvas";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -55,31 +60,29 @@ const SIDE_DISPLAY: Record<CoinSide, string> = {
   tails: "🔵 Tails",
 };
 
-const MODULE_DIR = path.dirname(
-  fileURLToPath(import.meta.url),
-);
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 // The source runs from the workspace root in Replit, while the compiled
 // WispByte bundle runs from artifacts/api-server/dist. Resolve both layouts
 // without depending on the process working directory.
-const COINFLIP_ASSET_CANDIDATES = [
+const COINFLIP_FACE_ASSET_CANDIDATES = [
   path.resolve(
     process.cwd(),
-    "coinflip_animation_pack",
+    "coinflip_face_assets",
   ),
   path.resolve(
     MODULE_DIR,
-    "../../../coinflip_animation_pack",
+    "../../../coinflip_face_assets",
   ),
   path.resolve(
     MODULE_DIR,
-    "../../../../coinflip_animation_pack",
+    "../../../../coinflip_face_assets",
   ),
 ];
 
-function getCoinflipAssetsDir(): string {
+function getCoinflipFaceAssetsDir(): string {
   const assetsDir =
-    COINFLIP_ASSET_CANDIDATES.find(
+    COINFLIP_FACE_ASSET_CANDIDATES.find(
       (candidate) =>
         fs.existsSync(candidate),
     );
@@ -87,9 +90,9 @@ function getCoinflipAssetsDir(): string {
   if (!assetsDir) {
     throw new Error(
       [
-        "Coinflip assets folder does not exist.",
+        "Coinflip face assets folder does not exist.",
         "Checked:",
-        ...COINFLIP_ASSET_CANDIDATES,
+        ...COINFLIP_FACE_ASSET_CANDIDATES,
       ].join(" "),
     );
   }
@@ -97,30 +100,27 @@ function getCoinflipAssetsDir(): string {
   return assetsDir;
 }
 
-// How long Discord is allowed to play the GIF
-// before the final result panel appears.
-const ANIMATION_MS = 2600;
+const COINFLIP_FRAME_MS = 240;
+const COINFLIP_FRAME_SCALES = [
+  1,
+  0.74,
+  0.48,
+  0.24,
+  0.09,
+  0.24,
+  0.48,
+  0.74,
+  1,
+];
+const COINFLIP_CANVAS_SIZE = 520;
+const COINFLIP_RADIUS = 174;
+const COINFLIP_EDGE_HEIGHT = 24;
 
-// ─── Animation history ───────────────────────────────────────────────────────
-//
-// Prevents the exact same animation from being selected
-// twice in a row for the same result.
-//
-// Example:
-//
-// Game 1 → heads_04
-// Game 2 → heads_11
-// Game 3 → heads_02
-//
-// The history resets if the bot restarts.
+type CoinFaceImages = Record<CoinSide, Image>;
 
-const lastAnimation: Record<
-  CoinSide,
-  string | null
-> = {
-  heads: null,
-  tails: null,
-};
+let coinFaceImagesPromise:
+  | Promise<CoinFaceImages>
+  | null = null;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -132,77 +132,36 @@ function text(
   );
 }
 
-/**
- * Gets all available animations for a result.
- *
- * heads → coinflip_heads_01.gif ... coinflip_heads_12.gif
- * tails → coinflip_tails_01.gif ... coinflip_tails_12.gif
- */
-function getCoinflipAnimations(
-  result: CoinSide,
-): string[] {
-  const assetsDir =
-    getCoinflipAssetsDir();
+async function getCoinflipFaceImages(): Promise<CoinFaceImages> {
+  if (!coinFaceImagesPromise) {
+    coinFaceImagesPromise =
+      (async () => {
+        const assetsDir =
+          getCoinflipFaceAssetsDir();
 
-  const prefix =
-    `coinflip_${result}_`;
-
-  const files =
-    fs.readdirSync(
-      assetsDir,
-    );
-
-  return files
-    .filter(
-      (file) =>
-        file.startsWith(prefix) &&
-        file.toLowerCase().endsWith(".gif"),
-    )
-    .sort();
-}
-
-/**
- * Picks a random animation.
- *
- * It avoids immediately using the same animation twice
- * for the same result.
- */
-function getRandomCoinflipGif(
-  result: CoinSide,
-): string {
-  const animations =
-    getCoinflipAnimations(result);
-
-  if (animations.length === 0) {
-    throw new Error(
-      `No coinflip animations found for ${result}. ` +
-      `Expected files like coinflip_${result}_01.gif`,
-    );
+        return {
+          heads: await loadImage(
+            path.join(
+              assetsDir,
+              "coinflip_heads.jpeg",
+            ),
+          ),
+          tails: await loadImage(
+            path.join(
+              assetsDir,
+              "coinflip_tails.jpeg",
+            ),
+          ),
+        };
+      })();
   }
 
-  let available =
-    animations.filter(
-      (file) =>
-        file !== lastAnimation[result],
-    );
-
-  // Safety fallback.
-  if (available.length === 0) {
-    available = animations;
+  try {
+    return await coinFaceImagesPromise;
+  } catch (error) {
+    coinFaceImagesPromise = null;
+    throw error;
   }
-
-  const selected =
-    available[
-      Math.floor(
-        Math.random() *
-          available.length,
-      )
-    ]!;
-
-  lastAnimation[result] =
-    selected;
-
-  return selected;
 }
 
 // ─── Animation Container ─────────────────────────────────────────────────────
@@ -210,16 +169,16 @@ function getRandomCoinflipGif(
 function coinflipAnimationContainer(
   amount: number,
   choice: CoinSide,
-  gifFilename: string,
+  imageFilename: string,
 ): ContainerBuilder {
   const coinImage =
     new MediaGalleryBuilder().addItems(
       new MediaGalleryItemBuilder()
         .setURL(
-          `attachment://${gifFilename}`,
+          `attachment://${imageFilename}`,
         )
         .setDescription(
-          "Coin flipping",
+          "Coin flipping vertically",
         ),
     );
 
@@ -335,73 +294,217 @@ function coinflipResultContainer(
 
 // ─── Animation ────────────────────────────────────────────────────────────────
 
+function oppositeSide(
+  side: CoinSide,
+): CoinSide {
+  return side === "heads"
+    ? "tails"
+    : "heads";
+}
+
+function drawCoinFace(
+  ctx: ReturnType<
+    ReturnType<typeof createCanvas>["getContext"]
+  >,
+  image: Image,
+  scaleY: number,
+  side: CoinSide,
+): void {
+  const center =
+    COINFLIP_CANVAS_SIZE / 2;
+  const faceHeight =
+    COINFLIP_RADIUS * 2 * scaleY;
+  const edgeColor =
+    side === "heads"
+      ? "#087344"
+      : "#2455ad";
+
+  // The visible rim remains in place while the face compresses around the
+  // horizontal axis, creating thickness without any left/right movement.
+  ctx.save();
+  ctx.fillStyle = edgeColor;
+  ctx.strokeStyle = "#081225";
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.ellipse(
+    center,
+    center +
+      Math.max(
+        3,
+        faceHeight / 2,
+      ) +
+      COINFLIP_EDGE_HEIGHT / 2,
+    COINFLIP_RADIUS,
+    COINFLIP_EDGE_HEIGHT / 2,
+    0,
+    0,
+    Math.PI * 2,
+  );
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+
+  if (faceHeight <= 1) {
+    return;
+  }
+
+  // Clip the reference artwork to the coin outline so its dark square
+  // background never appears as the coin flips edge-on.
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(
+    center,
+    center,
+    COINFLIP_RADIUS,
+    faceHeight / 2,
+    0,
+    0,
+    Math.PI * 2,
+  );
+  ctx.clip();
+  ctx.drawImage(
+    image,
+    center - COINFLIP_RADIUS,
+    center - faceHeight / 2,
+    COINFLIP_RADIUS * 2,
+    faceHeight,
+  );
+  ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle =
+    side === "heads"
+      ? "rgba(118, 255, 181, 0.66)"
+      : "rgba(150, 198, 255, 0.68)";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.ellipse(
+    center,
+    center,
+    COINFLIP_RADIUS - 2,
+    Math.max(
+      1,
+      faceHeight / 2 - 2,
+    ),
+    0,
+    0,
+    Math.PI * 2,
+  );
+  ctx.stroke();
+  ctx.restore();
+}
+
+function coinflipFrame(
+  image: Image,
+  side: CoinSide,
+  scaleY: number,
+): Buffer {
+  const canvas =
+    createCanvas(
+      COINFLIP_CANVAS_SIZE,
+      COINFLIP_CANVAS_SIZE,
+    );
+  const ctx =
+    canvas.getContext("2d");
+
+  // Match the deep navy from the supplied reference images.
+  ctx.fillStyle = "#11192d";
+  ctx.fillRect(
+    0,
+    0,
+    COINFLIP_CANVAS_SIZE,
+    COINFLIP_CANVAS_SIZE,
+  );
+
+  drawCoinFace(
+    ctx,
+    image,
+    scaleY,
+    side,
+  );
+
+  return canvas.toBuffer("image/png");
+}
+
 async function animateCoinflip(
   interaction: ChatInputCommandInteraction,
   amount: number,
   choice: CoinSide,
-  gifFilename: string,
+  result: CoinSide,
 ): Promise<void> {
-  const assetsDir =
-    getCoinflipAssetsDir();
-  const gifPath =
-    path.join(
-      assetsDir,
-      gifFilename,
-    );
+  const images =
+    await getCoinflipFaceImages();
+  const opposite =
+    oppositeSide(choice);
+  const transitions =
+    result === choice
+      ? [choice, opposite, result]
+      : [choice, result];
+  const imageFilename =
+    "coinflip-frame.png";
 
-  // Verify the file exists before sending.
-  if (!fs.existsSync(gifPath)) {
-    throw new Error(
-      `Coinflip GIF not found: ${gifPath}`,
-    );
+  for (
+    let transition = 0;
+    transition < transitions.length - 1;
+    transition++
+  ) {
+    const from =
+      transitions[transition]!;
+    const to =
+      transitions[transition + 1]!;
+
+    for (
+      let frame = 0;
+      frame < COINFLIP_FRAME_SCALES.length;
+      frame++
+    ) {
+      const scaleY =
+        COINFLIP_FRAME_SCALES[frame]!;
+      const side =
+        frame <
+          COINFLIP_FRAME_SCALES.length / 2
+          ? from
+          : to;
+      const attachment =
+        new AttachmentBuilder(
+          coinflipFrame(
+            images[side],
+            side,
+            scaleY,
+          ),
+        ).setName(
+          imageFilename,
+        );
+
+      try {
+        await interaction.editReply({
+          flags:
+            MessageFlags.IsComponentsV2,
+          components: [
+            coinflipAnimationContainer(
+              amount,
+              choice,
+              imageFilename,
+            ),
+          ],
+          files: [
+            attachment,
+          ],
+        });
+      } catch {
+        // Intermediate animation frames are best-effort. The settled result
+        // is retried separately after the animation completes.
+      }
+
+      await new Promise<void>(
+        (resolve) =>
+          setTimeout(
+            resolve,
+            COINFLIP_FRAME_MS,
+          ),
+      );
+    }
   }
-
-  const attachment =
-    new AttachmentBuilder(
-      gifPath,
-    ).setName(
-      gifFilename,
-    );
-
-  /*
-   * Send the animated GIF once.
-   *
-   * We DON'T edit the Discord message repeatedly.
-   * Discord itself plays the GIF, which makes the
-   * animation much smoother.
-   */
-  try {
-    await interaction.editReply({
-      flags:
-        MessageFlags.IsComponentsV2,
-
-      components: [
-        coinflipAnimationContainer(
-          amount,
-          choice,
-          gifFilename,
-        ),
-      ],
-
-      files: [
-        attachment,
-      ],
-    });
-  } catch {
-    // The final result is retried below. A transient first edit should not
-    // turn a settled wager into an unhandled command failure.
-  }
-
-  /*
-   * Give the GIF time to finish.
-   */
-  await new Promise<void>(
-    (resolve) =>
-      setTimeout(
-        resolve,
-        ANIMATION_MS,
-      ),
-  );
 }
 
 // ─── Command Execute ─────────────────────────────────────────────────────────
@@ -488,8 +591,21 @@ export async function execute(
 
   // Resolve the animation before charging the player. Missing deployment
   // assets must never leave a wager debited without a playable result.
-  const gifFilename =
-    getRandomCoinflipGif(result);
+  try {
+    await getCoinflipFaceImages();
+  } catch (error) {
+    console.error(
+      "[coinflip] Face assets unavailable",
+      error,
+    );
+    return void interaction.editReply({
+      embeds: [
+        errorEmbed(
+          "Coinflip is temporarily unavailable because its face images could not be loaded.",
+        ),
+      ],
+    });
+  }
 
   const payout =
     won
@@ -518,7 +634,7 @@ export async function execute(
     interaction,
     amount,
     choice,
-    gifFilename,
+    result,
   );
 
   // ─── Final result ──────────────────────────────────────────────────────────

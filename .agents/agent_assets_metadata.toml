@@ -504,3 +504,10 @@ uri = "file://wispbyte-coinflip-colordice-animation-2026-08-17.zip"
 type = "unspecified"
 title = "WispByte Coinflip + Color Dice update"
 description = "Production-safe WispByte ZIP with the rebuilt bot, portable Coinflip GIF lookup, staged Color Dice animation, dice faces, canvas runtime dependency, and Coinflip animation assets. Excludes secrets, databases, production config, admin files, and node_modules."
+
+[[outputs]]
+id = "mv9XrHBaaDXAf_s1H2Nh1"
+uri = "file://wispbyte-coinflip-vertical-flip-2026-08-17.zip"
+type = "unspecified"
+title = "WispByte Coinflip vertical flip update"
+description = "WispByte-ready ZIP using the uploaded H/T coin artwork. The coin stays centered, flips vertically with a thicker visible edge, and uses a slower staged animation. Includes rebuilt dist, face assets, and required runtime metadata; excludes secrets, databases, production config, admin files, and node_modules."
