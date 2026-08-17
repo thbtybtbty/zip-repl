@@ -11,6 +11,7 @@ import {
 } from "discord.js";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   COLORS,
@@ -54,12 +55,47 @@ const SIDE_DISPLAY: Record<CoinSide, string> = {
   tails: "🔵 Tails",
 };
 
-const COINFLIP_ASSETS = path.join(
-  process.cwd(),
-  "..",
-  "..",
-  "coinflip_animation_pack",
+const MODULE_DIR = path.dirname(
+  fileURLToPath(import.meta.url),
 );
+
+// The source runs from the workspace root in Replit, while the compiled
+// WispByte bundle runs from artifacts/api-server/dist. Resolve both layouts
+// without depending on the process working directory.
+const COINFLIP_ASSET_CANDIDATES = [
+  path.resolve(
+    process.cwd(),
+    "coinflip_animation_pack",
+  ),
+  path.resolve(
+    MODULE_DIR,
+    "../../../coinflip_animation_pack",
+  ),
+  path.resolve(
+    MODULE_DIR,
+    "../../../../coinflip_animation_pack",
+  ),
+];
+
+function getCoinflipAssetsDir(): string {
+  const assetsDir =
+    COINFLIP_ASSET_CANDIDATES.find(
+      (candidate) =>
+        fs.existsSync(candidate),
+    );
+
+  if (!assetsDir) {
+    throw new Error(
+      [
+        "Coinflip assets folder does not exist.",
+        "Checked:",
+        ...COINFLIP_ASSET_CANDIDATES,
+      ].join(" "),
+    );
+  }
+
+  return assetsDir;
+}
 
 // How long Discord is allowed to play the GIF
 // before the final result panel appears.
@@ -105,18 +141,15 @@ function text(
 function getCoinflipAnimations(
   result: CoinSide,
 ): string[] {
-  if (!fs.existsSync(COINFLIP_ASSETS)) {
-    throw new Error(
-      `Coinflip assets folder does not exist: ${COINFLIP_ASSETS}`,
-    );
-  }
+  const assetsDir =
+    getCoinflipAssetsDir();
 
   const prefix =
     `coinflip_${result}_`;
 
   const files =
     fs.readdirSync(
-      COINFLIP_ASSETS,
+      assetsDir,
     );
 
   return files
@@ -306,33 +339,13 @@ async function animateCoinflip(
   interaction: ChatInputCommandInteraction,
   amount: number,
   choice: CoinSide,
-  result: CoinSide,
+  gifFilename: string,
 ): Promise<void> {
-  /*
-   * IMPORTANT:
-   *
-   * The actual result is already determined by the
-   * existing game logic.
-   *
-   * We only choose an animation that ENDS on that result.
-   *
-   * Therefore:
-   *
-   * result = heads
-   *   → random heads animation
-   *
-   * result = tails
-   *   → random tails animation
-   */
-
-  const gifFilename =
-    getRandomCoinflipGif(
-      result,
-    );
-
+  const assetsDir =
+    getCoinflipAssetsDir();
   const gifPath =
     path.join(
-      COINFLIP_ASSETS,
+      assetsDir,
       gifFilename,
     );
 
@@ -357,8 +370,8 @@ async function animateCoinflip(
    * Discord itself plays the GIF, which makes the
    * animation much smoother.
    */
-  await interaction
-    .editReply({
+  try {
+    await interaction.editReply({
       flags:
         MessageFlags.IsComponentsV2,
 
@@ -373,8 +386,11 @@ async function animateCoinflip(
       files: [
         attachment,
       ],
-    })
-    .catch(() => null);
+    });
+  } catch {
+    // The final result is retried below. A transient first edit should not
+    // turn a settled wager into an unhandled command failure.
+  }
 
   /*
    * Give the GIF time to finish.
@@ -392,7 +408,7 @@ async function animateCoinflip(
 
 export async function execute(
   interaction: ChatInputCommandInteraction,
-) {
+): Promise<void> {
   const amountStr =
     interaction.options.getString(
       "amount",
@@ -416,7 +432,7 @@ export async function execute(
     !amount ||
     amount < 1_000_000
   ) {
-    return interaction.reply({
+    return void interaction.reply({
       embeds: [
         errorEmbed(
           "Minimum bet is **1M gems**. Try `1m`, `2.5b`, `500k`.",
@@ -442,7 +458,7 @@ export async function execute(
   if (
     user.balance < amount
   ) {
-    return interaction.editReply({
+    return void interaction.editReply({
       embeds: [
         errorEmbed(
           `Insufficient balance. You have **${formatAmount(
@@ -469,6 +485,11 @@ export async function execute(
           ? "tails"
           : "heads"
     ) as CoinSide;
+
+  // Resolve the animation before charging the player. Missing deployment
+  // assets must never leave a wager debited without a playable result.
+  const gifFilename =
+    getRandomCoinflipGif(result);
 
   const payout =
     won
@@ -497,15 +518,14 @@ export async function execute(
     interaction,
     amount,
     choice,
-    result,
+    gifFilename,
   );
 
   // ─── Final result ──────────────────────────────────────────────────────────
 
-  await interaction.editReply({
+  const finalPayload = {
     flags:
       MessageFlags.IsComponentsV2,
-
     components: [
       coinflipResultContainer(
         amount,
@@ -514,5 +534,26 @@ export async function execute(
         won,
       ),
     ],
-  });
+  };
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await interaction.editReply(
+        finalPayload,
+      );
+      break;
+    } catch (error) {
+      if (attempt === 2) {
+        throw error;
+      }
+
+      await new Promise<void>(
+        (resolve) =>
+          setTimeout(
+            resolve,
+            180 * (attempt + 1),
+          ),
+      );
+    }
+  }
 }

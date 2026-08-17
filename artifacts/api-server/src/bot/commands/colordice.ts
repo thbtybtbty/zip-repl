@@ -148,15 +148,17 @@ const PIP = "#f8f8f2";
 // Fixed dice positions.
 // These NEVER change between animation frames.
 const DICE_POSITIONS = [
-  { x: 300, y: 360 },
-  { x: 465, y: 360 },
-  { x: 630, y: 360 },
-  { x: 795, y: 360 },
-  { x: 960, y: 360 },
-  { x: 1125, y: 360 },
+  { x: 160, y: 360 },
+  { x: 336, y: 360 },
+  { x: 512, y: 360 },
+  { x: 688, y: 360 },
+  { x: 864, y: 360 },
+  { x: 1040, y: 360 },
 ];
 
 const DIE_SIZE = 120;
+const DICE_FACE_VALUES = [1, 2, 3, 4, 5, 6] as const;
+type DiceFace = (typeof DICE_FACE_VALUES)[number];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DRAWING HELPERS
@@ -407,17 +409,29 @@ function drawDie(
   x: number,
   y: number,
   color: DiceColor,
+  face: DiceFace,
+  rotation = 0,
+  offsetY = 0,
+  scale = 1,
+  isLocked = false,
 ): void {
   ctx.save();
+
+  ctx.translate(
+    x,
+    y + offsetY,
+  );
+  ctx.rotate(rotation);
+  ctx.scale(scale, scale);
 
   const half =
     DIE_SIZE / 2;
 
   const left =
-    x - half;
+    -half;
 
   const top =
-    y - half;
+    -half;
 
   // Shadow.
   ctx.save();
@@ -491,55 +505,85 @@ function drawDie(
 
   ctx.restore();
 
-  // ONE centered white pip.
-  ctx.fillStyle = PIP;
+  // Locked dice get a small gold halo so the result reveal feels staged.
+  if (isLocked) {
+    ctx.save();
+    ctx.globalAlpha = 0.32;
+    ctx.shadowColor = GOLD;
+    ctx.shadowBlur = 18;
+    ctx.strokeStyle = GOLD;
+    ctx.lineWidth = 3;
+    roundedRect(
+      ctx,
+      left + 2,
+      top + 2,
+      DIE_SIZE - 4,
+      DIE_SIZE - 4,
+      17,
+    );
+    ctx.stroke();
+    ctx.restore();
+  }
 
-  ctx.beginPath();
+  const pipPositions: Record<
+    DiceFace,
+    [number, number][]
+  > = {
+    1: [[0, 0]],
+    2: [[-23, -23], [23, 23]],
+    3: [[-23, -23], [0, 0], [23, 23]],
+    4: [
+      [-23, -23],
+      [23, -23],
+      [-23, 23],
+      [23, 23],
+    ],
+    5: [
+      [-23, -23],
+      [23, -23],
+      [0, 0],
+      [-23, 23],
+      [23, 23],
+    ],
+    6: [
+      [-23, -23],
+      [-23, 0],
+      [-23, 23],
+      [23, -23],
+      [23, 0],
+      [23, 23],
+    ],
+  };
 
-  ctx.arc(
-    x,
-    y,
-    16,
-    0,
-    Math.PI * 2,
-  );
+  for (const [pipX, pipY] of pipPositions[face]) {
+    ctx.save();
 
-  ctx.fill();
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = "#000000";
+    ctx.beginPath();
+    ctx.arc(
+      pipX + 2,
+      pipY + 3,
+      13,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
 
-  // Tiny pip shadow for depth.
-  ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = PIP;
+    ctx.beginPath();
+    ctx.arc(
+      pipX,
+      pipY,
+      14,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
 
-  ctx.globalAlpha = 0.12;
-  ctx.fillStyle = "#000000";
-
-  ctx.beginPath();
-
-  ctx.arc(
-    x + 2,
-    y + 3,
-    13,
-    0,
-    Math.PI * 2,
-  );
-
-  ctx.fill();
-
-  ctx.restore();
-
-  // Re-draw the clean white center over the shadow.
-  ctx.fillStyle = PIP;
-
-  ctx.beginPath();
-
-  ctx.arc(
-    x,
-    y,
-    14,
-    0,
-    Math.PI * 2,
-  );
-
-  ctx.fill();
+    ctx.restore();
+  }
 
   ctx.restore();
 }
@@ -549,7 +593,20 @@ function drawDie(
 function drawDice(
   ctx: CanvasRenderingContext2D,
   dice: DiceColor[],
+  faces: DiceFace[],
+  animationFrame: number,
+  showResult: boolean,
 ): void {
+  const lockedCount = showResult
+    ? dice.length
+    : Math.min(
+        dice.length,
+        Math.max(
+          0,
+          animationFrame - 3,
+        ),
+      );
+
   for (
     let i = 0;
     i < 6;
@@ -558,11 +615,30 @@ function drawDice(
     const position =
       DICE_POSITIONS[i]!;
 
+    const isLocked =
+      i < lockedCount;
+    const motion =
+      isLocked
+        ? 0
+        : animationFrame * 0.82 +
+          i * 1.15;
+
     drawDie(
       ctx,
       position.x,
       position.y,
       dice[i]!,
+      faces[i] ?? 1,
+      isLocked
+        ? 0
+        : Math.sin(motion) * 0.075,
+      isLocked
+        ? 0
+        : Math.sin(motion * 1.45) * 10,
+      isLocked
+        ? 1
+        : 1 + Math.sin(motion * 0.9) * 0.035,
+      isLocked,
     );
   }
 }
@@ -576,6 +652,7 @@ function drawBottomInfo(
   matches: number,
   mult: number,
   payout: number,
+  animationFrame = 0,
 ): void {
   const pickName =
     pick.charAt(0).toUpperCase() +
@@ -595,12 +672,23 @@ function drawBottomInfo(
       525,
     );
 
+    const lockedCount =
+      Math.min(
+        6,
+        Math.max(
+          0,
+          animationFrame - 3,
+        ),
+      );
+
     ctx.fillStyle = MUTED;
     ctx.font =
       "600 16px Arial";
 
     ctx.fillText(
-      "Six dice • One matching color can win",
+      lockedCount === 0
+        ? "Rolling six dice…"
+        : `${lockedCount}/6 dice locked • Watching for ${pickName}`,
       IMAGE_WIDTH / 2,
       555,
     );
@@ -667,6 +755,8 @@ function colorDiceImage(
   matches: number,
   mult: number,
   payout: number,
+  faces: DiceFace[],
+  animationFrame: number,
 ): Buffer {
   const canvas =
     createCanvas(
@@ -689,6 +779,9 @@ function colorDiceImage(
   drawDice(
     ctx,
     dice,
+    faces,
+    animationFrame,
+    showResult,
   );
 
   drawBottomInfo(
@@ -698,6 +791,7 @@ function colorDiceImage(
     matches,
     mult,
     payout,
+    animationFrame,
   );
 
   return canvas.toBuffer(
@@ -715,6 +809,8 @@ function imageFile(
   matches = 0,
   mult = 0,
   payout = 0,
+  faces: DiceFace[] = randomFaceRow(),
+  animationFrame = 0,
 ): AttachmentBuilder {
   return new AttachmentBuilder(
     colorDiceImage(
@@ -725,6 +821,8 @@ function imageFile(
       matches,
       mult,
       payout,
+      faces,
+      animationFrame,
     ),
     {
       name:
@@ -737,6 +835,19 @@ function imageFile(
 
 function randomDiceRow(): DiceColor[] {
   return rollDice();
+}
+
+function randomFaceRow(): DiceFace[] {
+  return Array.from(
+    { length: 6 },
+    () =>
+      DICE_FACE_VALUES[
+        Math.floor(
+          Math.random() *
+            DICE_FACE_VALUES.length,
+        )
+      ]!,
+  );
 }
 
 function rollingEmbed(
@@ -1060,6 +1171,8 @@ export async function handleColorPick(
     Math.floor(
       pending.bet * mult,
     );
+  const finalFaces =
+    randomFaceRow();
 
   // ─────────────────────────────────────────────────────────────────────────
   // FIRST UPDATE
@@ -1079,6 +1192,11 @@ export async function handleColorPick(
         pick,
         randomDiceRow(),
         false,
+          0,
+          0,
+          0,
+          randomFaceRow(),
+          0,
       ),
     ],
     components: [],
@@ -1088,11 +1206,11 @@ export async function handleColorPick(
   // FAST COLOR ANIMATION
   // ─────────────────────────────────────────────────────────────────────────
 
-  const FRAME_MS = 180;
+  const FRAME_MS = 220;
 
   for (
     let frame = 0;
-    frame < 9;
+    frame < 10;
     frame++
   ) {
     await new Promise<void>(
@@ -1103,8 +1221,28 @@ export async function handleColorPick(
         ),
     );
 
+    const lockedCount =
+      Math.min(
+        dice.length,
+        Math.max(
+          0,
+          frame + 1 - 3,
+        ),
+      );
     const animatedDice =
-      randomDiceRow();
+      randomDiceRow().map(
+        (color, index) =>
+          index < lockedCount
+            ? dice[index]!
+            : color,
+      );
+    const animatedFaces =
+      randomFaceRow().map(
+        (face, index) =>
+          index < lockedCount
+            ? finalFaces[index]!
+            : face,
+      );
 
     try {
       await interaction.editReply({
@@ -1120,6 +1258,11 @@ export async function handleColorPick(
             pick,
             animatedDice,
             false,
+            0,
+            0,
+            0,
+            animatedFaces,
+            frame + 1,
           ),
         ],
       });
@@ -1133,7 +1276,7 @@ export async function handleColorPick(
     (resolve) =>
       setTimeout(
         resolve,
-        220,
+        260,
       ),
   );
 
@@ -1178,6 +1321,8 @@ export async function handleColorPick(
         matches,
         mult,
         payout,
+          finalFaces,
+          99,
       ),
     ],
     components: [],

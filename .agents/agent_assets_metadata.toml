@@ -497,3 +497,10 @@ uri = "file://exports/wispbyte-chicken-crossing-polished-board-2026-08-16.zip"
 type = "unspecified"
 title = "WispByte update — polished Chicken Crossing board"
 description = "Polished vertical Chicken Crossing image panel with a continuous start sidewalk, connected lane route, improved checkpoint circles, SAFE/NEXT/RISK/CRASH states, and clearer multiplier badges. Includes rebuilt dist and runtime metadata only; excludes secrets and production data."
+
+[[outputs]]
+id = "dLXFNvIBHPteZ7b8iAliX"
+uri = "file://wispbyte-coinflip-colordice-animation-2026-08-17.zip"
+type = "unspecified"
+title = "WispByte Coinflip + Color Dice update"
+description = "Production-safe WispByte ZIP with the rebuilt bot, portable Coinflip GIF lookup, staged Color Dice animation, dice faces, canvas runtime dependency, and Coinflip animation assets. Excludes secrets, databases, production config, admin files, and node_modules."

@@ -3,3 +3,4 @@
 - [WispByte database compatibility](wispbyte-database-compat.md) — Use sql.js/WebAssembly for SQLite on WispByte; never ship a native SQLite addon.
 - [Workspace dependency setup](workspace-dependency-setup.md) — Imported lockfiles may lag current workspace manifests; reconcile with pnpm before building, then keep production packages minimal.
 - [Drizzle sql.js row contract](drizzle-sqljs-row-contract.md) — sqlite-proxy callbacks must return positional rows so Drizzle maps snake_case columns and timestamps correctly.
+- [WispByte animation assets](wispbyte-animation-assets.md) — WispByte runtime packages must carry external canvas dependencies and Coinflip GIF assets alongside dist.
