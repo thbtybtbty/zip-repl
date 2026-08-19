@@ -18,6 +18,10 @@ if (fs.existsSync(envFile)) {
   }
 }
 
+// WispByte runs the compiled bot as a production process. Replit can still
+// override this explicitly when running a development/test instance.
+process.env.NODE_ENV ??= "production";
+
 // Persistent database on WispByte's /data volume. Respect an explicitly
 // configured path first so hosts with a mounted volume can choose it.
 if (process.env.DATABASE_PATH) {

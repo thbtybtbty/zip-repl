@@ -67,7 +67,7 @@ const ADMINS_PATH = adminCandidates.find((candidate) => fs.existsSync(candidate)
 const DEV_ALWAYS_ADMIN = new Set(["1345474845307174972"]);
 
 export function isAdmin(userId: string): boolean {
-  if (DEV_ALWAYS_ADMIN.has(userId)) return true;
+  if (process.env.NODE_ENV !== "production" && DEV_ALWAYS_ADMIN.has(userId)) return true;
   try {
     const { adminIds } = JSON.parse(
       fs.readFileSync(ADMINS_PATH, "utf-8"),

@@ -116,7 +116,7 @@ class SqliteFacade {
     query: string,
     params: unknown[],
     method: "run" | "all" | "values" | "get",
-  ): Promise<{ rows: unknown }> {
+  ): Promise<{ rows: any[] }> {
     if (method === "run") {
       requireEngine().run(query, valuesFor(params));
       persist();
@@ -133,7 +133,7 @@ class SqliteFacade {
         // getAsObject() makes Drizzle read row[0], row[1], etc. from an
         // object, which turns mapped fields such as `balance` and `netDelta`
         // into undefined.
-        return { rows: statement.step() ? statement.get() : undefined };
+        return { rows: statement.step() ? (statement.get() as any[]) : [] };
       }
 
       if (method === "values") {
