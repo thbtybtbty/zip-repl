@@ -1,9 +1,13 @@
 {
   "name": "gambling-bot",
   "version": "1.0.0",
+  "description": "Standalone Discord gambling bot runtime for WispByte",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.7",

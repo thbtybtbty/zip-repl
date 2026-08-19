@@ -617,3 +617,17 @@ mtime_ms = 1787158834701
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:2882ead5-3526-4ae6-a62b-3cd4382ea40f/215aa1c6-f2d6-4d42-9e7e-f74e39654fbe/86c614f0-05fb-425a-a86c-6b9d0cd948ad"
 storage_version_token = "1787158842239441"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "hBLyfrXQdSuddjQrwCl-T"
+uri = "file://wispbyte-gambling-bot.tar.gz"
+type = "unspecified"
+title = "Wispbyte standalone Discord gambling bot"
+description = "Ready-to-upload Wispbyte package with compiled dist, standalone launcher, minimal runtime package metadata and lockfile, admin configuration, coinflip assets, and setup README. Excludes secrets, live database files, Replit files, and node_modules."
+logical_id = "6dc5e9c6-9f25-4961-94ae-90af9bfa2fc3"
+content_hash = "sha256:c2cbdea66cca3c3d6a722673f9530b01bc9b299682935dfe7af87c5941283da7"
+size = 3161906
+mtime_ms = 1787164505660
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:6030616b-1e75-4bc4-b6c4-4f4c55ebf4e3/6dc5e9c6-9f25-4961-94ae-90af9bfa2fc3/f24bcbe2-6b00-49b2-980f-b4f016c320a2"
+storage_version_token = "1787164525341683"
+content_type = "application/octet-stream"
