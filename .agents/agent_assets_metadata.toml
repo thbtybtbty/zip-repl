@@ -603,3 +603,17 @@ mtime_ms = 1787157775374
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:2882ead5-3526-4ae6-a62b-3cd4382ea40f/d7bb8f26-2f92-44be-85e6-bd50d3abc5a5/c53db83e-41a6-4461-beb6-86eb76a99593"
 storage_version_token = "1787157827901385"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "0CrPyyBiy2qT1OCtA95e0"
+uri = "file://exports/gemspin-wispbyte-fixed-2026-08-19.zip"
+type = "unspecified"
+title = "Fixed GemSpin WispByte package"
+description = "WispByte package with a CommonJS-compatible package manifest and a public npm package-lock URL set. This fixes package-firewall.replit.local ENOTFOUND and require() in ES module scope."
+logical_id = "215aa1c6-f2d6-4d42-9e7e-f74e39654fbe"
+content_hash = "sha256:c41b509d4a94f334425b011431808b13962e7af81644ecc38b757adeac868629"
+size = 5889065
+mtime_ms = 1787158834701
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:2882ead5-3526-4ae6-a62b-3cd4382ea40f/215aa1c6-f2d6-4d42-9e7e-f74e39654fbe/86c614f0-05fb-425a-a86c-6b9d0cd948ad"
+storage_version_token = "1787158842239441"
+content_type = "application/octet-stream"
