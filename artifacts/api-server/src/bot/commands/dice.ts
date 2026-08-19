@@ -103,39 +103,39 @@ function drawDie(
 ): void {
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate(-0.13);
+  ctx.rotate(-0.16);
 
   ctx.shadowColor = "rgba(0, 0, 0, 0.55)";
-  ctx.shadowBlur = 13;
-  ctx.shadowOffsetY = 7;
+  ctx.shadowBlur = 16;
+  ctx.shadowOffsetY = 9;
   ctx.strokeStyle = "#111827";
-  ctx.lineWidth = 5;
+  ctx.lineWidth = 6;
 
-  const dieFace = ctx.createLinearGradient(-23, -33, 22, 34);
+  const dieFace = ctx.createLinearGradient(-29, -42, 28, 42);
   dieFace.addColorStop(0, "#ffffff");
-  dieFace.addColorStop(0.46, "#f1f4f1");
-  dieFace.addColorStop(1, "#c9d0d2");
+  dieFace.addColorStop(0.42, "#f6faf7");
+  dieFace.addColorStop(1, "#b9c5ca");
   ctx.fillStyle = dieFace;
-  roundedRect(ctx, -24, -34, 48, 68, 9);
+  roundedRect(ctx, -30, -42, 60, 84, 11);
   ctx.fill();
   ctx.stroke();
 
   ctx.shadowColor = "transparent";
   ctx.globalAlpha = 0.72;
   ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = 2;
-  roundedRect(ctx, -17, -27, 34, 54, 5);
+  ctx.lineWidth = 3;
+  roundedRect(ctx, -21, -32, 42, 64, 7);
   ctx.stroke();
   ctx.globalAlpha = 1;
 
   ctx.fillStyle = "#172033";
   for (const [px, py] of pipPositions(value)) {
     ctx.beginPath();
-    ctx.arc(px * 11, py * 19, 4.8, 0, Math.PI * 2);
+    ctx.arc(px * 14, py * 23, 6, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = "#27344b";
     ctx.beginPath();
-    ctx.arc(px * 11 - 1, py * 19 - 1, 2.3, 0, Math.PI * 2);
+    ctx.arc(px * 14 - 1.5, py * 23 - 1.5, 2.8, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = "#172033";
   }
@@ -223,8 +223,14 @@ function drawDiceImage(
   ctx.globalAlpha = 1;
 
   const targetX = split;
+  ctx.strokeStyle = "#111827";
+  ctx.lineWidth = 9;
+  ctx.beginPath();
+  ctx.moveTo(targetX, 148);
+  ctx.lineTo(targetX, 258);
+  ctx.stroke();
   ctx.strokeStyle = "#ffe05c";
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 5;
   ctx.beginPath();
   ctx.moveTo(targetX, 148);
   ctx.lineTo(targetX, 258);
@@ -232,27 +238,27 @@ function drawDiceImage(
 
   const flagX = Math.max(
     BAR_X + 6,
-    Math.min(targetX + 5, IMAGE_WIDTH - 84),
+    Math.min(targetX + 6, IMAGE_WIDTH - 104),
   );
 
   ctx.fillStyle = "#ffd34d";
-  ctx.strokeStyle = "#a8731b";
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#111827";
+  ctx.lineWidth = 4;
   ctx.beginPath();
   ctx.moveTo(flagX, 148);
-  ctx.lineTo(flagX + 66, 148);
-  ctx.lineTo(flagX + 66, 176);
-  ctx.lineTo(flagX + 20, 176);
-  ctx.lineTo(flagX + 9, 162);
+  ctx.lineTo(flagX + 84, 148);
+  ctx.lineTo(flagX + 84, 182);
+  ctx.lineTo(flagX + 22, 182);
+  ctx.lineTo(flagX + 8, 165);
   ctx.lineTo(flagX, 176);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
 
   ctx.fillStyle = "#142035";
-  ctx.font = "900 16px Arial";
+  ctx.font = "900 20px Arial";
   ctx.textAlign = "center";
-  ctx.fillText(String(target), flagX + 38, 167);
+  ctx.fillText(String(target), flagX + 47, 171);
 
   const rollX = trackX + (roll / 100) * BAR_WIDTH;
   drawDie(

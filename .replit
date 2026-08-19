@@ -50,7 +50,6 @@ DISCORD_CLIENT_ID = "1530170782175465546"
 
 [[ports]]
 localPort = 8080
-externalPort = 80
 
 [[ports]]
 localPort = 8081
