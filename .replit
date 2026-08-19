@@ -48,16 +48,5 @@ channel = "stable-25_05"
 [userenv.shared]
 DISCORD_CLIENT_ID = "1530170782175465546"
 
-[[ports]]
-localPort = 8080
-
-[[ports]]
-localPort = 8081
-externalPort = 8081
-
-[[ports]]
-localPort = 8082
-externalPort = 3000
-
 [objectStorage]
 defaultBucketID = "replit-objstore-6670d19d-e10a-41fd-86f5-f73dadf2036f"
