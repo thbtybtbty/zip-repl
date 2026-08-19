@@ -7,4 +7,4 @@ Animated game panels should use a small number of deliberately spaced message ed
 
 **Why:** Rapid successive Discord message edits caused intermittent slot animation crashes.
 
-**How to apply:** Use this pattern for future animated game commands, especially when a bet has already been charged.
+**How to apply:** Use this pattern for future animated game commands, especially when a bet has already been charged. Treat Discord error 10062 (Unknown interaction) as an expired acknowledgement window: log it once and never attempt a second reply, which only creates another error.

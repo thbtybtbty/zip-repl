@@ -66,6 +66,15 @@ const GAMBLING_COMMANDS = new Set([
   "crash","scratchcard","chickencrossing","colordice","dice","upgrader","keno","flip","hilo",
 ]);
 
+function isExpiredInteractionError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === 10062
+  );
+}
+
 const commands    = [balance, tip, mines, towers, rps, coinflip, dice, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, createcode, redeem, viewcodes, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms, rain, link, invites, cleardata];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
@@ -161,10 +170,22 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "invites")          return await invites.execute(interaction);
       if (name === "clear")            return await cleardata.execute(interaction);
     } catch (err) {
+      if (isExpiredInteractionError(err)) {
+        logger.warn({ command: name }, "Interaction expired before Discord acknowledged it");
+        return;
+      }
       logger.error({ err, command: name }, "Error executing command");
       const payload = { content: "❌ Something went wrong. Please try again.", ephemeral: true };
-      if (interaction.replied || interaction.deferred) await interaction.followUp(payload);
-      else await interaction.reply(payload);
+      try {
+        if (interaction.replied || interaction.deferred) await interaction.followUp(payload);
+        else await interaction.reply(payload);
+      } catch (replyError) {
+        if (isExpiredInteractionError(replyError)) {
+          logger.warn({ command: name }, "Interaction expired before the error response could be sent");
+          return;
+        }
+        throw replyError;
+      }
     }
     return;
   }
@@ -378,9 +399,21 @@ async function handleInteraction(interaction: Interaction) {
       if (id === "rain_join") return await rain.handleJoin(bi);
 
     } catch (err) {
+      if (isExpiredInteractionError(err)) {
+        logger.warn({ buttonId: id }, "Button interaction expired before Discord acknowledged it");
+        return;
+      }
       logger.error({ err, buttonId: id }, "Error handling button");
       if (!bi.replied && !bi.deferred) {
-        await bi.reply({ content: "❌ Something went wrong.", ephemeral: true });
+        try {
+          await bi.reply({ content: "❌ Something went wrong.", ephemeral: true });
+        } catch (replyError) {
+          if (isExpiredInteractionError(replyError)) {
+            logger.warn({ buttonId: id }, "Button interaction expired before the error response could be sent");
+            return;
+          }
+          throw replyError;
+        }
       }
     }
     return;
@@ -392,9 +425,21 @@ async function handleInteraction(interaction: Interaction) {
     try {
       if (si.customId === "aap_user_select") return await addadminperms.handleUserSelect(si);
     } catch (err) {
+      if (isExpiredInteractionError(err)) {
+        logger.warn({ selectId: si.customId }, "Select interaction expired before Discord acknowledged it");
+        return;
+      }
       logger.error({ err, selectId: si.customId }, "Error handling user select menu");
       if (!si.replied && !si.deferred) {
-        await si.reply({ content: "❌ Something went wrong.", ephemeral: true });
+        try {
+          await si.reply({ content: "❌ Something went wrong.", ephemeral: true });
+        } catch (replyError) {
+          if (isExpiredInteractionError(replyError)) {
+            logger.warn({ selectId: si.customId }, "Select interaction expired before the error response could be sent");
+            return;
+          }
+          throw replyError;
+        }
       }
     }
     return;
@@ -411,9 +456,21 @@ async function handleInteraction(interaction: Interaction) {
       if (id === "game_enable_select")         return await gamedisable.handleEnableSelect(si);
       if (id === "aap_remove_select")          return await addadminperms.handleRemoveSelect(si);
     } catch (err) {
+      if (isExpiredInteractionError(err)) {
+        logger.warn({ selectId: id }, "Select interaction expired before Discord acknowledged it");
+        return;
+      }
       logger.error({ err, selectId: id }, "Error handling select menu");
       if (!si.replied && !si.deferred) {
-        await si.reply({ content: "❌ Something went wrong.", ephemeral: true });
+        try {
+          await si.reply({ content: "❌ Something went wrong.", ephemeral: true });
+        } catch (replyError) {
+          if (isExpiredInteractionError(replyError)) {
+            logger.warn({ selectId: id }, "Select interaction expired before the error response could be sent");
+            return;
+          }
+          throw replyError;
+        }
       }
     }
     return;
@@ -444,9 +501,21 @@ async function handleInteraction(interaction: Interaction) {
         return await resetstats.handleModal(mi, id.slice("rs_modal_".length));
 
     } catch (err) {
+      if (isExpiredInteractionError(err)) {
+        logger.warn({ modalId: id }, "Modal interaction expired before Discord acknowledged it");
+        return;
+      }
       logger.error({ err, modalId: id }, "Error handling modal");
       if (!mi.replied && !mi.deferred) {
-        await mi.reply({ content: "❌ Something went wrong.", ephemeral: true });
+        try {
+          await mi.reply({ content: "❌ Something went wrong.", ephemeral: true });
+        } catch (replyError) {
+          if (isExpiredInteractionError(replyError)) {
+            logger.warn({ modalId: id }, "Modal interaction expired before the error response could be sent");
+            return;
+          }
+          throw replyError;
+        }
       }
     }
   }
