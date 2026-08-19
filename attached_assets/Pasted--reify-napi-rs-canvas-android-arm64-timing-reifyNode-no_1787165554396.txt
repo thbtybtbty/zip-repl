@@ -1,0 +1,63 @@
+################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no
+[##################] - reify:@napi-rs/canvas-android-arm64: timing reifyNode:no 25h
+[20:49:46]up to date, audited 5 packages in 7s
+[20:49:46]3 packages are looking for funding
+[20:49:46]run `npm fund` for details
+[20:49:46]found 0 vulnerabilities
+[20:49:46][boot] Loading .env...
+[20:49:46][boot] DB → /home/container/artifacts/api-server/bot.db
+[20:49:46][boot] Patching hardcoded paths...
+[20:49:46][boot] DISCORD_BOT_TOKEN set: true | DISCORD_CLIENT_ID set: true
+[20:49:46][boot] Starting bot (Node v19.9.0)...
+[20:49:49]{"level":30,"time":1787165389352,"pid":33,"hostname":"71b6e021-f6ff-4700-865f-336f875f6301","port":8080,"host":"0.0.0.0","msg":"Server listening"}
+[20:49:59]{"level":50,"time":1787165399791,"pid":33,"hostname":"71b6e021-f6ff-4700-865f-336f875f6301","err":{"type":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: discord.com:443, timeout: 10000ms)","stack":"ConnectTimeoutError: Connect Timeout Error (attempted address: discord.com:443, timeout: 10000ms)\n at onConnectTimeout (file:///home/container/artifacts/api-server/dist/index.patched.mjs:31670:29)\n at Immediate._onImmediate (file:///home/container/artifacts/api-server/dist/index.patched.mjs:31651:11)\n at process.processImmediate (node:internal/timers:478:21)","name":"ConnectTimeoutError","code":"UND_ERR_CONNECT_TIMEOUT"},"msg":"Failed to start Discord bot"}
+[20:49:59]Server marked as offline
+[20:50:00][Wispbyte]: ---------- Detect
