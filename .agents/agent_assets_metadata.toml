@@ -6,210 +6,245 @@ id = "oGEyWVwtqd5JB0A-GQSTO"
 uri = "file://bot.zip"
 type = "unspecified"
 title = "bot.zip — WispByte deployment"
+logical_id = "09ab3970-40a6-4559-94e0-157c12683b64"
 
 [[outputs]]
 id = "Wu6dL-J6fx1iI0yawm7cY"
 uri = "file://wispbyte-upload-new.zip"
 type = "unspecified"
 title = "WispByte Bot Upload (1.1 MB)"
+logical_id = "548fc6ac-3e6e-46b6-8c6e-a74ac32edbf2"
 
 [[outputs]]
 id = "13_IhfP4BMSdgMmmm80w8"
 uri = "file://wispbyte-final.zip"
 type = "unspecified"
 title = "WispByte Final Upload v4 (1.1 MB)"
+logical_id = "b104e7c9-28b8-450b-9cf5-fc7edae1458e"
 
 [[outputs]]
 id = "Y9_wAJQE73iu3frODG2BX"
 uri = "file://attached_assets/wispbyte-updated-2026-07-23.tar.gz"
 type = "unspecified"
 title = "WispByte updated archive (colordice + upgrader + chickencrossing fix)"
+logical_id = "c3f0abd1-61ea-4f3c-b284-6ec37ce80728"
 
 [[outputs]]
 id = "9mvStWARTdOptBeYd1t9a"
 uri = "file://attached_assets/wispbyte-full-updated-2026-07-23.tar.gz"
 type = "unspecified"
 title = "WispByte complete archive — all files updated"
+logical_id = "ac5115f3-7779-46ca-a98b-b77a6207a224"
 
 [[outputs]]
 id = "bswzb8hgWTvefGvgpyXhY"
 uri = "file://attached_assets/wispbyte-full-updated-v2.tar.gz"
 type = "unspecified"
 title = "WispByte full archive — min bet + BJ fixes"
+logical_id = "ba2b6ab7-7fd2-4faa-82b1-1df22f2bade1"
 
 [[outputs]]
 id = "39NG4SDUknnQJICwjOqzi"
 uri = "file://attached_assets/wispbyte-full-updated-v3.tar.gz"
 type = "unspecified"
 title = "WispByte full archive v3 — BJ + coinflip + colordice + min bet"
+logical_id = "6c2af002-d849-4f8c-9117-091912c7c822"
 
 [[outputs]]
 id = "yaPJfXLJPBSzXxoiCuQvY"
 uri = "file://attached_assets/wispbyte-bj-bustfix.tar.gz"
 type = "unspecified"
 title = "WispByte — blackjack dealer bust fix"
+logical_id = "01a6ff31-7b23-492b-b76c-931de002a13c"
 
 [[outputs]]
 id = "hLrKwNv34g4u1jfI-8hR8"
 uri = "file://attached_assets/wispbyte-update.tar.gz"
 type = "unspecified"
 title = "wispbyte-update.tar.gz"
+logical_id = "ad3e38fc-f0d1-4e91-b8eb-06b477381346"
 
 [[outputs]]
 id = "9iBcA9kA0A1YaMGwe9m1l"
 uri = "file://wispbyte-dist-update.zip"
 type = "unspecified"
 title = "WispByte dist update"
+logical_id = "eb364d7b-977b-4c6f-9677-6f61b0de8749"
 
 [[outputs]]
 id = "UrOHt4hBG5dENYFPQ3Vr5"
 uri = "file://index-wispbyte.mjs"
 type = "unspecified"
 title = "index.mjs — WispByte (keno update)"
+logical_id = "d4e9a67f-3cee-4399-9cd7-fff9a537af86"
 
 [[outputs]]
 id = "iWycN351lAFp3BaaVgyti"
 uri = "file://keno-update.tar.gz"
 type = "unspecified"
 title = "update.tar.gz — all changes"
+logical_id = "8be3d089-b077-4a0f-ac12-45099168fee0"
 
 [[outputs]]
 id = "wRZ9p8bjgXVdEm1apok5w"
 uri = "file://update.tar.gz"
 type = "unspecified"
 title = "update.tar.gz — history + resetstats"
+logical_id = "c6791067-9812-4fed-bb5b-8aba8d84999a"
 
 [[outputs]]
 id = "8I43rzcPejxZI-FZBvGKQ"
 uri = "file://wispbyte-update.tar.gz"
 type = "unspecified"
 title = "wispbyte-update.tar.gz"
+logical_id = "c7d3e270-81d1-4a30-8ae9-f7b6a4eaf8bd"
 
 [[outputs]]
 id = "a63Ab24aVgaNQCri6d92w"
 uri = "file://wispbyte-wheel-update.tar.gz"
 type = "unspecified"
 title = "Wispbyte Wheel Update"
+logical_id = "d7f509c5-25e8-48ec-9468-c475d4c78950"
 
 [[outputs]]
 id = "7sJVx8bFaZg44UkJrCrxt"
 uri = "file://wispbyte-slots-update.tar.gz"
 type = "unspecified"
 title = "Wispbyte Slots Update"
+logical_id = "89c13fa9-3342-4b98-b24b-2e756d66106e"
 
 [[outputs]]
 id = "5AeKW2OcW4n4rr50UswbA"
 uri = "file://wispbyte-slots-animation-payouts-update.tar.gz"
 type = "unspecified"
 title = "Wispbyte Slots Animation and Payouts Update"
+logical_id = "c1a3a4d0-ecc2-4066-9a1c-78bd2b6a13f6"
 
 [[outputs]]
 id = "JYx008rYngtsZHvmN9AsJ"
 uri = "file://wispbyte-hilo-update.tar.gz"
 type = "unspecified"
 title = "Wispbyte Hi-Lo Update"
+logical_id = "fcbcc135-fe3f-4fe5-97b9-57d6c4ec839f"
 
 [[outputs]]
 id = "lNhVNDOWRQ389gXcnZpzG"
 uri = "file://wispbyte-hilo-panel-update.tar.gz"
 type = "unspecified"
 title = "Wispbyte Hi-Lo Panel Update"
+logical_id = "ac66c4c1-8f5e-4ea6-8bd4-7ebf56aaf446"
 
 [[outputs]]
 id = "3ee1PkmAKGr3_dFzYD_8H"
 uri = "file://wispbyte-update-stats-economy-adminperms.tar.gz"
 type = "unspecified"
 title = "Wispbyte Update — stats, economy, addadminperms"
+logical_id = "dea24b82-c0e3-4bac-ac76-db4630291186"
 
 [[outputs]]
 id = "j9U6ADnYZyJIkOctWs4is"
 uri = "file://wispbyte-update-fixes.tar.gz"
 type = "unspecified"
 title = "Wispbyte Update — /history fix, admin bet exclusion, balance advanced stats"
+logical_id = "cd73b84e-3a53-4024-939e-889651339998"
 
 [[outputs]]
 id = "JwDkdO8uJ6k1x0qkPIuS_"
 uri = "file://attached_assets/gemspin-bot-v2-wispbyte.tar.gz"
 type = "unspecified"
 title = "GemSpin Bot V2 — WispByte Package (mines + flip update)"
+logical_id = "c8890e79-df59-41d2-aed2-de76eb2abca3"
 
 [[outputs]]
 id = "-dw7ldCLfhvuVmr3gwgQn"
 uri = "file://wispbyte-dist.zip"
 type = "unspecified"
 title = "WispByte Package — improved promo code embed"
+logical_id = "7cd3f8b7-0b4c-4bfa-ab8a-b3afd8447d84"
 
 [[outputs]]
 id = "0EQ1H__zNDyrCNI9tQVLh"
 uri = "file://wispbyte-createcode-update.tar.gz"
 type = "unspecified"
 title = "Wispbyte Update — createcode embed"
+logical_id = "193bb9e3-1722-4f30-a520-addaba902f0f"
 
 [[outputs]]
 id = "GiXQtvUlCn3-l59pErfrM"
 uri = "file://wispbyte-createcode-embed-fix.tar.gz"
 type = "unspecified"
 title = "Wispbyte Update — createcode embed fix"
+logical_id = "aed10aaf-2028-4326-830f-494acff9bc57"
 
 [[outputs]]
 id = "GFPog6GR3l00rNwAZ0J28"
 uri = "file://wispbyte-createcode-inline-labels.tar.gz"
 type = "unspecified"
 title = "Wispbyte Update — inline labels"
+logical_id = "d4679883-77c4-4170-8215-476300d09811"
 
 [[outputs]]
 id = "a-wACIU8_DqvD6pCTuqHX"
 uri = "file://wispbyte-rain-command.tar.gz"
 type = "unspecified"
 title = "Wispbyte Update — /rain command"
+logical_id = "ed83526e-d8c7-4847-8340-6e425f5ddd07"
 
 [[outputs]]
 id = "Lo3H_TqFijEqVd36xzFB4"
 uri = "file://wispbyte-rain-reqs-setup-codes.tar.gz"
 type = "unspecified"
 title = "Wispbyte Update — rain reqs + setup + codes blockquote"
+logical_id = "45c587ed-2e5c-482a-a30a-0649fcd3c5d1"
 
 [[outputs]]
 id = "atUHKquj5WPEYzkGoN0im"
 uri = "file://wispbyte-index.mjs"
 type = "unspecified"
 title = "index.mjs"
+logical_id = "264b8d6f-4bea-4bfb-956f-8d8f06aba842"
 
 [[outputs]]
 id = "nYc1mx8bU8fxRzehUkEko"
 uri = "file://wispbyte-blackjack-update.tar.gz"
 type = "unspecified"
 title = "Wispbyte — Blackjack UI update (dist/)"
+logical_id = "043f83ec-91cb-4b26-9bdb-38de579f5238"
 
 [[outputs]]
 id = "SMCUBTQ1Goj0qD675ulaY"
 uri = "file://wispbyte-deposit-update.tar.gz"
 type = "unspecified"
 title = "Wispbyte — Mailbox deposit update (dist/)"
+logical_id = "190e7423-6f57-4711-aa1c-aa66cb02eef8"
 
 [[outputs]]
 id = "RfaPvL8bdeFFLq4tVko92"
 uri = "file://attached_assets/MailboxDeposit.luau"
 type = "unspecified"
 title = "MailboxDeposit.luau — Roblox script"
+logical_id = "e808eaaa-70b0-4e2d-ac14-5f7b28f7c841"
 
 [[outputs]]
 id = "-3MLTfRb1trFjgEyyEk1O"
 uri = "file://wispbyte-mailbox-update.tar.gz"
 type = "unspecified"
 title = "Wispbyte — Mailbox update (dist/)"
+logical_id = "ad0227de-4665-4a2f-8142-836e59786843"
 
 [[outputs]]
 id = "gC0a_NICu91v5HCFLRG86"
 uri = "file://attached_assets/PS99_MailboxWatcher.luau"
 type = "unspecified"
 title = "PS99_MailboxWatcher.luau — updated executor script"
+logical_id = "322bb80d-0f21-452f-8108-34c2e41a6aad"
 
 [[outputs]]
 id = "atwsFt35pM-291MO3Yoh5"
 uri = "file://wispbyte-link-update.tar.gz"
 type = "unspecified"
 title = "Wispbyte — /link + robloxUser deposit (dist/)"
+logical_id = "3bec8caf-3eb6-4cb0-95ac-76b40f7a7f11"
 
 [[outputs]]
 id = "JGEmHY76gGgUo9ZL8AWsh"
@@ -217,6 +252,7 @@ uri = "file://wispbyte-port-fix.tar.gz"
 type = "unspecified"
 title = "wispbyte-port-fix.tar.gz"
 description = "Updated dist/ — fixes the HTTP server to read PORT from the environment (defaults to 8080 if unset). Upload this to your Wispbyte dist/ folder and restart."
+logical_id = "661a861b-4243-41eb-af21-e5c54dcd1f3a"
 
 [[outputs]]
 id = "tbXtxN-PjoF3lsnP8J57t"
@@ -224,6 +260,7 @@ uri = "file://wispbyte-sigint-fix.tar.gz"
 type = "unspecified"
 title = "wispbyte-sigint-fix.tar.gz"
 description = "dist/ + package.json. Start command auto-runs npm install then launches the bot — no console needed."
+logical_id = "abc8bf35-6b5f-47ea-87ca-9142a5c3b38c"
 
 [[outputs]]
 id = "j_itIUtVzfxqV6cDfTE6M"
@@ -231,6 +268,7 @@ uri = "file://wispbyte-update.zip"
 type = "unspecified"
 title = "wispbyte-update.zip"
 description = "dist/ + package.json as a .zip. Upload to Wispbyte, set startup command to: npm start"
+logical_id = "56964044-9a07-41ee-8022-842007eef9bb"
 
 [[outputs]]
 id = "hTWgRSD8-RUuUpjl9J32W"
@@ -238,6 +276,7 @@ uri = "file://wispbyte-ready.zip"
 type = "unspecified"
 title = "wispbyte-ready.zip"
 description = "Clean zip, integrity verified. Extract to your Wispbyte container root, then start with: npm start"
+logical_id = "93fd2d04-56b3-4983-93a0-af6210f73ad5"
 
 [[outputs]]
 id = "wymhfJUvXAUkegv8UyEtw"
@@ -245,6 +284,7 @@ uri = "file://attached_assets/wispbyte-update-2026-08-05.tar.gz"
 type = "unspecified"
 title = "WispByte bot update package"
 description = "Rebuilt WispByte runtime for the tested Discord bot. Includes the launcher, startup script, npm metadata, and rebuilt dist files. Production .env, database, server config, admin config, and node_modules are intentionally excluded."
+logical_id = "32d30125-dedd-4bdd-8848-177d09cc3fa1"
 
 [[outputs]]
 id = "P6l4F6I_5kfFnvzVz3g8E"
@@ -252,6 +292,7 @@ uri = "file://attached_assets/wispbyte-compatible-2026-08-05.tar.gz"
 type = "unspecified"
 title = "WispByte-compatible bot package — 2026-08-05"
 description = "Complete WispByte upload package. Replaces native better-sqlite3 with sql.js/WebAssembly, includes index.js as the declared main file, package.json, public npm package-lock.json, start.sh, rebuilt dist/, and deployment notes. Excludes credentials, databases, admin files, server config, and node_modules."
+logical_id = "0a2bf46f-84c0-40f1-ac1a-d4e30152455b"
 
 [[outputs]]
 id = "BgjFJtsq9ujH6KZPFd4xJ"
@@ -259,6 +300,7 @@ uri = "file://attached_assets/wispbyte-update-balance-history-fix-2026-08-05.tar
 type = "unspecified"
 title = "WispByte balance and history fix"
 description = "Fixed the sql.js/Drizzle row mapping that caused balance and history fields to be undefined on WispByte. Includes the rebuilt runtime, launcher, startup script, and npm metadata. Production .env, database, server config, admin config, and node_modules are excluded."
+logical_id = "63f0d3cc-ea22-46ed-8182-5cbededae6d5"
 
 [[outputs]]
 id = "LjYe9eCmRNV_iB-DZgW6b"
@@ -266,6 +308,7 @@ uri = "file://attached_assets/wispbyte-blackjack-embed-fields-2026-08-05.tar.gz"
 type = "unspecified"
 title = "WispByte Blackjack embed update"
 description = "Replaced the Blackjack command's literal separator lines with native Discord embed fields for Bet, Payout, Dealer, and Your Hand. Includes the rebuilt runtime and WispByte launcher files. Production .env, database, server config, admin config, and node_modules are excluded."
+logical_id = "0692c35c-846f-4083-830d-8dd62e1d3f5d"
 
 [[outputs]]
 id = "FPiL2CxktPaSwXHGA0q8o"
@@ -273,6 +316,7 @@ uri = "file://attached_assets/wispbyte-blackjack-embed-fields-fixed.zip"
 type = "unspecified"
 title = "WispByte Blackjack update — ZIP"
 description = "Repacked with normalized paths as a standard ZIP archive. Validated with unzip test and full extraction. Includes the rebuilt bot runtime and launcher files; production secrets and data are excluded."
+logical_id = "0e1c488b-0596-4b90-9148-acc03c55a865"
 
 [[outputs]]
 id = "nz67QVmoOwFZa_xgAdUtQ"
@@ -280,6 +324,7 @@ uri = "file://attached_assets/wispbyte-blackjack-embed-fields-fixed.tar.gz"
 type = "unspecified"
 title = "WispByte Blackjack update — tar.gz fallback"
 description = "Freshly repacked tar.gz fallback with normalized paths. Validated with gzip test, tar listing, and full extraction."
+logical_id = "8accecfa-c928-4583-a568-5cddcf7decd6"
 
 [[outputs]]
 id = "A_KPLAhpJMYS-G7W_sBCR"
@@ -287,6 +332,7 @@ uri = "file://attached_assets/wispbyte-blackjack-private-errors.zip"
 type = "unspecified"
 title = "WispByte Blackjack and private errors update"
 description = "WispByte ZIP package with the original Blackjack panel restored, separator lines removed, sub-1m Blackjack errors made private, and non-admin attempts to view another user's balance made private. Archive integrity and extraction were validated. Production .env, database, server config, admin config, and node_modules are excluded."
+logical_id = "708eb028-1c23-4759-91f9-e8d5d2e12b29"
 
 [[outputs]]
 id = "t2orUUi9qYC4xQRZF76t7"
@@ -294,6 +340,7 @@ uri = "file://attached_assets/wispbyte-enospc-database-fix.zip"
 type = "unspecified"
 title = "WispByte database storage fix"
 description = "WispByte ZIP package for the ENOSPC database write failure. Includes the updated launcher and rebuilt runtime, with configured database-path support and cleanup of failed temporary database writes. Archive integrity and extraction were validated. Production .env, database, server config, admin config, and node_modules are excluded."
+logical_id = "a2434494-20f5-4259-af19-04dec5eefadb"
 
 [[outputs]]
 id = "m2C0IopHvda3GjOauEfGT"
@@ -301,6 +348,7 @@ uri = "file://wispbyte-ready-2026-08-07.tar.gz"
 type = "unspecified"
 title = "WispByte-ready Discord bot package"
 description = "Rebuilt runtime package for WispByte. Includes index.js, package metadata, start.sh, deployment notes, and the rebuilt artifacts/api-server/dist bundle. Excludes secrets, production database/configuration, admin files, and node_modules."
+logical_id = "b5081049-4361-442d-bf12-47af2459f428"
 
 [[outputs]]
 id = "p-hGh0BveKD5ChR0w--c5"
@@ -308,6 +356,7 @@ uri = "file://wispbyte-enospc-diagnostics-2026-08-07.tar.gz"
 type = "unspecified"
 title = "WispByte diagnostic update — verified TAR.GZ"
 description = "Verified tar.gz alternative. Validated with gzip -t and tar listing. Use this if WispByte expects tar.gz format."
+logical_id = "69ab2ac4-e7ad-4500-99f8-466bad80377d"
 
 [[outputs]]
 id = "9LZdBqNE1HEh0BUJbefi3"
@@ -315,6 +364,7 @@ uri = "file://wispbyte-enospc-diagnostics-2026-08-07.zip"
 type = "unspecified"
 title = "WispByte diagnostic update — verified ZIP"
 description = "Genuine ZIP archive, not a renamed tar.gz. Locally validated with unzip -t: all files passed. Includes the rebuilt bot runtime and startup diagnostics. Excludes secrets, production database/configuration, admin files, and node_modules."
+logical_id = "4169597a-6f76-4484-8e02-b617b2dff794"
 
 [[outputs]]
 id = "J6uqXrh6SZCmjMEk1whzd"
@@ -322,6 +372,7 @@ uri = "file://wispbyte-blackjack-format-2026-08-07.zip"
 type = "unspecified"
 title = "WispByte Blackjack update — verified ZIP"
 description = "Genuine ZIP archive validated with unzip -t. Includes the updated Blackjack panel formatting, custom emojis, spaced card rows, multiplier/result layout, and ephemeral invalid or under-1M bet replies. Excludes secrets, production database/configuration, admin files, and node_modules."
+logical_id = "4696a929-6ed5-4833-aade-d6b61eb91b1a"
 
 [[outputs]]
 id = "nqF2KEahbstM5taCBWMH-"
@@ -329,6 +380,7 @@ uri = "file://wispbyte-blackjack-format-2026-08-07.tar.gz"
 type = "unspecified"
 title = "WispByte Blackjack update — verified TAR.GZ"
 description = "Verified TAR.GZ alternative for WispByte. Includes the same tested Blackjack update and excludes secrets, production database/configuration, admin files, and node_modules."
+logical_id = "fec393b5-3dcf-4ffc-b0f0-bbdb3e840304"
 
 [[outputs]]
 id = "whQtlNOzMrE5FiECjDhvU"
@@ -336,6 +388,7 @@ uri = "file://wispbyte-blackjack-universal-emojis-2026-08-07.zip"
 type = "unspecified"
 title = "WispByte Blackjack update — universal emojis ZIP"
 description = "Genuine ZIP validated with unzip -t. Replaces server-specific emojis with standard Unicode emojis: 🃏, 💎, and ✨. The bot was rebuilt and verified in Replit with all 37 commands registered."
+logical_id = "b85dfb09-98a3-4b59-ac6a-c2cd428d8726"
 
 [[outputs]]
 id = "oYB5huT9DLVOE1r6KdDKS"
@@ -343,6 +396,7 @@ uri = "file://wispbyte-blackjack-universal-emojis-2026-08-07.tar.gz"
 type = "unspecified"
 title = "WispByte Blackjack update — universal emojis TAR.GZ"
 description = "Verified TAR.GZ alternative containing the same Unicode emoji update."
+logical_id = "26af5e3e-f7e1-4ab6-92db-9e3b927e7c64"
 
 [[outputs]]
 id = "K8TARgUIknUuFhIEcyVsm"
@@ -350,6 +404,7 @@ uri = "file://wispbyte-blackjack-spacing-2026-08-07.zip"
 type = "unspecified"
 title = "WispByte Blackjack spacing update — ZIP"
 description = "Verified ZIP containing the requested Blackjack spacing changes."
+logical_id = "fb6456e2-a847-45d1-baf8-7b46cec5face"
 
 [[outputs]]
 id = "NTo6ASef0mWA085fNsUWS"
@@ -357,6 +412,7 @@ uri = "file://wispbyte-setup-2026-08-07.tar.gz"
 type = "unspecified"
 title = "WispByte bot setup bundle"
 description = "Rebuilt WispByte runtime archive with index.js, start.sh, npm metadata, and updated artifacts/api-server/dist/. It excludes secrets, production database/configuration, admin files, and node_modules."
+logical_id = "43f11191-949c-4782-9fbf-a230ec0fbe04"
 
 [[outputs]]
 id = "IxUTImLu29wqsUS8h5E77"
@@ -364,6 +420,7 @@ uri = "file://wispbyte-private-invalid-amount-2026-08-07.zip"
 type = "unspecified"
 title = "WispByte private invalid-bet update"
 description = "ZIP bundle with invalid or below-1m bet messages made private across the games. Includes the rebuilt artifacts/api-server/dist/ in the correct WispByte folder structure and excludes secrets, production data, config, admin files, and node_modules."
+logical_id = "11e1920f-8569-4da4-a5df-a494ee673781"
 
 [[outputs]]
 id = "AO4isIanY9geWpoNSSLPG"
@@ -371,6 +428,7 @@ uri = "file://wispbyte-upgrader-x-multiplier-2026-08-07.zip"
 type = "unspecified"
 title = "WispByte upgrader x-multiplier update"
 description = "Updated WispByte ZIP for /upgrader. The multiplier now accepts both values like 2.5 and values with x like 2.5x, while keeping the same 1.5x–25x range and payout behavior."
+logical_id = "cf4b40f3-ef6e-4f71-b685-91f2a07bb72b"
 
 [[outputs]]
 id = "dJ9gVHFWAPdpnGG_56W3r"
@@ -378,6 +436,7 @@ uri = "file://wispbyte-chickencrossing-panel-2026-08-07.zip"
 type = "unspecified"
 title = "WispByte Chicken Crossing panel update"
 description = "Updated Chicken Crossing ZIP. The panel now shows the current cash-out amount, labels the maximum payout as Last lane, and displays the Next lane pays footer starting from lane 1. Production data and secrets are excluded."
+logical_id = "2b02d68a-df1d-4eec-becf-4ea07f39bd89"
 
 [[outputs]]
 id = "6Aqj9Crb4Df-g4g4cN676"
@@ -385,6 +444,7 @@ uri = "file://wispbyte-wheel-roulette-2026-08-08.zip"
 type = "unspecified"
 title = "WispByte Wheel and Roulette update"
 description = "Updated WispByte ZIP. Wheel keeps the exact weighted counts and house edge while reducing repetitive low-multiplier strip layouts, removes Odds, and Roulette now uses Multiplier or Missed Multiplier with 2x/3x/36x bet choices."
+logical_id = "dc619c5d-44d8-4d5d-8b74-b2e562ede414"
 
 [[outputs]]
 id = "PhwcPwd-wzlNQ0T3-CBjK"
@@ -392,6 +452,7 @@ uri = "file://wispbyte-wheel-no-all-low-2026-08-08.zip"
 type = "unspecified"
 title = "WispByte Wheel no-all-low update"
 description = "Updated Wheel ZIP. No five-item visible strip can consist only of 0x and 0.5x; original weighted counts and house edge remain unchanged. Production secrets, database, config, admin files, and node_modules are excluded."
+logical_id = "e2006714-78d6-4082-86d8-349e9f37c68f"
 
 [[outputs]]
 id = "r06u44Bgx12h9qomAi4gO"
@@ -399,6 +460,7 @@ uri = "file://wispbyte-setup-2026-08-08.tar.gz"
 type = "unspecified"
 title = "WispByte-ready Discord bot package"
 description = "Verified build from the Replit test bot. Includes index.js, npm metadata, start.sh, deployment notes, and the rebuilt artifacts/api-server/dist/ bundle. Excludes .env, tokens, databases, server config, admin files, and node_modules."
+logical_id = "d1dde4b5-e202-47dd-92e1-23d1de3e74b3"
 
 [[outputs]]
 id = "PKBtDvJF1T6Z9vAr6Kl4d"
@@ -406,6 +468,7 @@ uri = "file://wispbyte-min-deposit-withdraw-2026-08-08.tar.gz"
 type = "unspecified"
 title = "Updated WispByte bot package"
 description = "Includes optional /setup minimum_deposit and minimum_withdraw settings, enforces both thresholds, and removes the personal-code Step 3 from the /deposit panel. Verified with the Replit test bot. Excludes .env, tokens, databases, server config, admin files, and node_modules."
+logical_id = "56349036-67fa-40ad-8958-f8cf15436383"
 
 [[outputs]]
 id = "Z9KPGBjLyk4iKXolCResj"
@@ -413,6 +476,7 @@ uri = "file://wispbyte-blackjack-dealer-blackjack-flow-2026-08-08.zip"
 type = "unspecified"
 title = "WispByte update — Blackjack dealer blackjack flow"
 description = "Updated runtime package: dealer-only blackjack no longer ends the game automatically; the player gets the normal blackjack controls. Includes rebuilt dist/ and excludes secrets, databases, server config, admin files, and node_modules."
+logical_id = "afc74fb7-9fe0-4514-95ca-822a1b35dbfd"
 
 [[outputs]]
 id = "5uFZlRt2evY29nmn0Fhgw"
@@ -420,6 +484,7 @@ uri = "file://wispbyte-blackjack-natural-dealer-wins-2026-08-08.zip"
 type = "unspecified"
 title = "WispByte update — Natural dealer blackjack wins"
 description = "Dealer natural blackjack now beats any non-natural player 21, including 21 made with additional cards. Only two natural blackjacks push. Revealed dealer blackjack displays as Dealer's Blackjack. Package excludes secrets, databases, server config, admin files, and node_modules."
+logical_id = "efee9b53-b9db-4296-bcc2-75208685052f"
 
 [[outputs]]
 id = "kzkN4xp3FOezwBrV9LlTE"
@@ -427,6 +492,7 @@ uri = "file://wispbyte-blackjack-dealers-blackjack-display-fix-2026-08-09.zip"
 type = "unspecified"
 title = "WispByte update — Dealer's Blackjack display fix"
 description = "Fixes the reveal so a natural dealer blackjack consistently displays only \"Dealer's Blackjack\" instead of \"Dealer Dealer's Blackjack\" or \"Dealer 21\". Includes rebuilt dist/ and excludes secrets, databases, server config, admin files, and node_modules."
+logical_id = "3502963f-be58-49b8-8e9c-75daf39418b7"
 
 [[outputs]]
 id = "K40c0SkAVEmWRbb3Jqxp-"
@@ -434,6 +500,7 @@ uri = "file://wispbyte-blackjack-natural-result-and-doubled-font-2026-08-09.zip"
 type = "unspecified"
 title = "WispByte update — Blackjack result and doubled label"
 description = "A non-natural player 21 losing to a dealer natural blackjack now says: The dealer beat you, natural blackjack to 21. The (doubled) label is now normal font instead of italic. Includes rebuilt dist/ and excludes secrets, databases, server config, admin files, and node_modules."
+logical_id = "ca2ab9db-8b15-47d7-8d72-9438fd642f57"
 
 [[outputs]]
 id = "GRzH5nP4GZnrPAQW9-U6t"
@@ -441,6 +508,7 @@ uri = "file://wispbyte-coinflip-flip-rps-animations-2026-08-09.zip"
 type = "unspecified"
 title = "WispByte update — Coinflip, Flip, and RPS animations"
 description = "Adds short Color Dice-style animations with game-specific visuals to /coinflip, /flip, and /rps. Outcomes are precomputed before animation and final result embeds remain unchanged. Includes rebuilt dist/ and excludes secrets, databases, server config, admin files, and node_modules."
+logical_id = "679f2aef-0330-45e3-a731-0fffef559944"
 
 [[outputs]]
 id = "tB7CyWNsm6y2zas1hG6zm"
@@ -448,6 +516,7 @@ uri = "file://wispbyte-one-square-per-animation-frame-2026-08-09.zip"
 type = "unspecified"
 title = "WispByte update — One square per animation frame"
 description = "Coinflip, Flip, and RPS animations now fill exactly one square per frame, matching the Color Dice animation style. Includes rebuilt dist/ and excludes secrets, databases, server config, admin files, and node_modules."
+logical_id = "adeecc2c-17af-40cf-b213-cddd2a1b15ef"
 
 [[outputs]]
 id = "CE7plsAEBxuR9yZQLmbuq"
@@ -455,6 +524,7 @@ uri = "file://wispbyte-towers-panel-update-2026-08-10.zip"
 type = "unspecified"
 title = "WispByte Towers panel update"
 description = "Updated Towers embed layout: difficulty is in the title, bet/potential/next gem appear above the grid, the standalone multiplier section is removed, and multipliers are shown in parentheses. Secrets, databases, production configuration, admin files, and node_modules are excluded."
+logical_id = "9f8463e4-42f4-4d06-b26d-0a8c8f038e4a"
 
 [[outputs]]
 id = "rT5EWhAN-4t9eMgxdsOXq"
@@ -462,6 +532,7 @@ uri = "file://wispbyte-towers-grid-reveal-update-2026-08-10.zip"
 type = "unspecified"
 title = "WispByte Towers grid reveal update"
 description = "Updated Towers behavior: unrevealed diamonds use the gem emoji, hidden grid cells use question emojis, and cash-out or bomb-hit results reveal the complete stored grid. Secrets, databases, production configuration, admin files, and node_modules are excluded."
+logical_id = "432df175-8234-47f7-b252-958cf3016874"
 
 [[outputs]]
 id = "JTNB47OZpmFXolBVX_4ZT"
@@ -469,6 +540,7 @@ uri = "file://wispbyte-towers-buttons-update-2026-08-10.zip"
 type = "unspecified"
 title = "WispByte Towers buttons update"
 description = "Updated Towers controls: lost and cashed-out games show only Play Again, and Medium difficulty removes the middle placeholder button so only Left and Right remain. Secrets, databases, production configuration, admin files, and node_modules are excluded."
+logical_id = "40d9d864-da08-4a56-a4da-5ce50ca710f0"
 
 [[outputs]]
 id = "SKXJF9QiGDWF50i8Z9WNz"
@@ -476,6 +548,7 @@ uri = "file://wispbyte-blackjack-bust-update-2026-08-13.zip"
 type = "unspecified"
 title = "WispByte Blackjack bust display update"
 description = "Updated Blackjack hand displays so a bust shows the hand value followed by `• Bust`, matching the attached reference, instead of the explosion emoji. Secrets, databases, production configuration, admin files, and node_modules are excluded."
+logical_id = "11e9506a-b8cb-4ed2-b009-838d66c466eb"
 
 [[outputs]]
 id = "A3_9l4pPzWbKYQJn0gT20"
@@ -483,6 +556,7 @@ uri = "file://wispbyte-blackjack-scratchcard-update-2026-08-13.zip"
 type = "unspecified"
 title = "WispByte Blackjack and Scratchcard update"
 description = "Blackjack losses no longer show a multiplier, dealer reveal no longer shows temporary ellipsis points, Scratchcard now includes rare large multipliers including an occasional 500x jackpot while targeting the same 88% RTP, and duplicate loss payout text was removed. Secrets, databases, production configuration, admin files, and node_modules are excluded."
+logical_id = "ab877b89-1d54-498f-adbc-e4d457e21daf"
 
 [[outputs]]
 id = "5VvoP4YD-kfdWAqX48XyZ"
@@ -490,6 +564,7 @@ uri = "file://exports/wispbyte-chicken-crossing-vertical-lanes-2026-08-16.zip"
 type = "unspecified"
 title = "WispByte update — vertical Chicken Crossing lanes"
 description = "Updated WispByte-ready ZIP with the vertical five-lane Chicken Crossing image panel. Includes the rebuilt dist and runtime metadata; excludes secrets, production database, server configuration, admin files, and node_modules."
+logical_id = "10f088ed-492e-4828-8095-a81d25b42065"
 
 [[outputs]]
 id = "hkSeQoAtDtHwrdtyAPClz"
@@ -497,6 +572,7 @@ uri = "file://exports/wispbyte-chicken-crossing-polished-board-2026-08-16.zip"
 type = "unspecified"
 title = "WispByte update — polished Chicken Crossing board"
 description = "Polished vertical Chicken Crossing image panel with a continuous start sidewalk, connected lane route, improved checkpoint circles, SAFE/NEXT/RISK/CRASH states, and clearer multiplier badges. Includes rebuilt dist and runtime metadata only; excludes secrets and production data."
+logical_id = "f33bec49-41b7-4569-b079-73b282354b4a"
 
 [[outputs]]
 id = "dLXFNvIBHPteZ7b8iAliX"
@@ -504,6 +580,7 @@ uri = "file://wispbyte-coinflip-colordice-animation-2026-08-17.zip"
 type = "unspecified"
 title = "WispByte Coinflip + Color Dice update"
 description = "Production-safe WispByte ZIP with the rebuilt bot, portable Coinflip GIF lookup, staged Color Dice animation, dice faces, canvas runtime dependency, and Coinflip animation assets. Excludes secrets, databases, production config, admin files, and node_modules."
+logical_id = "61fb0050-8999-4885-a759-ebd1edc3fb57"
 
 [[outputs]]
 id = "mv9XrHBaaDXAf_s1H2Nh1"
@@ -511,3 +588,18 @@ uri = "file://wispbyte-coinflip-vertical-flip-2026-08-17.zip"
 type = "unspecified"
 title = "WispByte Coinflip vertical flip update"
 description = "WispByte-ready ZIP using the uploaded H/T coin artwork. The coin stays centered, flips vertically with a thicker visible edge, and uses a slower staged animation. Includes rebuilt dist, face assets, and required runtime metadata; excludes secrets, databases, production config, admin files, and node_modules."
+logical_id = "f301ac10-2c7c-4be7-adc2-e66502f9d578"
+
+[[outputs]]
+id = "RrtGPeuIH9VLAln22Z0ED"
+uri = "file://exports/gemspin-wispbyte-updated-2026-08-19.zip"
+type = "unspecified"
+title = "Updated GemSpin WispByte package"
+description = "WispByte-ready ZIP containing the rebuilt bot bundle, /invites command, admin-only /clear data, runtime package manifest/lockfile, sql.js, canvas assets, and coinflip animation assets."
+logical_id = "d7bb8f26-2f92-44be-85e6-bd50d3abc5a5"
+content_hash = "sha256:353a02039b5eee69130bcd4fa799e80b29865b6c7dcff9072277f8c9584e93ba"
+size = 6970152
+mtime_ms = 1787157775374
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:2882ead5-3526-4ae6-a62b-3cd4382ea40f/d7bb8f26-2f92-44be-85e6-bd50d3abc5a5/c53db83e-41a6-4461-beb6-86eb76a99593"
+storage_version_token = "1787157827901385"
+content_type = "application/octet-stream"

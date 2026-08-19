@@ -56,6 +56,7 @@ import * as economy         from "./commands/economy.js";
 import * as addadminperms   from "./commands/addadminperms.js";
 import * as rain            from "./commands/rain.js";
 import * as link            from "./commands/link.js";
+import * as invites         from "./commands/invites.js";
 import * as cleardata       from "./commands/cleardata.js";
 import { isFrozen, isGameDisabled } from "./botState.js";
 
@@ -65,7 +66,7 @@ const GAMBLING_COMMANDS = new Set([
   "crash","scratchcard","chickencrossing","colordice","dice","upgrader","keno","flip","hilo",
 ]);
 
-const commands    = [balance, tip, mines, towers, rps, coinflip, dice, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, createcode, redeem, viewcodes, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms, rain, link, cleardata];
+const commands    = [balance, tip, mines, towers, rps, coinflip, dice, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, createcode, redeem, viewcodes, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms, rain, link, invites, cleardata];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -157,6 +158,7 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "addadminperms")    return await addadminperms.execute(interaction);
       if (name === "rain")             return await rain.execute(interaction);
       if (name === "link")             return await link.execute(interaction);
+      if (name === "invites")          return await invites.execute(interaction);
       if (name === "clear")            return await cleardata.execute(interaction);
     } catch (err) {
       logger.error({ err, command: name }, "Error executing command");

@@ -4,6 +4,7 @@ import {
   ButtonStyle,
   EmbedBuilder,
   MessageFlags,
+  PermissionFlagsBits,
   SlashCommandBuilder,
   type ButtonInteraction,
   type ChatInputCommandInteraction,
@@ -19,6 +20,7 @@ const CANCEL_PREFIX = "clear_data_cancel_";
 export const data = new SlashCommandBuilder()
   .setName("clear")
   .setDescription("[Admin] Clear all bot data and start fresh")
+  .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .addSubcommand((subcommand) =>
     subcommand
       .setName("data")
