@@ -100,21 +100,18 @@ function getCoinflipFaceAssetsDir(): string {
   return assetsDir;
 }
 
-const COINFLIP_FRAME_MS = 240;
+const COINFLIP_FRAME_MS = 150;
 const COINFLIP_FRAME_SCALES = [
   1,
-  0.74,
-  0.48,
-  0.24,
-  0.09,
-  0.24,
-  0.48,
-  0.74,
+  0.62,
+  0.23,
+  0.06,
+  0.23,
+  0.62,
   1,
 ];
-const COINFLIP_CANVAS_SIZE = 520;
-const COINFLIP_RADIUS = 174;
-const COINFLIP_EDGE_HEIGHT = 24;
+const COINFLIP_CANVAS_SIZE = 480;
+const COINFLIP_RADIUS = 190;
 
 type CoinFaceImages = Record<CoinSide, Image>;
 
@@ -308,48 +305,18 @@ function drawCoinFace(
   >,
   image: Image,
   scaleY: number,
-  side: CoinSide,
 ): void {
   const center =
     COINFLIP_CANVAS_SIZE / 2;
   const faceHeight =
     COINFLIP_RADIUS * 2 * scaleY;
-  const edgeColor =
-    side === "heads"
-      ? "#087344"
-      : "#2455ad";
-
-  // The visible rim remains in place while the face compresses around the
-  // horizontal axis, creating thickness without any left/right movement.
-  ctx.save();
-  ctx.fillStyle = edgeColor;
-  ctx.strokeStyle = "#081225";
-  ctx.lineWidth = 7;
-  ctx.beginPath();
-  ctx.ellipse(
-    center,
-    center +
-      Math.max(
-        3,
-        faceHeight / 2,
-      ) +
-      COINFLIP_EDGE_HEIGHT / 2,
-    COINFLIP_RADIUS,
-    COINFLIP_EDGE_HEIGHT / 2,
-    0,
-    0,
-    Math.PI * 2,
-  );
-  ctx.fill();
-  ctx.stroke();
-  ctx.restore();
 
   if (faceHeight <= 1) {
     return;
   }
 
-  // Clip the reference artwork to the coin outline so its dark square
-  // background never appears as the coin flips edge-on.
+  // Keep the attachment transparent and clip the supplied artwork to the
+  // centered coin shape so no square background or extra shape is visible.
   ctx.save();
   ctx.beginPath();
   ctx.ellipse(
@@ -370,33 +337,10 @@ function drawCoinFace(
     faceHeight,
   );
   ctx.restore();
-
-  ctx.save();
-  ctx.strokeStyle =
-    side === "heads"
-      ? "rgba(118, 255, 181, 0.66)"
-      : "rgba(150, 198, 255, 0.68)";
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.ellipse(
-    center,
-    center,
-    COINFLIP_RADIUS - 2,
-    Math.max(
-      1,
-      faceHeight / 2 - 2,
-    ),
-    0,
-    0,
-    Math.PI * 2,
-  );
-  ctx.stroke();
-  ctx.restore();
 }
 
 function coinflipFrame(
   image: Image,
-  side: CoinSide,
   scaleY: number,
 ): Buffer {
   const canvas =
@@ -407,20 +351,10 @@ function coinflipFrame(
   const ctx =
     canvas.getContext("2d");
 
-  // Match the deep navy from the supplied reference images.
-  ctx.fillStyle = "#11192d";
-  ctx.fillRect(
-    0,
-    0,
-    COINFLIP_CANVAS_SIZE,
-    COINFLIP_CANVAS_SIZE,
-  );
-
   drawCoinFace(
     ctx,
     image,
     scaleY,
-    side,
   );
 
   return canvas.toBuffer("image/png");
@@ -469,7 +403,6 @@ async function animateCoinflip(
         new AttachmentBuilder(
           coinflipFrame(
             images[side],
-            side,
             scaleY,
           ),
         ).setName(

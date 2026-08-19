@@ -1,4 +1,3 @@
-
 import {
   SlashCommandBuilder,
   ButtonBuilder,
@@ -67,6 +66,14 @@ export const activeBlackjackGames =
 const finishedBlackjackGames =
   new Map<string, FinishedBlackjackGame>();
 
+// ─── Constants ─────────────────────────────────────────────────────────────────
+
+const DEFAULT_PLAYER_CARDS = 2;
+const DEFAULT_DEALER_CARDS = 2;
+
+const MIN_STARTING_CARDS = 1;
+const MAX_STARTING_CARDS = 10;
+
 // ─── Deck helpers ──────────────────────────────────────────────────────────────
 
 const RANKS = [
@@ -117,7 +124,28 @@ function shuffle(deck: Card[]): Card[] {
 }
 
 function deal(deck: Card[]): Card {
-  return deck.pop()!;
+  const card = deck.pop();
+
+  if (!card) {
+    throw new Error(
+      "Blackjack deck ran out of cards.",
+    );
+  }
+
+  return card;
+}
+
+function dealCards(
+  deck: Card[],
+  amount: number,
+): Card[] {
+  const hand: Card[] = [];
+
+  for (let i = 0; i < amount; i++) {
+    hand.push(deal(deck));
+  }
+
+  return hand;
 }
 
 // ─── Hand value ────────────────────────────────────────────────────────────────
@@ -155,7 +183,10 @@ function handValue(hand: Card[]): number {
 }
 
 function isBlackjack(hand: Card[]): boolean {
-  return hand.length === 2 && handValue(hand) === 21;
+  return (
+    hand.length === 2 &&
+    handValue(hand) === 21
+  );
 }
 
 function isBust(hand: Card[]): boolean {
@@ -199,6 +230,7 @@ function drawRoundedRect(
   radius: number,
 ) {
   ctx.beginPath();
+
   ctx.roundRect(
     x,
     y,
@@ -206,6 +238,7 @@ function drawRoundedRect(
     height,
     radius,
   );
+
   ctx.fill();
 }
 
@@ -249,6 +282,7 @@ function drawCard(
   ctx.lineWidth = 2.5;
 
   ctx.beginPath();
+
   ctx.roundRect(
     x,
     y,
@@ -256,6 +290,7 @@ function drawCard(
     height,
     16,
   );
+
   ctx.stroke();
 
   ctx.fillStyle = color;
@@ -363,6 +398,7 @@ function drawHiddenCard(
   ctx.lineWidth = 4;
 
   ctx.beginPath();
+
   ctx.roundRect(
     x + 9,
     y + 9,
@@ -370,10 +406,12 @@ function drawHiddenCard(
     height - 18,
     11,
   );
+
   ctx.stroke();
 
   ctx.strokeStyle =
     "rgba(255,255,255,0.18)";
+
   ctx.lineWidth = 1.5;
 
   for (
@@ -583,13 +621,11 @@ function getResultText(
   game: BlackjackGame,
   status: GameStatus,
 ): string {
-  const pv = handValue(
-    game.playerHand,
-  );
+  const pv =
+    handValue(game.playerHand);
 
-  const dv = handValue(
-    game.dealerHand,
-  );
+  const dv =
+    handValue(game.dealerHand);
 
   switch (status) {
     case "player_bust":
@@ -714,9 +750,11 @@ function drawResultOverlay(
 
   ctx.strokeStyle =
     "rgba(255,255,255,0.16)";
+
   ctx.lineWidth = 1.5;
 
   ctx.beginPath();
+
   ctx.roundRect(
     x,
     y,
@@ -724,6 +762,7 @@ function drawResultOverlay(
     boxHeight,
     14,
   );
+
   ctx.stroke();
 
   ctx.fillStyle = "#ffffff";
@@ -819,6 +858,7 @@ function blackjackImage(
 
   const betPaddingX = 18;
   const betPaddingY = 8;
+
   const betTextWidth =
     ctx.measureText(betText).width;
 
@@ -873,7 +913,7 @@ function blackjackImage(
   ctx.fillText(
     "DEALER",
     70,
-    88 + 36,
+    124,
   );
 
   const dealerValue =
@@ -908,7 +948,8 @@ function blackjackImage(
     ctx,
     game.dealerHand,
     DEALER_Y,
-    !showDealerFull,
+    !showDealerFull &&
+      game.dealerHand.length >= 2,
   );
 
   // ── Divider ──────────────────────────────────────────────────────────────
@@ -1554,6 +1595,36 @@ export const data =
             "Bet amount (e.g. 1m, 2.5b)",
           )
           .setRequired(true),
+    )
+    .addIntegerOption(
+      (opt) =>
+        opt
+          .setName("player_cards")
+          .setDescription(
+            "Number of starting cards for the player (default: 2)",
+          )
+          .setMinValue(
+            MIN_STARTING_CARDS,
+          )
+          .setMaxValue(
+            MAX_STARTING_CARDS,
+          )
+          .setRequired(false),
+    )
+    .addIntegerOption(
+      (opt) =>
+        opt
+          .setName("dealer_cards")
+          .setDescription(
+            "Number of starting cards for the dealer (default: 2)",
+          )
+          .setMinValue(
+            MIN_STARTING_CARDS,
+          )
+          .setMaxValue(
+            MAX_STARTING_CARDS,
+          )
+          .setRequired(false),
     );
 
 export async function execute(
@@ -1576,6 +1647,52 @@ export async function execute(
       embeds: [
         errorEmbed(
           "Minimum bet is **1m gems**. Try `1m`, `2.5b`, `500k`.",
+        ),
+      ],
+      flags:
+        MessageFlags.Ephemeral,
+    });
+  }
+
+  const playerCards =
+    interaction.options.getInteger(
+      "player_cards",
+    ) ??
+    DEFAULT_PLAYER_CARDS;
+
+  const dealerCards =
+    interaction.options.getInteger(
+      "dealer_cards",
+    ) ??
+    DEFAULT_DEALER_CARDS;
+
+  if (
+    playerCards <
+      MIN_STARTING_CARDS ||
+    playerCards >
+      MAX_STARTING_CARDS
+  ) {
+    return interaction.reply({
+      embeds: [
+        errorEmbed(
+          `Player cards must be between **${MIN_STARTING_CARDS}** and **${MAX_STARTING_CARDS}**.`,
+        ),
+      ],
+      flags:
+        MessageFlags.Ephemeral,
+    });
+  }
+
+  if (
+    dealerCards <
+      MIN_STARTING_CARDS ||
+    dealerCards >
+      MAX_STARTING_CARDS
+  ) {
+    return interaction.reply({
+      embeds: [
+        errorEmbed(
+          `Dealer cards must be between **${MIN_STARTING_CARDS}** and **${MAX_STARTING_CARDS}**.`,
         ),
       ],
       flags:
@@ -1632,23 +1749,32 @@ export async function execute(
   const game: BlackjackGame = {
     userId:
       interaction.user.id,
+
     displayName:
       interaction.member &&
       "displayName" in interaction.member
         ? interaction.member.displayName
         : interaction.user.globalName ??
           interaction.user.username,
+
     bet: amount,
+
     deck,
-    playerHand: [
-      deal(deck),
-      deal(deck),
-    ],
-    dealerHand: [
-      deal(deck),
-      deal(deck),
-    ],
+
+    playerHand:
+      dealCards(
+        deck,
+        playerCards,
+      ),
+
+    dealerHand:
+      dealCards(
+        deck,
+        dealerCards,
+      ),
+
     doubled: false,
+
     messageId: "",
   };
 
@@ -1695,6 +1821,7 @@ export async function execute(
       await interaction.editReply({
         flags:
           MessageFlags.IsComponentsV2,
+
         files: [
           imageFile(
             game,
@@ -1702,6 +1829,7 @@ export async function execute(
             true,
           ),
         ],
+
         components: [
           buildBlackjackContainer(
             game,
@@ -1737,10 +1865,49 @@ export async function execute(
     return;
   }
 
+  /*
+   * If the selected starting player cards
+   * already make 21, resolve the game.
+   */
+  if (
+    handValue(
+      game.playerHand,
+    ) === 21
+  ) {
+    dealerPlay(game);
+
+    const status =
+      determineOutcome(game);
+
+    return resolveInitialGame(
+      interaction,
+      game,
+      status,
+    );
+  }
+
+  /*
+   * If the player starts busted because of
+   * the selected number of starting cards,
+   * resolve immediately.
+   */
+  if (
+    isBust(
+      game.playerHand,
+    )
+  ) {
+    return resolveInitialGame(
+      interaction,
+      game,
+      "player_bust",
+    );
+  }
+
   const msg =
     await interaction.editReply({
       flags:
         MessageFlags.IsComponentsV2,
+
       files: [
         imageFile(
           game,
@@ -1748,6 +1915,7 @@ export async function execute(
           false,
         ),
       ],
+
       components: [
         buildBlackjackContainer(
           game,
@@ -1763,6 +1931,115 @@ export async function execute(
   activeBlackjackGames.set(
     interaction.user.id,
     game,
+  );
+}
+
+// ─── Initial game resolver ──────────────────────────────────────────────────────
+
+async function resolveInitialGame(
+  interaction: ChatInputCommandInteraction,
+  game: BlackjackGame,
+  status: GameStatus,
+): Promise<void> {
+  activeBlackjackGames.delete(
+    game.userId,
+  );
+
+  const multiplier =
+    game.doubled ? 2 : 1;
+
+  const totalStake =
+    game.bet * multiplier;
+
+  let payout = 0;
+  let netDelta = 0;
+
+  if (status === "blackjack") {
+    const profit =
+      Math.floor(
+        game.bet * 1.5,
+      );
+
+    payout =
+      game.bet + profit;
+
+    netDelta = profit;
+  } else if (
+    status === "player_win" ||
+    status === "dealer_bust"
+  ) {
+    payout =
+      totalStake * 2;
+
+    netDelta =
+      totalStake;
+  } else if (
+    status === "push"
+  ) {
+    payout =
+      totalStake;
+
+    netDelta = 0;
+  } else {
+    payout = 0;
+
+    netDelta =
+      -totalStake;
+  }
+
+  await addBalance(
+    game.userId,
+    payout,
+  );
+
+  await recordBet(
+    game.userId,
+    totalStake,
+    netDelta,
+    "blackjack",
+  );
+
+  const msg =
+    await interaction.editReply({
+      flags:
+        MessageFlags.IsComponentsV2,
+
+      files: [
+        imageFile(
+          game,
+          status,
+          true,
+        ),
+      ],
+
+      components: [
+        buildBlackjackContainer(
+          game,
+          status,
+          false,
+          false,
+        ),
+      ],
+    });
+
+  game.messageId =
+    msg.id;
+
+  finishedBlackjackGames.set(
+    msg.id,
+    {
+      game: {
+        ...game,
+        deck: [...game.deck],
+        playerHand: [
+          ...game.playerHand,
+        ],
+        dealerHand: [
+          ...game.dealerHand,
+        ],
+      },
+      status,
+    },
   );
 }
 
@@ -1815,6 +2092,7 @@ export async function handleHit(
   await interaction.editReply({
     flags:
       MessageFlags.IsComponentsV2,
+
     files: [
       imageFile(
         game,
@@ -1822,6 +2100,7 @@ export async function handleHit(
         false,
       ),
     ],
+
     components: [
       buildBlackjackContainer(
         game,
@@ -1976,10 +2255,10 @@ export async function handlePlayAgain(
     });
   }
 
-  // Disable the old Play Again button.
   await interaction.update({
     flags:
       MessageFlags.IsComponentsV2,
+
     components: [
       buildBlackjackContainer(
         finished.game,
@@ -2033,6 +2312,16 @@ export async function handlePlayAgain(
     -bet,
   );
 
+  /*
+   * Play Again uses the same number of starting
+   * cards as the finished game.
+   */
+  const playerCards =
+    finished.game.playerHand.length;
+
+  const dealerCards =
+    finished.game.dealerHand.length;
+
   const deck =
     shuffle(
       buildDeck(),
@@ -2040,23 +2329,38 @@ export async function handlePlayAgain(
 
   const game: BlackjackGame = {
     userId,
+
     displayName:
       interaction.member &&
       "displayName" in interaction.member
         ? interaction.member.displayName
         : interaction.user.globalName ??
           interaction.user.username,
+
     bet,
+
     deck,
-    playerHand: [
-      deal(deck),
-      deal(deck),
-    ],
-    dealerHand: [
-      deal(deck),
-      deal(deck),
-    ],
+
+    playerHand:
+      dealCards(
+        deck,
+        Math.min(
+          playerCards,
+          MAX_STARTING_CARDS,
+        ),
+      ),
+
+    dealerHand:
+      dealCards(
+        deck,
+        Math.min(
+          dealerCards,
+          MAX_STARTING_CARDS,
+        ),
+      ),
+
     doubled: false,
+
     messageId: "",
   };
 
@@ -2095,15 +2399,6 @@ export async function handlePlayAgain(
       payout,
     );
 
-    /*
-     * IMPORTANT:
-     * Use interaction.channel.send() instead of
-     * interaction.followUp().
-     *
-     * This creates a completely normal new Discord
-     * message rather than another response/follow-up
-     * to the button interaction.
-     */
     if (!interaction.channel) {
       return;
     }
@@ -2112,6 +2407,7 @@ export async function handlePlayAgain(
       await interaction.channel.send({
         flags:
           MessageFlags.IsComponentsV2,
+
         files: [
           imageFile(
             game,
@@ -2119,6 +2415,7 @@ export async function handlePlayAgain(
             true,
           ),
         ],
+
         components: [
           buildBlackjackContainer(
             game,
@@ -2154,11 +2451,125 @@ export async function handlePlayAgain(
     return;
   }
 
-  /*
-   * IMPORTANT:
-   * This is also a normal channel message.
-   * It does NOT reply to the old Blackjack game.
-   */
+  if (
+    handValue(
+      game.playerHand,
+    ) === 21
+  ) {
+    dealerPlay(game);
+
+    if (!interaction.channel) {
+      return;
+    }
+
+    const status =
+      determineOutcome(game);
+
+    const msg =
+      await interaction.channel.send({
+        flags:
+          MessageFlags.IsComponentsV2,
+
+        files: [
+          imageFile(
+            game,
+            status,
+            true,
+          ),
+        ],
+
+        components: [
+          buildBlackjackContainer(
+            game,
+            status,
+            false,
+            false,
+          ),
+        ],
+      });
+
+    game.messageId =
+      msg.id;
+
+    finishedBlackjackGames.set(
+      msg.id,
+      {
+        game: {
+          ...game,
+          deck: [
+            ...game.deck,
+          ],
+          playerHand: [
+            ...game.playerHand,
+          ],
+          dealerHand: [
+            ...game.dealerHand,
+          ],
+        },
+        status,
+      },
+    );
+
+    return;
+  }
+
+  if (
+    isBust(
+      game.playerHand,
+    )
+  ) {
+    if (!interaction.channel) {
+      return;
+    }
+
+    const msg =
+      await interaction.channel.send({
+        flags:
+          MessageFlags.IsComponentsV2,
+
+        files: [
+          imageFile(
+            game,
+            "player_bust",
+            true,
+          ),
+        ],
+
+        components: [
+          buildBlackjackContainer(
+            game,
+            "player_bust",
+            false,
+            false,
+          ),
+        ],
+      });
+
+    game.messageId =
+      msg.id;
+
+    finishedBlackjackGames.set(
+      msg.id,
+      {
+        game: {
+          ...game,
+          deck: [
+            ...game.deck,
+          ],
+          playerHand: [
+            ...game.playerHand,
+          ],
+          dealerHand: [
+            ...game.dealerHand,
+          ],
+        },
+        status: "player_bust",
+      },
+    );
+
+    return;
+  }
+
   if (!interaction.channel) {
     return;
   }
@@ -2167,6 +2578,7 @@ export async function handlePlayAgain(
     await interaction.channel.send({
       flags:
         MessageFlags.IsComponentsV2,
+
       files: [
         imageFile(
           game,
@@ -2174,6 +2586,7 @@ export async function handlePlayAgain(
           false,
         ),
       ],
+
       components: [
         buildBlackjackContainer(
           game,

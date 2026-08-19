@@ -149,177 +149,77 @@ function drawHitCar(
 ): void {
   ctx.save();
 
-  ctx.globalAlpha = 0.8;
-
   ctx.translate(x, y);
-  ctx.rotate(-Math.PI / 2);
   ctx.scale(scale, scale);
 
-  ctx.save();
-  ctx.globalAlpha = 0.22;
+  // Top-down car, aligned with the vertical lane. It sits behind the
+  // chicken, but its brighter body and longer silhouette remain visible.
+  ctx.globalAlpha = 0.34;
   ctx.fillStyle = "#171b31";
 
   ctx.beginPath();
   ctx.ellipse(
     0,
-    67,
-    125,
-    18,
+    12,
+    73,
+    126,
     0,
     0,
     Math.PI * 2,
   );
   ctx.fill();
 
-  ctx.restore();
-
-  ctx.fillStyle = "#262d4d";
+  ctx.globalAlpha = 0.96;
+  ctx.fillStyle = "#bd3f55";
   ctx.strokeStyle = "#171c32";
-  ctx.lineWidth = 6;
-
-  ctx.beginPath();
-  ctx.moveTo(-115, 32);
-  ctx.lineTo(-98, -13);
-  ctx.quadraticCurveTo(-86, -47, -52, -57);
-  ctx.lineTo(48, -57);
-  ctx.quadraticCurveTo(82, -48, 98, -14);
-  ctx.lineTo(116, 32);
-  ctx.lineTo(116, 51);
-  ctx.quadraticCurveTo(116, 62, 104, 62);
-  ctx.lineTo(-104, 62);
-  ctx.quadraticCurveTo(-116, 62, -116, 51);
-  ctx.closePath();
-
+  ctx.lineWidth = 7;
+  roundedRect(ctx, -63, -126, 126, 252, 26);
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = "#3d466b";
-  ctx.strokeStyle = "#171c32";
-  ctx.lineWidth = 5;
-
-  ctx.beginPath();
-  ctx.moveTo(-66, -49);
-  ctx.lineTo(-42, -80);
-  ctx.quadraticCurveTo(-35, -90, -20, -91);
-  ctx.lineTo(27, -91);
-  ctx.quadraticCurveTo(42, -90, 50, -79);
-  ctx.lineTo(69, -49);
-  ctx.closePath();
-
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = "#202742";
-  ctx.strokeStyle = "#566184";
+  ctx.fillStyle = "#e06468";
+  ctx.strokeStyle = "#7d293f";
   ctx.lineWidth = 3;
-
-  ctx.beginPath();
-  ctx.moveTo(-37, -76);
-  ctx.lineTo(-20, -82);
-  ctx.lineTo(20, -82);
-  ctx.lineTo(39, -76);
-  ctx.lineTo(49, -55);
-  ctx.lineTo(-47, -55);
-  ctx.closePath();
-
+  roundedRect(ctx, -48, -91, 96, 99, 17);
   ctx.fill();
   ctx.stroke();
 
-  ctx.save();
-  ctx.globalAlpha = 0.13;
-  ctx.strokeStyle = "#ffffff";
+  ctx.fillStyle = "#26385d";
+  ctx.strokeStyle = "#10182e";
   ctx.lineWidth = 4;
-
-  ctx.beginPath();
-  ctx.moveTo(-28, -78);
-  ctx.lineTo(-12, -57);
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.moveTo(7, -81);
-  ctx.lineTo(24, -57);
-  ctx.stroke();
-
-  ctx.restore();
-
-  ctx.fillStyle = "#343c5d";
-
-  roundedRect(ctx, -84, -5, 168, 48, 10);
-  ctx.fill();
-
-  ctx.fillStyle = "#1d233d";
-
-  roundedRect(ctx, -112, 37, 224, 25, 9);
-  ctx.fill();
-
-  ctx.fillStyle = "#e9343e";
-  ctx.strokeStyle = "#7e202c";
-  ctx.lineWidth = 3;
-
-  roundedRect(ctx, -103, 4, 35, 18, 6);
+  roundedRect(ctx, -43, -76, 86, 64, 13);
   ctx.fill();
   ctx.stroke();
 
-  roundedRect(ctx, 68, 4, 35, 18, 6);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.save();
-  ctx.globalAlpha = 0.10;
-  ctx.fillStyle = "#ff4149";
-
-  ctx.beginPath();
-  ctx.arc(-86, 13, 26, 0, Math.PI * 2);
+  ctx.fillStyle = "#324a76";
+  roundedRect(ctx, -43, 18, 86, 66, 13);
   ctx.fill();
 
-  ctx.beginPath();
-  ctx.arc(86, 13, 26, 0, Math.PI * 2);
+  ctx.fillStyle = "#e6f1f4";
+  ctx.globalAlpha = 0.78;
+  roundedRect(ctx, -31, -67, 62, 42, 8);
+  ctx.fill();
+  roundedRect(ctx, -31, 27, 62, 42, 8);
   ctx.fill();
 
-  ctx.restore();
-
-  ctx.fillStyle = "#e4e7dc";
-  ctx.strokeStyle = "#171c32";
-  ctx.lineWidth = 3;
-
-  roundedRect(ctx, -38, 20, 76, 24, 4);
+  ctx.globalAlpha = 0.94;
+  ctx.fillStyle = "#151d35";
+  roundedRect(ctx, -72, -84, 18, 49, 7);
   ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = "#303758";
-  ctx.font = "900 11px Arial";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-
-  ctx.fillText("HIT", 0, 32);
-
-  ctx.fillStyle = "#11162a";
-  ctx.strokeStyle = "#080c18";
-  ctx.lineWidth = 4;
-
-  ctx.beginPath();
-  ctx.ellipse(-82, 53, 22, 28, 0, 0, Math.PI * 2);
+  roundedRect(ctx, 54, -84, 18, 49, 7);
   ctx.fill();
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.ellipse(82, 53, 22, 28, 0, 0, Math.PI * 2);
+  roundedRect(ctx, -72, 35, 18, 49, 7);
   ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = "#3c4566";
-  ctx.strokeStyle = "#1a2038";
-  ctx.lineWidth = 3;
-
-  ctx.beginPath();
-  ctx.arc(-82, 53, 10, 0, Math.PI * 2);
+  roundedRect(ctx, 54, 35, 18, 49, 7);
   ctx.fill();
-  ctx.stroke();
 
-  ctx.beginPath();
-  ctx.arc(82, 53, 10, 0, Math.PI * 2);
+  ctx.fillStyle = "#ffd66b";
+  roundedRect(ctx, -32, -116, 64, 8, 4);
   ctx.fill();
-  ctx.stroke();
+
+  ctx.fillStyle = "#ff7d67";
+  roundedRect(ctx, -32, 108, 64, 8, 4);
+  ctx.fill();
 
   ctx.restore();
 }
@@ -1328,8 +1228,8 @@ function chickenCrossingImage(
       drawHitCar(
         ctx,
         hitCenter,
-        TARGET_Y + 5,
-        0.82,
+        TARGET_Y + 24,
+        0.92,
       );
 
       drawChicken(
