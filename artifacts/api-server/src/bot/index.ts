@@ -24,6 +24,7 @@ import * as mines         from "./commands/mines.js";
 import * as towers        from "./commands/towers.js";
 import * as rps           from "./commands/rps.js";
 import * as coinflip      from "./commands/coinflip.js";
+import * as dice          from "./commands/dice.js";
 import * as blackjack     from "./commands/blackjack.js";
 import * as setup         from "./commands/setup.js";
 import * as deposit       from "./commands/deposit.js";
@@ -60,10 +61,10 @@ import { isFrozen, isGameDisabled } from "./botState.js";
 // ─── Gambling commands (checked for freeze + disable) ─────────────────────────
 const GAMBLING_COMMANDS = new Set([
   "mines","towers","rps","coinflip","blackjack","wheel","slots","roulette",
-  "crash","scratchcard","chickencrossing","colordice","upgrader","keno","flip","hilo",
+  "crash","scratchcard","chickencrossing","colordice","dice","upgrader","keno","flip","hilo",
 ]);
 
-const commands    = [balance, tip, mines, towers, rps, coinflip, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, createcode, redeem, viewcodes, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms, rain, link];
+const commands    = [balance, tip, mines, towers, rps, coinflip, dice, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, createcode, redeem, viewcodes, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms, rain, link];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -115,6 +116,7 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "towers")        return await towers.execute(interaction);
       if (name === "rps")           return await rps.execute(interaction);
       if (name === "coinflip")      return await coinflip.execute(interaction);
+      if (name === "dice")          return await dice.execute(interaction);
       if (name === "blackjack")     return await blackjack.execute(interaction);
       if (name === "setup")         return await setup.execute(interaction);
       if (name === "deposit")       return await deposit.execute(interaction);
