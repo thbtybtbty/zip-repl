@@ -622,12 +622,26 @@ content_type = "application/octet-stream"
 id = "hBLyfrXQdSuddjQrwCl-T"
 uri = "file://wispbyte-gambling-bot.tar.gz"
 type = "unspecified"
-title = "Updated Wispbyte gambling bot package"
-description = "Rebuilt with the current coinflip implementation and expired-interaction handling. The package includes compiled dist, public npm lockfile, launcher, admin config, coinflip assets, and Wispbyte troubleshooting instructions; it excludes secrets, live database files, Replit patch files, and node_modules."
+title = "WispByte TAR package with main file at root"
+description = "Alternative TAR.GZ package with index.js, package.json, and start.sh directly at the archive root."
 logical_id = "6dc5e9c6-9f25-4961-94ae-90af9bfa2fc3"
-content_hash = "sha256:db993ff634d82a3fa9444e863660ca824a2bd0fc2a1b5229ba3a6c3bd61512d6"
-size = 3163962
-mtime_ms = 1787165886832
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:6030616b-1e75-4bc4-b6c4-4f4c55ebf4e3/6dc5e9c6-9f25-4961-94ae-90af9bfa2fc3/aae10523-ac9c-4737-8ab4-792dab3a81fc"
-storage_version_token = "1787165908086115"
+content_hash = "sha256:bbfcb9cc0c1a57a8702cc24835773c0617edcc81666211472346dbdb80178f9d"
+size = 3163849
+mtime_ms = 1787166629728
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:6030616b-1e75-4bc4-b6c4-4f4c55ebf4e3/6dc5e9c6-9f25-4961-94ae-90af9bfa2fc3/584cd1c8-fb7a-41d2-bbff-b4d3e1a39064"
+storage_version_token = "1787166659330643"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "NO38WI6XR3PqX8qs2quRg"
+uri = "file://wispbyte-gambling-bot.zip"
+type = "unspecified"
+title = "WispByte package with main file at root"
+description = "Use this ZIP for WispByte. index.js, package.json, and start.sh are now directly at the archive root, so WispByte can detect the main file. package.json declares main=index.js and npm start runs node index.js."
+logical_id = "e210a011-7273-418c-b60d-7e2283cd3a66"
+content_hash = "sha256:70bdf1c5981d2e7456ac3b88dfb1f9cb9428afca629e7bb742aa3ae3a27160ed"
+size = 3165318
+mtime_ms = 1787166630436
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:6030616b-1e75-4bc4-b6c4-4f4c55ebf4e3/e210a011-7273-418c-b60d-7e2283cd3a66/7ab5c3e6-dcb6-479d-9eb1-ce4e3ce05950"
+storage_version_token = "1787166658391131"
 content_type = "application/octet-stream"
