@@ -109,33 +109,39 @@ function drawDie(
   ctx.shadowBlur = 16;
   ctx.shadowOffsetY = 9;
   ctx.strokeStyle = "#111827";
-  ctx.lineWidth = 6;
+  ctx.lineWidth = 5;
 
-  const dieFace = ctx.createLinearGradient(-29, -42, 28, 42);
+  // Keep the die compact like the reference, but give it a beveled,
+  // dimensional tile treatment instead of simply scaling it up.
+  ctx.fillStyle = "#8d9aa3";
+  roundedRect(ctx, -23, -27, 46, 60, 9);
+  ctx.fill();
+
+  const dieFace = ctx.createLinearGradient(-22, -30, 21, 30);
   dieFace.addColorStop(0, "#ffffff");
-  dieFace.addColorStop(0.42, "#f6faf7");
-  dieFace.addColorStop(1, "#b9c5ca");
+  dieFace.addColorStop(0.42, "#f4f7f5");
+  dieFace.addColorStop(1, "#c7d0d2");
   ctx.fillStyle = dieFace;
-  roundedRect(ctx, -30, -42, 60, 84, 11);
+  roundedRect(ctx, -23, -30, 46, 60, 9);
   ctx.fill();
   ctx.stroke();
 
   ctx.shadowColor = "transparent";
   ctx.globalAlpha = 0.72;
   ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = 3;
-  roundedRect(ctx, -21, -32, 42, 64, 7);
+  ctx.lineWidth = 2;
+  roundedRect(ctx, -17, -24, 34, 48, 5);
   ctx.stroke();
   ctx.globalAlpha = 1;
 
   ctx.fillStyle = "#172033";
   for (const [px, py] of pipPositions(value)) {
     ctx.beginPath();
-    ctx.arc(px * 14, py * 23, 6, 0, Math.PI * 2);
+    ctx.arc(px * 10, py * 17, 4.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = "#27344b";
     ctx.beginPath();
-    ctx.arc(px * 14 - 1.5, py * 23 - 1.5, 2.8, 0, Math.PI * 2);
+    ctx.arc(px * 10 - 1, py * 17 - 1, 2.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = "#172033";
   }
@@ -238,27 +244,46 @@ function drawDiceImage(
 
   const flagX = Math.max(
     BAR_X + 6,
-    Math.min(targetX + 6, IMAGE_WIDTH - 104),
+    Math.min(targetX + 5, IMAGE_WIDTH - 84),
   );
 
-  ctx.fillStyle = "#ffd34d";
-  ctx.strokeStyle = "#111827";
-  ctx.lineWidth = 4;
+  // A compact folded pennant: depth and a warm gradient improve the shape
+  // without making the marker larger than the supplied reference.
+  ctx.fillStyle = "rgba(0, 0, 0, 0.38)";
+  ctx.strokeStyle = "transparent";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(flagX + 3, 151);
+  ctx.lineTo(flagX + 69, 151);
+  ctx.lineTo(flagX + 69, 179);
+  ctx.lineTo(flagX + 22, 179);
+  ctx.lineTo(flagX + 11, 166);
+  ctx.lineTo(flagX + 3, 175);
+  ctx.closePath();
+  ctx.fill();
+
+  const flag = ctx.createLinearGradient(flagX, 148, flagX, 175);
+  flag.addColorStop(0, "#ffe276");
+  flag.addColorStop(0.55, "#ffd34d");
+  flag.addColorStop(1, "#e4a72b");
+  ctx.fillStyle = flag;
+  ctx.strokeStyle = "#9d6f1b";
+  ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(flagX, 148);
-  ctx.lineTo(flagX + 84, 148);
-  ctx.lineTo(flagX + 84, 182);
-  ctx.lineTo(flagX + 22, 182);
-  ctx.lineTo(flagX + 8, 165);
-  ctx.lineTo(flagX, 176);
+  ctx.lineTo(flagX + 66, 148);
+  ctx.lineTo(flagX + 66, 176);
+  ctx.lineTo(flagX + 20, 176);
+  ctx.lineTo(flagX + 9, 163);
+  ctx.lineTo(flagX, 173);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
 
   ctx.fillStyle = "#142035";
-  ctx.font = "900 20px Arial";
+  ctx.font = "900 16px Arial";
   ctx.textAlign = "center";
-  ctx.fillText(String(target), flagX + 47, 171);
+  ctx.fillText(String(target), flagX + 37, 167);
 
   const rollX = trackX + (roll / 100) * BAR_WIDTH;
   drawDie(
