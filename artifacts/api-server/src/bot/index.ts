@@ -56,6 +56,7 @@ import * as economy         from "./commands/economy.js";
 import * as addadminperms   from "./commands/addadminperms.js";
 import * as rain            from "./commands/rain.js";
 import * as link            from "./commands/link.js";
+import * as cleardata       from "./commands/cleardata.js";
 import { isFrozen, isGameDisabled } from "./botState.js";
 
 // ─── Gambling commands (checked for freeze + disable) ─────────────────────────
@@ -64,7 +65,7 @@ const GAMBLING_COMMANDS = new Set([
   "crash","scratchcard","chickencrossing","colordice","dice","upgrader","keno","flip","hilo",
 ]);
 
-const commands    = [balance, tip, mines, towers, rps, coinflip, dice, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, createcode, redeem, viewcodes, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms, rain, link];
+const commands    = [balance, tip, mines, towers, rps, coinflip, dice, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, createcode, redeem, viewcodes, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms, rain, link, cleardata];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -156,6 +157,7 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "addadminperms")    return await addadminperms.execute(interaction);
       if (name === "rain")             return await rain.execute(interaction);
       if (name === "link")             return await link.execute(interaction);
+      if (name === "clear")            return await cleardata.execute(interaction);
     } catch (err) {
       logger.error({ err, command: name }, "Error executing command");
       const payload = { content: "❌ Something went wrong. Please try again.", ephemeral: true };
@@ -341,6 +343,10 @@ async function handleInteraction(interaction: Interaction) {
       // Reset stats
       if (id.startsWith("rs_apply_"))  return await resetstats.handleApply(bi, id.slice("rs_apply_".length));
       if (id.startsWith("rs_cancel_")) return await resetstats.handleCancel(bi, id.slice("rs_cancel_".length));
+
+      // Clear all data
+      if (id.startsWith("clear_data_confirm_")) return await cleardata.handleConfirm(bi);
+      if (id.startsWith("clear_data_cancel_"))  return await cleardata.handleCancel(bi);
 
       // Stats pagination
       if (id.startsWith("stats_prev_") || id.startsWith("stats_next_")) {
