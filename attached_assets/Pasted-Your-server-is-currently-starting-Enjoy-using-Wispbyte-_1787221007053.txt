@@ -1,0 +1,57 @@
+Your server is currently starting! Enjoy using Wispbyte
+[12:15:45]v19.9.0
+[12:15:45]Server marked as running
+[12:15:45]:/home/container$ if [[ -d .git ]] && [[ ${AUTO_UPDATE} == "1" ]]; then git pull; fi; if [[ ! -z ${NODE_PACKAGES} ]]; then /usr/local/bin/npm install ${NODE_PACKAGES}; fi; if [[ ! -z ${UNNODE_PACKAGES} ]]; then /usr/local/bin/npm uninstall ${UNNODE_PACKAGES}; fi; if [ -f /home/container/package.json ]; then /usr/local/bin/npm install; fi; /usr/local/bin/node /home/container/${JS_FILE}
+[12:15:47]npm ERR! code ENOSPC
+[12:15:47]npm ERR! syscall write
+[12:15:47]npm ERR! errno -28
+[12:15:47]npm ERR! nospc ENOSPC: no space left on device, write
+[12:15:47]npm ERR! nospc There appears to be insufficient space on your system to finish.
+[12:15:47]npm ERR! nospc Clear up some disk space and try again.
+[12:15:47]
+[12:15:47]npm ERR! A complete log of this run can be found in: /home/container/.npm/_logs/2026-08-20T10_15_47_427Z-debug-0.log
+[12:15:47][boot] Loading .env...
+[12:15:47][boot] DB → /home/container/artifacts/api-server/bot.db
+[12:15:47][boot] Patching hardcoded paths...
+[12:15:47]node:internal/fs/utils:346
+[12:15:47]throw err;
+[12:15:47]^
+[12:15:47]Error: ENOSPC: no space left on device, write
+[12:15:47] at Object.writeSync (node:fs:938:3)
+[12:15:47] at Object.writeFileSync (node:fs:2253:26)
+[12:15:47]at Object.<anonymous> (/home/container/index.js:46:6)
+[12:15:47] at Module._compile (node:internal/modules/cjs/loader:1275:14)
+[12:15:47] at Module._extensions..js (node:internal/modules/cjs/loader:1329:10)
+[12:15:47] at Module.load (node:internal/modules/cjs/loader:1133:32)
+[12:15:47] at Module._load (node:internal/modules/cjs/loader:972:12)
+[12:15:47] at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:83:12)
+[12:15:47] at node:internal/main/run_main_module:23:47 {
+[12:15:47]errno: -28,
+[12:15:47]syscall: 'write',
+[12:15:47]code: 'ENOSPC'
+[12:15:47]}
+[12:15:47]Node.js v19.9.0
+[12:15:48]Server marked as offline
+[12:15:49][Wispbyte]: ---------- Detected server process in a crashed state! ----------
+[12:15:49][Wispbyte]: Exit code: 1
+[12:15:49][Wispbyte]: Out of memory: false
+[12:15:49][Wispbyte]: Checking server disk space usage, this could take a few seconds...
+[12:15:49][Wispbyte]: Updating process configuration files...
+[12:15:49][Wispbyte]: Ensuring file permissions are set correctly, this could take a few seconds...
+[12:15:49]Server marked as starting
+ __        ___           _           _       
+ \ \      / (_)___ _ __ | |__  _   _| |_ ___ 
+  \ \ /\ / /| / __| '_ \| '_ \| | | | __/ _ \
+   \ V  V / | \__ \ |_) | |_) | |_| | ||  __/
+    \_/\_/  |_|___/ .__/|_.__/ \__, |\__\___|
+                  |_|          |___/         
+Your server is currently starting! Enjoy using Wispbyte
+[12:15:52][Wispbyte] : Docker image pulled successfully
+[12:15:54]v19.9.0
+[12:15:54]Server marked as running
+[12:15:54]:/home/container$ if [[ -d .git ]] && [[ ${AUTO_UPDATE} == "1" ]]; then git pull; fi; if [[ ! -z ${NODE_PACKAGES} ]]; then /usr/local/bin/npm install ${NODE_PACKAGES}; fi; if [[ ! -z ${UNNODE_PACKAGES} ]]; then /usr/local/bin/npm uninstall ${UNNODE_PACKAGES}; fi; if [ -f /home/container/package.json ]; then /usr/local/bin/npm install; fi; /usr/local/bin/node /home/container/${JS_FILE}
+[12:15:56]npm ERR! code ENOSPC
+[12:15:56]npm ERR! syscall write
+[12:15:56]npm ERR! errno -28
+[12:15:56]npm ERR! nospc ENOSPC: no space left on device, write
+[12:15:56]npm ERR! nospc There appears to be insufficient space on your system to finish.
