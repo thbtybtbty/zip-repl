@@ -645,3 +645,17 @@ mtime_ms = 1787220623097
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:6030616b-1e75-4bc4-b6c4-4f4c55ebf4e3/e210a011-7273-418c-b60d-7e2283cd3a66/20e05281-a263-48b1-b4ad-5403f7d07a6a"
 storage_version_token = "1787220635203539"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "GlBBGOXKygXtTTgTIr7cp"
+uri = "file://wispbyte-node19-fixed-update.zip"
+type = "unspecified"
+title = "WispByte Node 19 fixed update"
+description = "Renamed copy of the updated WispByte ZIP. Targets Node 19.9.0, keeps the main files at the archive root, and includes the rebuilt bot, current coinflip assets, and interaction/storage troubleshooting README."
+logical_id = "eb7d8d06-cace-478c-8184-f3880ebc7245"
+content_hash = "sha256:07a2524566984524df6953d30fee403db2fe759373832610c1ccea13af43c25a"
+size = 3165003
+mtime_ms = 1787220766681
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:6030616b-1e75-4bc4-b6c4-4f4c55ebf4e3/eb7d8d06-cace-478c-8184-f3880ebc7245/2e6b87f9-0636-47e6-b64e-076ab680b6b1"
+storage_version_token = "1787220774105990"
+content_type = "application/octet-stream"
