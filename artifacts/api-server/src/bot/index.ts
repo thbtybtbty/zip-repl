@@ -612,6 +612,11 @@ export async function startBot() {
 
   client.on(Events.InteractionCreate, (interaction) => {
     handleInteraction(interaction).catch((err) => {
+      // A Discord interaction token is valid for only a few seconds. Every
+      // routed handler already avoids a second reply for code 10062; keep the
+      // final event-level guard quiet too so an expired interaction never
+      // becomes a misleading "Unhandled interaction" console error.
+      if (isExpiredInteractionError(err)) return;
       logger.error({ err }, "Unhandled interaction error");
     });
   });

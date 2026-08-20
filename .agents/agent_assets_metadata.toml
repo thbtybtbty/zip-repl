@@ -673,3 +673,17 @@ mtime_ms = 1787221052298
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:6030616b-1e75-4bc4-b6c4-4f4c55ebf4e3/6c7e0f46-f3b0-4f4b-8ad3-f04e4725203c/537cfe5c-2ec9-43e0-8e61-d8077e79bd20"
 storage_version_token = "1787221063566420"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "oVv59vg15jJFoD9W0Dbr1"
+uri = "file://wispbyte-clean-node19.zip"
+type = "unspecified"
+title = "Fresh WispByte runtime package — Node 19.9.0"
+description = "Built from scratch as a clean runtime ZIP. Includes the launcher, package metadata, compiled bot files, admins.json, coinflip assets, start.sh, and README. Excludes node_modules, database files, .env, source maps, Replit files, and index.patched.mjs. npm ci --omit=dev was verified."
+logical_id = "98fd1268-f694-4216-afcb-c409de3b98ae"
+content_hash = "sha256:e84e87373cc70cb620a53d38c5d380f48931b4d27977d34bd03037744e717c07"
+size = 1188913
+mtime_ms = 1787235602584
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:6030616b-1e75-4bc4-b6c4-4f4c55ebf4e3/98fd1268-f694-4216-afcb-c409de3b98ae/dd343560-d5d4-4d50-abdc-5d85bc9fec74"
+storage_version_token = "1787235615340251"
+content_type = "application/octet-stream"
