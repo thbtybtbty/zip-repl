@@ -34,19 +34,13 @@ if (process.env.DATABASE_PATH) {
   console.log("[boot] DB → " + process.env.DATABASE_PATH);
 }
 
-// Patch hardcoded Replit path in the built bundle
+// Start the compiled bundle directly. The bundle resolves runtime assets from
+// the package layout, so WispByte does not need a second patched copy of the
+// 5+ MB bundle. Creating that extra file can fail on hosts with a full npm
+// cache, inode quota, or container overlay even when the visible disk meter
+// still reports free space.
 const distDir = path.join(__dirname, "artifacts", "api-server", "dist");
 const botEntry = path.join(distDir, "index.mjs");
-const botPatched = path.join(distDir, "index.patched.mjs");
-const REPLIT_PATH = "/home/runner/workspace/artifacts/api-server/dist";
-
-const src = fs.readFileSync(botEntry, "utf8");
-if (src.includes(REPLIT_PATH)) {
-  console.log("[boot] Patching hardcoded paths...");
-  fs.writeFileSync(botPatched, src.replaceAll(REPLIT_PATH, distDir));
-} else {
-  fs.copyFileSync(botEntry, botPatched);
-}
 
 // Start the bot. The compiled bundle is included in the WispByte package, so
 // the server does not need TypeScript, pnpm, esbuild, or a native addon.
@@ -54,7 +48,7 @@ const hasToken = !!process.env.DISCORD_BOT_TOKEN;
 const hasClient = !!process.env.DISCORD_CLIENT_ID;
 console.log("[boot] DISCORD_BOT_TOKEN set:", hasToken, "| DISCORD_CLIENT_ID set:", hasClient);
 console.log("[boot] Starting bot (Node " + process.version + ")...");
-const child = spawn(process.execPath, [botPatched], {
+const child = spawn(process.execPath, [botEntry], {
   stdio: "inherit",
   cwd: distDir,
   env: process.env,

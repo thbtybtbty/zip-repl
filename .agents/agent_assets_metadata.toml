@@ -659,3 +659,17 @@ mtime_ms = 1787220766681
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:6030616b-1e75-4bc4-b6c4-4f4c55ebf4e3/eb7d8d06-cace-478c-8184-f3880ebc7245/2e6b87f9-0636-47e6-b64e-076ab680b6b1"
 storage_version_token = "1787220774105990"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "riM6TSMwH_0b7JQM06TWn"
+uri = "file://wispbyte-no-patch-node19-update.zip"
+type = "unspecified"
+title = "WispByte Node 19 low-storage startup update"
+description = "Updated ZIP with the launcher fixed to start dist/index.mjs directly without creating index.patched.mjs. This avoids the extra 5+ MB write that failed with ENOSPC. It targets Node 19.9.0, keeps main files at the archive root, and npm ci --omit=dev was verified."
+logical_id = "6c7e0f46-f3b0-4f4b-8ad3-f04e4725203c"
+content_hash = "sha256:895d105c8a1bbc374971463e5fae4b4b0b5239c15b43496548bf64b86c725e7d"
+size = 3165136
+mtime_ms = 1787221052298
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:6030616b-1e75-4bc4-b6c4-4f4c55ebf4e3/6c7e0f46-f3b0-4f4b-8ad3-f04e4725203c/537cfe5c-2ec9-43e0-8e61-d8077e79bd20"
+storage_version_token = "1787221063566420"
+content_type = "application/octet-stream"
