@@ -813,3 +813,17 @@ mtime_ms = 1787439299131
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:15503c23-39ad-4c50-a15a-cf84e6f94bfc/6097c514-0055-4584-b56e-506a989e1401/76f9dc60-8b07-4ffc-bd7e-63e6d079a108"
 storage_version_token = "1787439304157756"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "7UWSku88VEStMP7eouzk_"
+uri = "file://attached_assets/gemspin-wispbyte-fixed.zip"
+type = "unspecified"
+title = "Fixed WispByte bot package"
+description = "Use this ZIP for WispByte. It includes index.js as the main file, package.json, the updated bot bundle, and all required pino/thread-stream worker files. The package was checked without starting the bot."
+logical_id = "a037f00b-e0dd-420a-8c7a-b73459fd7d0e"
+content_hash = "sha256:6b099dfdeeeb76e23f15b8cee79d98348f09de80107c3f689b79b756854c00a3"
+size = 1164438
+mtime_ms = 1787439545967
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:15503c23-39ad-4c50-a15a-cf84e6f94bfc/a037f00b-e0dd-420a-8c7a-b73459fd7d0e/d2906bc0-9ec4-489b-9de9-16677586f2c1"
+storage_version_token = "1787439550602907"
+content_type = "application/octet-stream"

@@ -1,0 +1,47 @@
+0:56:43]v20.20.2
+[0:56:43]Server marked as running
+[0:56:43]:/home/container$ bash start.sh
+[0:56:43][boot] Node v20.20.2
+[0:56:43][boot] Checking @napi-rs/canvas...
+[0:56:43][boot] Current Canvas version: 1.0.7
+[0:56:44][boot] Canvas path: /home/container/node_modules/@napi-rs/canvas/index.js
+[0:56:44][boot] Canvas version: 1.0.7
+[0:56:44][boot] Creating Canvas test...
+[0:56:44][boot] Canvas generated: 7414 bytes
+[0:56:44][boot] Canvas PNG test passed.
+[0:56:44][boot] Test image: /home/container/canvas-test.png
+[0:56:44][boot] Real Canvas OK.
+[0:56:44][boot] sql.js OK
+[0:56:44][boot] libSQL OK
+[0:56:44][boot] Loading .env...
+[0:56:44][boot] .env loaded.
+[0:56:44][boot] Turso credentials loaded.
+[0:56:44][boot] Main bundle found.
+[0:56:44][boot] Checking database adapter...
+[0:56:44][boot] valuesFor() already exists.
+[0:56:44][boot] Database adapter OK.
+[0:56:44][boot] Database adapter verified.
+[0:56:44][boot] Starting GemSpin...
+[0:56:46]node:internal/event_target:1105
+[0:56:46]process.nextTick(() => { throw err; });
+[0:56:46]^
+[0:56:46]Error: Cannot find module '/home/runner/workspace/artifacts/api-server/dist/thread-stream-worker.mjs'
+[0:56:46] at Function._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+[0:56:46] at Function._load (node:internal/modules/cjs/loader:1038:27)
+[0:56:46] at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+[0:56:46] at MessagePort.<anonymous> (node:internal/main/worker_thread:192:26)
+[0:56:46] at [nodejs.internal.kHybridDispatch] (node:internal/event_target:831:20)
+[0:56:46] at MessagePort.<anonymous> (node:internal/per_context/messageport:23:28)
+[0:56:46]Emitted 'error' event on Worker instance at:
+[0:56:46] at [kOnErrorMessage] (node:internal/worker:333:10)
+[0:56:46] at [kOnMessage] (node:internal/worker:344:37)
+[0:56:46] at MessagePort.<anonymous> (node:internal/worker:233:57)
+[0:56:46] at [nodejs.internal.kHybridDispatch] (node:internal/event_target:831:20)
+[0:56:46] at MessagePort.<anonymous> (node:internal/per_context/messageport:23:28)
+[0:56:46] at [kOnExit] (node:internal/worker:310:5)
+[0:56:46] at Worker.<computed>.onexit (node:internal/worker:230:20) {
+[0:56:46]code: 'MODULE_NOT_FOUND',
+[0:56:46]requireStack: []
+[0:56:46]}
+[0:56:46]Node.js v20.20.2
+[0:56:46]Server marked as offline
