@@ -687,3 +687,17 @@ mtime_ms = 1787235602584
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:6030616b-1e75-4bc4-b6c4-4f4c55ebf4e3/98fd1268-f694-4216-afcb-c409de3b98ae/dd343560-d5d4-4d50-abdc-5d85bc9fec74"
 storage_version_token = "1787235615340251"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "dwmO-OzH5et-6D82LZOrI"
+uri = "file://attached_assets/index_6_1787426473742.mjs"
+type = "unspecified"
+title = "Updated Discord gambling bot index.mjs"
+description = "Updated WispByte bundle with configurable starter balance, optional tip log Components V2 panel, 1% rakeback accrual and claim command, exclusions, and history logging."
+logical_id = "23dfb67f-cb50-4dfb-9573-e1ea65d6c0e6"
+content_hash = "sha256:7c4a369a2097e2f3b14d52612e572747254674d0fe3d8203ee89efcf7918e9c8"
+size = 5615728
+mtime_ms = 1787427276036
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:107e51fb-6ea9-417c-93ca-842c19edcc25/23dfb67f-cb50-4dfb-9573-e1ea65d6c0e6/5507e1ee-b53e-41c6-837d-642bbb2df622"
+storage_version_token = "1787427281698778"
+content_type = "application/octet-stream"

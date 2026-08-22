@@ -124755,6 +124755,8 @@ var usersTable = sqliteTable("users", {
   // lifetime amount bet
   profit: integer("profit").notNull().default(0),
   // lifetime net profit (can be negative)
+  rakeback: integer("rakeback").notNull().default(0),
+  // accrued unclaimed rakeback
   lockedBalance: integer("locked_balance").notNull().default(0),
   // bonus gems (rain/codes/tips/welcome) that must be wagered ≥1.8× before withdrawal
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => /* @__PURE__ */ new Date()),
@@ -124999,6 +125001,7 @@ async function initDb() {
       withdrawn INTEGER NOT NULL DEFAULT 0,
       wagered INTEGER NOT NULL DEFAULT 0,
       profit INTEGER NOT NULL DEFAULT 0,
+      rakeback INTEGER NOT NULL DEFAULT 0,
       locked_balance INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL DEFAULT (unixepoch()),
       updated_at INTEGER NOT NULL DEFAULT (unixepoch())
@@ -125058,7 +125061,7 @@ async function initDb() {
 
   // Create the same complete schema remotely. These are idempotent.
   const remoteSchema = [
-    `CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT NOT NULL, roblox_username TEXT, balance INTEGER NOT NULL DEFAULT 0, deposited INTEGER NOT NULL DEFAULT 0, withdrawn INTEGER NOT NULL DEFAULT 0, wagered INTEGER NOT NULL DEFAULT 0, profit INTEGER NOT NULL DEFAULT 0, locked_balance INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (unixepoch()), updated_at INTEGER NOT NULL DEFAULT (unixepoch()))`,
+    `CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT NOT NULL, roblox_username TEXT, balance INTEGER NOT NULL DEFAULT 0, deposited INTEGER NOT NULL DEFAULT 0, withdrawn INTEGER NOT NULL DEFAULT 0, wagered INTEGER NOT NULL DEFAULT 0, profit INTEGER NOT NULL DEFAULT 0, rakeback INTEGER NOT NULL DEFAULT 0, locked_balance INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (unixepoch()), updated_at INTEGER NOT NULL DEFAULT (unixepoch()))`,
     `CREATE TABLE IF NOT EXISTS games (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), game_type TEXT NOT NULL, bet INTEGER NOT NULL, state TEXT NOT NULL DEFAULT '{}', status TEXT NOT NULL DEFAULT 'active', multiplier TEXT NOT NULL DEFAULT '1.00', created_at INTEGER NOT NULL DEFAULT (unixepoch()), updated_at INTEGER NOT NULL DEFAULT (unixepoch()))`,
     `CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS bet_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, command TEXT NOT NULL, bet INTEGER NOT NULL, net_delta INTEGER NOT NULL, admin_bet INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`,
@@ -125075,6 +125078,7 @@ async function initDb() {
     `ALTER TABLE users ADD COLUMN withdrawn INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN wagered INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN profit INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN rakeback INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN locked_balance INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE bet_log ADD COLUMN admin_bet INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN roblox_username TEXT`,
@@ -125235,6 +125239,18 @@ async function recordBet(userId, wagered, netDelta, command = "unknown", cashout
   }).where(eq(usersTable.id, userId));
   const adminBet = isAdmin(userId) ? 1 : 0;
   await db.insert(betLogTable).values({ userId, command, bet: wagered, netDelta, adminBet });
+  if (netDelta < 0 && adminBet === 0) {
+    const cfg = getServerConfig2();
+    const gameName = command.split("-")[0];
+    const excluded = Array.isArray(cfg?.rakebackExcludedGames) ? cfg.rakebackExcludedGames : [];
+    const rakeback = Math.floor(Math.abs(netDelta) * 0.01);
+    if (rakeback > 0 && !excluded.includes(gameName)) {
+      await db.update(usersTable).set({
+        rakeback: sql`${usersTable.rakeback} + ${rakeback}`,
+        updatedAt: /* @__PURE__ */ new Date()
+      }).where(eq(usersTable.id, userId));
+    }
+  }
   const shouldUnlock = cashoutMultiplier === void 0 || cashoutMultiplier >= 1.8;
   if (shouldUnlock) await unlockWager(userId, wagered);
 }
@@ -125593,6 +125609,27 @@ async function execute2(interaction) {
   await interaction.editReply({
     content: `<@${interaction.user.id}> tipped **${formatAmount(amount)} gems** ${GEM} to <@${target.id}>!`
   });
+  if (cfg?.tipLogChannelId) {
+    try {
+      const logChannel = interaction.client.channels.cache.get(cfg.tipLogChannelId) ?? await interaction.client.channels.fetch(cfg.tipLogChannelId);
+      if (logChannel?.isTextBased()) {
+        const tipPanel = new import_discord3.ContainerBuilder().setAccentColor(COLORS.primary).addTextDisplayComponents(
+          new import_discord3.TextDisplayBuilder().setContent([
+            "# \u2705 Tip Completed",
+            "",
+            `\u{1F48E} **Amount**  ${formatAmount(amount)}`,
+            `\u{1F4E5} **From**  <@${interaction.user.id}>`,
+            `\u{1F4E5} **To**  <@${target.id}>`,
+            "",
+            `> <@${interaction.user.id}> sent **${formatAmount(amount)}** gems to <@${target.id}>.`
+          ].join("\n"))
+        );
+        await logChannel.send({ flags: import_discord3.MessageFlags.IsComponentsV2, components: [tipPanel] });
+      }
+    } catch (err) {
+      logger.warn({ err }, "Failed to send tip log");
+    }
+  }
 }
 
 // src/bot/commands/mines.ts
@@ -128922,6 +128959,9 @@ function configEmbed(cfg, title, color) {
     { name: "\u{1F3AE} Roblox User", value: `\`${cfg.robloxUser}\``, inline: true },
     { name: "\u{1F4E5} Minimum Deposit", value: minimumAmount(cfg.minDeposit), inline: true },
     { name: "\u{1F4E4} Minimum Withdraw", value: minimumAmount(cfg.minWithdraw), inline: true },
+    { name: "\u{1F381} Starter Balance", value: minimumAmount(cfg.starterBalance), inline: true },
+    { name: "\u{1F4DD} Tip Log Channel", value: ch(cfg.tipLogChannelId), inline: true },
+    { name: "\u{1F4B8} Rakeback Excluded", value: cfg.rakebackExcludedGames?.length ? `\`${cfg.rakebackExcludedGames.join(", ")}\`` : "`None`", inline: false },
     {
       name: "\u{1F512} Lock Settings",
       value: [
@@ -128948,6 +128988,9 @@ function cfgSummary(cfg) {
     `\u{1F3AE} Roblox: \`${cfg.robloxUser}\``,
     `\u{1F4E5} Min Deposit: ${minimumAmount(cfg.minDeposit)}`,
     `\u{1F4E4} Min Withdraw: ${minimumAmount(cfg.minWithdraw)}`,
+    `\u{1F381} Starter: ${minimumAmount(cfg.starterBalance)}`,
+    `\u{1F4DD} Tip Log: ${ch(cfg.tipLogChannelId)}`,
+    `\u{1F4B8} Rakeback Excluded: ${cfg.rakebackExcludedGames?.length ? `\`${cfg.rakebackExcludedGames.join(", ")}\`` : "`None`"}`,
     `\u{1F512} Locks: Tips ${lock(cfg.lockTips ?? true)} \xB7 Rain ${lock(cfg.lockRain ?? true)} \xB7 Codes ${lock(cfg.lockCodes ?? true)} \xB7 Starter ${lock(cfg.lockStarterBalance ?? true)} \xB7 AddBal ${lock(cfg.lockAddBalance ?? false)}`
   ].join("\n");
 }
@@ -128971,6 +129014,12 @@ var data9 = new import_discord10.SlashCommandBuilder().setName("setup").setDescr
   (opt) => opt.setName("minimum_deposit").setDescription("Optional minimum deposit, e.g. 1m (use 0 to disable)").setRequired(false)
 ).addStringOption(
   (opt) => opt.setName("minimum_withdraw").setDescription("Optional minimum withdrawal, e.g. 1m (use 0 to disable)").setRequired(false)
+).addStringOption(
+  (opt) => opt.setName("starter_balance").setDescription("Optional new-member balance, e.g. 10m (use 0 to disable)").setRequired(false)
+).addChannelOption(
+  (opt) => opt.setName("tip_log_channel").setDescription("Optional channel for detailed tip logs").addChannelTypes(import_discord10.ChannelType.GuildText).setRequired(false)
+).addStringOption(
+  (opt) => opt.setName("rakeback_excluded_games").setDescription("Optional comma-separated games excluded from rakeback, e.g. blackjack,slots").setRequired(false)
 ).addChannelOption(
   (opt) => opt.setName("codes_channel").setDescription("Channel where new promocodes are announced").addChannelTypes(import_discord10.ChannelType.GuildText).setRequired(false)
 ).addChannelOption(
@@ -129009,6 +129058,9 @@ async function execute9(interaction) {
   const robloxUser = interaction.options.getString("roblox_user", true);
   const minDepositStr = interaction.options.getString("minimum_deposit", false);
   const minWithdrawStr = interaction.options.getString("minimum_withdraw", false);
+  const starterBalanceStr = interaction.options.getString("starter_balance", false);
+  const tipLogCh = interaction.options.getChannel("tip_log_channel", false);
+  const excludedGamesStr = interaction.options.getString("rakeback_excluded_games", false);
   const parseMinimum = (value, existingValue) => {
     if (value === null) return existingValue;
     if (value.trim() === "0") return void 0;
@@ -129018,7 +129070,9 @@ async function execute9(interaction) {
   };
   const minDeposit = parseMinimum(minDepositStr, existing?.minDeposit);
   const minWithdraw = parseMinimum(minWithdrawStr, existing?.minWithdraw);
-  if (Number.isNaN(minDeposit) || Number.isNaN(minWithdraw)) {
+  const starterBalance = starterBalanceStr === null ? existing?.starterBalance ?? 1e7 : starterBalanceStr.trim() === "0" ? 0 : parseAmount(starterBalanceStr);
+  const rakebackExcludedGames = excludedGamesStr === null ? existing?.rakebackExcludedGames ?? [] : [...new Set(excludedGamesStr.split(",").map((game) => game.trim().toLowerCase()).filter(Boolean))];
+  if (Number.isNaN(minDeposit) || Number.isNaN(minWithdraw) || starterBalance === null || Number.isNaN(starterBalance)) {
     return interaction.editReply({
       embeds: [errorEmbed("Invalid minimum amount. Use values like `1m`, `2.5b`, or `0` to disable.")]
     });
@@ -129040,6 +129094,9 @@ async function execute9(interaction) {
     robloxUser,
     minDeposit,
     minWithdraw,
+    starterBalance,
+    tipLogChannelId: tipLogCh?.id,
+    rakebackExcludedGames,
     lockTips,
     lockRain,
     lockCodes,
@@ -135656,7 +135713,8 @@ var GAME_COMMANDS = [
   "keno",
   "flip",
   "tip-sent",
-  "tip-received"
+  "tip-received",
+  "rakeback-claim"
 ];
 var LABEL = {
   blackjack: "Blackjack",
@@ -135674,7 +135732,8 @@ var LABEL = {
   keno: "Keno",
   flip: "Flip",
   "tip-sent": "Tip Sent",
-  "tip-received": "Tip Received"
+  "tip-received": "Tip Received",
+  "rakeback-claim": "Rakeback Claimed"
 };
 function discordTs(date5) {
   return `<t:${Math.floor(date5.getTime() / 1e3)}:R>`;
@@ -135743,6 +135802,55 @@ async function handlePage(bi, targetUserId, filter, page) {
   await bi.editReply({
     embeds: [embed],
     components: [pageRow(targetUserId, filter, currentPage, totalPages)]
+  });
+}
+
+// src/bot/commands/rakeback.ts
+var rakeback_exports = {};
+__export(rakeback_exports, {
+  data: () => dataRakeback,
+  execute: () => executeRakeback,
+  handleClaim: () => handleRakebackClaim
+});
+var import_discord_rakeback = __toESM(require_src2(), 1);
+var RAKEBACK_RATE = 1;
+function buildRakebackPanel(user, amount) {
+  const claimButton = new import_discord_rakeback.ButtonBuilder().setCustomId("rakeback_claim").setLabel("Claim Rakeback").setEmoji("\u{1F4B8}").setStyle(import_discord_rakeback.ButtonStyle.Success).setDisabled(amount <= 0);
+  const panel = new import_discord_rakeback.ContainerBuilder().setAccentColor(COLORS.gold).addTextDisplayComponents(
+    new import_discord_rakeback.TextDisplayBuilder().setContent([
+      `# \u{1F4B8} ${user.username}'s Rakeback`,
+      "",
+      `\u{1F4CA} **Rakeback percentage**  \`${RAKEBACK_RATE}%\``,
+      `\u{1F4B0} **Accrued rakeback**  \`${formatAmount(amount)}\``,
+      "",
+      amount > 0 ? "Click the button below to claim your accrued rakeback." : "You have no accrued rakeback to claim yet."
+    ].join("\n"))
+  ).addActionRowComponents(new import_discord_rakeback.ActionRowBuilder().addComponents(claimButton));
+  return panel;
+}
+var dataRakeback = new import_discord_rakeback.SlashCommandBuilder().setName("rakeback").setDescription("View and claim your 1% rakeback");
+async function executeRakeback(interaction) {
+  await interaction.deferReply({ flags: import_discord_rakeback.MessageFlags.Ephemeral });
+  const user = await getOrCreateUser(interaction.user.id, interaction.user.username);
+  await interaction.editReply({
+    flags: import_discord_rakeback.MessageFlags.IsComponentsV2,
+    components: [buildRakebackPanel(interaction.user, user.rakeback ?? 0)]
+  });
+}
+async function handleRakebackClaim(interaction) {
+  await interaction.deferUpdate();
+  const user = await getOrCreateUser(interaction.user.id, interaction.user.username);
+  const amount = user.rakeback ?? 0;
+  if (amount <= 0) {
+    await interaction.followUp({ content: "\u274C You have no accrued rakeback to claim.", flags: import_discord_rakeback.MessageFlags.Ephemeral });
+    return;
+  }
+  await db.update(usersTable).set({ rakeback: 0, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, interaction.user.id));
+  await addBalance(interaction.user.id, amount);
+  await db.insert(betLogTable).values({ userId: interaction.user.id, command: "rakeback-claim", bet: 0, netDelta: amount, adminBet: 0 });
+  await interaction.editReply({
+    flags: import_discord_rakeback.MessageFlags.IsComponentsV2,
+    components: [buildRakebackPanel(interaction.user, 0)]
   });
 }
 
@@ -137439,7 +137547,7 @@ var GAMBLING_COMMANDS = /* @__PURE__ */ new Set([
 function isExpiredInteractionError(error40) {
   return typeof error40 === "object" && error40 !== null && "code" in error40 && error40.code === 10062;
 }
-var commands = [balance_exports, tip_exports, mines_exports, towers_exports, rps_exports, coinflip_exports, dice_exports, blackjack_exports, setup_exports, deposit_exports, withdraw_exports, addbalance_exports, removebalance_exports, wheel_exports, slots_exports, hilo_exports, roulette_exports, crash_exports, scratchcard_exports, chickencrossing_exports, colordice_exports, upgrader_exports, keno_exports, flip_exports, createcode_exports, redeem_exports, viewcodes_exports, leaderboard_exports, history_exports, resetstats_exports, simulate_exports, freeze_exports, gamedisable_exports, stats_exports, economy_exports, addadminperms_exports, rain_exports, link_exports, invites_exports, cleardata_exports];
+var commands = [balance_exports, tip_exports, rakeback_exports, mines_exports, towers_exports, rps_exports, coinflip_exports, dice_exports, blackjack_exports, setup_exports, deposit_exports, withdraw_exports, addbalance_exports, removebalance_exports, wheel_exports, slots_exports, hilo_exports, roulette_exports, crash_exports, scratchcard_exports, chickencrossing_exports, colordice_exports, upgrader_exports, keno_exports, flip_exports, createcode_exports, redeem_exports, viewcodes_exports, leaderboard_exports, history_exports, resetstats_exports, simulate_exports, freeze_exports, gamedisable_exports, stats_exports, economy_exports, addadminperms_exports, rain_exports, link_exports, invites_exports, cleardata_exports];
 var commandData = commands.map((cmd) => cmd.data.toJSON());
 var client = new import_discord42.Client({
   intents: [
@@ -137462,6 +137570,7 @@ async function handleInteraction(interaction) {
     try {
       if (name === "balance") return await execute(interaction);
       if (name === "tip") return await execute2(interaction);
+      if (name === "rakeback") return await executeRakeback(interaction);
       if (GAMBLING_COMMANDS.has(name)) {
         if (isFrozen(interaction.user.id)) {
           return interaction.reply({
@@ -137640,6 +137749,7 @@ async function handleInteraction(interaction) {
       }
       if (id.startsWith("setup_confirm_")) return await handleConfirm(bi, id.slice("setup_confirm_".length));
       if (id.startsWith("setup_cancel_")) return await handleCancelSetup(bi, id.slice("setup_cancel_".length));
+      if (id === "rakeback_claim") return await handleRakebackClaim(bi);
       if (id.startsWith("addbalnc_enter_")) return await handleEnter(bi, id.slice("addbalnc_enter_".length));
       if (id.startsWith("addbalnc_cancel_")) return await handleCancelBtn(bi, id.slice("addbalnc_cancel_".length));
       if (id.startsWith("rembalnc_enter_")) return await handleEnter2(bi, id.slice("rembalnc_enter_".length));
@@ -137814,19 +137924,20 @@ async function handleNewMember(member) {
     logger.info({ userId, username }, "Returning member joined \u2014 no bonus awarded");
     return;
   }
+  const cfg = getServerConfig2();
+  const welcomeBonus = Math.max(0, cfg?.starterBalance ?? WELCOME_BONUS);
   await db.insert(usersTable).values({
     id: userId,
     username,
-    balance: WELCOME_BONUS
+    balance: welcomeBonus
   });
-  const cfg = getServerConfig2();
-  if (cfg?.lockStarterBalance ?? true) {
-    await addLocked(userId, WELCOME_BONUS);
+  if (welcomeBonus > 0 && (cfg?.lockStarterBalance ?? true)) {
+    await addLocked(userId, welcomeBonus);
   }
-  logger.info({ userId, username, bonus: WELCOME_BONUS }, "New member joined \u2014 welcome bonus awarded");
+  logger.info({ userId, username, bonus: welcomeBonus }, "New member joined \u2014 welcome bonus awarded");
   try {
-    await member.send(
-      `\u{1F44B} Welcome to the server! You've received a **${formatAmount(WELCOME_BONUS)}** welcome bonus. Use \`/balance\` to check your balance!`
+    if (welcomeBonus > 0) await member.send(
+      `\u{1F44B} Welcome to the server! You've received a **${formatAmount(welcomeBonus)}** welcome bonus. Use \`/balance\` to check your balance!`
     );
   } catch {
   }
