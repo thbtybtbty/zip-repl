@@ -125282,12 +125282,9 @@ var logger = (0, import_pino.default)({
     "req.headers.cookie",
     "res.headers['set-cookie']"
   ],
-  ...isProduction ? {} : {
-    transport: {
-      target: "pino-pretty",
-      options: { colorize: true }
-    }
-  }
+  // WispByte runs this single bundle without the optional Pino worker files.
+  // Keep logging on the standard stream so index.mjs remains self-contained.
+  ...{}
 });
 
 // src/routes/deposit.ts
