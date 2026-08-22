@@ -125239,16 +125239,13 @@ async function recordBet(userId, wagered, netDelta, command = "unknown", cashout
   }).where(eq(usersTable.id, userId));
   const adminBet = isAdmin(userId) ? 1 : 0;
   await db.insert(betLogTable).values({ userId, command, bet: wagered, netDelta, adminBet });
-  if (netDelta < 0 && adminBet === 0) {
+  if (netDelta < 0) {
     const cfg = getServerConfig2();
     const gameName = command.split("-")[0];
     const excluded = Array.isArray(cfg?.rakebackExcludedGames) ? cfg.rakebackExcludedGames : [];
     const rakeback = Math.floor(Math.abs(netDelta) * 0.01);
     if (rakeback > 0 && !excluded.includes(gameName)) {
-      await db.update(usersTable).set({
-        rakeback: sql`${usersTable.rakeback} + ${rakeback}`,
-        updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq(usersTable.id, userId));
+      sqlite.prepare("UPDATE users SET rakeback = COALESCE(rakeback, 0) + ?, updated_at = ? WHERE id = ?").run(rakeback, Math.floor(Date.now() / 1000), userId);
     }
   }
   const shouldUnlock = cashoutMultiplier === void 0 || cashoutMultiplier >= 1.8;
@@ -135832,20 +135829,22 @@ var dataRakeback = new import_discord_rakeback.SlashCommandBuilder().setName("ra
 async function executeRakeback(interaction) {
   await interaction.deferReply({ flags: import_discord_rakeback.MessageFlags.Ephemeral });
   const user = await getOrCreateUser(interaction.user.id, interaction.user.username);
+  const row = sqlite.prepare("SELECT COALESCE(rakeback, 0) AS rakeback FROM users WHERE id = ?").get(interaction.user.id) ?? {};
   await interaction.editReply({
     flags: import_discord_rakeback.MessageFlags.IsComponentsV2,
-    components: [buildRakebackPanel(interaction.user, user.rakeback ?? 0)]
+    components: [buildRakebackPanel(interaction.user, Number(row.rakeback ?? user.rakeback ?? 0))]
   });
 }
 async function handleRakebackClaim(interaction) {
   await interaction.deferUpdate();
-  const user = await getOrCreateUser(interaction.user.id, interaction.user.username);
-  const amount = user.rakeback ?? 0;
+  await getOrCreateUser(interaction.user.id, interaction.user.username);
+  const currentRow = sqlite.prepare("SELECT COALESCE(rakeback, 0) AS rakeback FROM users WHERE id = ?").get(interaction.user.id) ?? {};
+  const amount = Number(currentRow.rakeback ?? 0);
   if (amount <= 0) {
     await interaction.followUp({ content: "\u274C You have no accrued rakeback to claim.", flags: import_discord_rakeback.MessageFlags.Ephemeral });
     return;
   }
-  await db.update(usersTable).set({ rakeback: 0, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, interaction.user.id));
+  sqlite.prepare("UPDATE users SET rakeback = 0, updated_at = ? WHERE id = ?").run(Math.floor(Date.now() / 1000), interaction.user.id);
   await addBalance(interaction.user.id, amount);
   await db.insert(betLogTable).values({ userId: interaction.user.id, command: "rakeback-claim", bet: 0, netDelta: amount, adminBet: 0 });
   await interaction.editReply({
