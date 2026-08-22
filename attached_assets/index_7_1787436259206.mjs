@@ -129043,6 +129043,8 @@ var data9 = new import_discord10.SlashCommandBuilder().setName("setup").setDescr
   (opt) => opt.setName("flip_channel").setDescription("Channel where /flip challenges are posted").addChannelTypes(import_discord10.ChannelType.GuildText).setRequired(true)
 ).addStringOption(
   (opt) => opt.setName("roblox_user").setDescription("Roblox username players send gems to when depositing").setRequired(true)
+).addChannelOption(
+  (opt) => opt.setName("affiliate_channel").setDescription("Channel where new affiliations are announced").addChannelTypes(import_discord10.ChannelType.GuildText).setRequired(true)
 ).addStringOption(
   (opt) => opt.setName("minimum_deposit").setDescription("Optional minimum deposit, e.g. 1m (use 0 to disable)").setRequired(false)
 ).addStringOption(
@@ -129051,8 +129053,6 @@ var data9 = new import_discord10.SlashCommandBuilder().setName("setup").setDescr
   (opt) => opt.setName("starter_balance").setDescription("Optional new-member balance, e.g. 10m (use 0 to disable)").setRequired(false)
 ).addChannelOption(
   (opt) => opt.setName("tip_log_channel").setDescription("Optional channel for detailed tip logs").addChannelTypes(import_discord10.ChannelType.GuildText).setRequired(false)
-).addChannelOption(
-  (opt) => opt.setName("affiliate_channel").setDescription("Channel where new affiliations are announced").addChannelTypes(import_discord10.ChannelType.GuildText).setRequired(true)
 ).addStringOption(
   (opt) => opt.setName("rakeback_excluded_games").setDescription("Optional comma-separated games excluded from rakeback, e.g. blackjack,slots").setRequired(false)
 ).addChannelOption(
