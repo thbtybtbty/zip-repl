@@ -729,3 +729,17 @@ mtime_ms = 1787429079401
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:107e51fb-6ea9-417c-93ca-842c19edcc25/dec4527c-e1d7-49d9-ae8f-bf85973c1685/fbf84606-841e-4196-a4cd-f2340a3a2171"
 storage_version_token = "1787429083011465"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "RsaqgW86-zsCgFulpWj39"
+uri = "file://exports/updated-index-only.zip"
+type = "unspecified"
+title = "Updated index.mjs only"
+description = "ZIP containing exactly one file: index.mjs. No launcher, package files, workers, database, configuration, or other files included."
+logical_id = "dab09787-8ee8-4ee4-966d-231741cadaff"
+content_hash = "sha256:94dba4a25979e23e8f1ccba20b5be10fc850b5d443de620161196bbeb6be31f8"
+size = 1081846
+mtime_ms = 1787429175848
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:107e51fb-6ea9-417c-93ca-842c19edcc25/dab09787-8ee8-4ee4-966d-231741cadaff/894855d3-b715-4c7b-aeb7-d20a458a39aa"
+storage_version_token = "1787429181587854"
+content_type = "application/octet-stream"
