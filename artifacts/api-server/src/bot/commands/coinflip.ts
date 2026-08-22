@@ -1,23 +1,12 @@
+
 import {
   SlashCommandBuilder,
   ContainerBuilder,
   SeparatorBuilder,
   TextDisplayBuilder,
-  MediaGalleryBuilder,
-  MediaGalleryItemBuilder,
-  AttachmentBuilder,
   MessageFlags,
   type ChatInputCommandInteraction,
 } from "discord.js";
-import {
-  createCanvas,
-  loadImage,
-  type Image,
-} from "@napi-rs/canvas";
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
 import {
   COLORS,
   parseAmount,
@@ -27,8 +16,6 @@ import {
   recordBet,
   errorEmbed,
 } from "../utils.js";
-
-// ─── Command ──────────────────────────────────────────────────────────────────
 
 export const data = new SlashCommandBuilder()
   .setName("coinflip")
@@ -50,186 +37,99 @@ export const data = new SlashCommandBuilder()
       ),
   );
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-
 const SIDES = ["heads", "tails"] as const;
-type CoinSide = (typeof SIDES)[number];
 
-const SIDE_DISPLAY: Record<CoinSide, string> = {
+const SIDE_DISPLAY: Record<string, string> = {
   heads: "🪙 Heads",
   tails: "🔵 Tails",
 };
 
-const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
-
-// The source runs from the workspace root in Replit, while the compiled
-// WispByte bundle runs from artifacts/api-server/dist. Resolve both layouts
-// without depending on the process working directory.
-const COINFLIP_FACE_ASSET_CANDIDATES = [
-  path.resolve(
-    process.cwd(),
-    "coinflip_face_assets",
-  ),
-  path.resolve(
-    MODULE_DIR,
-    "../../../coinflip_face_assets",
-  ),
-  path.resolve(
-    MODULE_DIR,
-    "../../../../coinflip_face_assets",
-  ),
+const FLIP_PROGRESS_BARS = [
+  "▰▱▱▱▱▱",
+  "▰▰▱▱▱▱",
+  "▰▰▰▱▱▱",
+  "▰▰▰▰▱▱",
+  "▰▰▰▰▰▱",
+  "▰▰▰▰▰▰",
 ];
 
-function getCoinflipFaceAssetsDir(): string {
-  const assetsDir =
-    COINFLIP_FACE_ASSET_CANDIDATES.find(
-      (candidate) =>
-        fs.existsSync(candidate),
-    );
-
-  if (!assetsDir) {
-    throw new Error(
-      [
-        "Coinflip face assets folder does not exist.",
-        "Checked:",
-        ...COINFLIP_FACE_ASSET_CANDIDATES,
-      ].join(" "),
-    );
-  }
-
-  return assetsDir;
-}
-
-const COINFLIP_FRAME_MS = 150;
-const COINFLIP_FRAME_SCALES = [
-  1,
-  0.62,
-  0.23,
-  0.06,
-  0.23,
-  0.62,
-  1,
-];
-const COINFLIP_CANVAS_SIZE = 480;
-const COINFLIP_RADIUS = 190;
-
-type CoinFaceImages = Record<CoinSide, Image>;
-
-let coinFaceImagesPromise:
-  | Promise<CoinFaceImages>
-  | null = null;
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function text(
-  content: string,
-): TextDisplayBuilder {
-  return new TextDisplayBuilder().setContent(
-    content,
-  );
+function text(content: string): TextDisplayBuilder {
+  return new TextDisplayBuilder().setContent(content);
 }
 
-async function getCoinflipFaceImages(): Promise<CoinFaceImages> {
-  if (!coinFaceImagesPromise) {
-    coinFaceImagesPromise =
-      (async () => {
-        const assetsDir =
-          getCoinflipFaceAssetsDir();
-
-        return {
-          heads: await loadImage(
-            path.join(
-              assetsDir,
-              "coinflip_heads.jpeg",
-            ),
-          ),
-          tails: await loadImage(
-            path.join(
-              assetsDir,
-              "coinflip_tails.jpeg",
-            ),
-          ),
-        };
-      })();
-  }
-
-  try {
-    return await coinFaceImagesPromise;
-  } catch (error) {
-    coinFaceImagesPromise = null;
-    throw error;
-  }
-}
-
-// ─── Animation Container ─────────────────────────────────────────────────────
+// ─── Animation ─────────────────────────────────────────────────────────────────
 
 function coinflipAnimationContainer(
   amount: number,
-  choice: CoinSide,
-  imageFilename: string,
+  choice: string,
+  result: string,
+  frame: number,
 ): ContainerBuilder {
-  const coinImage =
-    new MediaGalleryBuilder().addItems(
-      new MediaGalleryItemBuilder()
-        .setURL(
-          `attachment://${imageFilename}`,
-        )
-        .setDescription(
-          "Coin flipping vertically",
-        ),
-    );
+  const animatedResult =
+    frame >= FLIP_PROGRESS_BARS.length - 1
+      ? result
+      : frame % 2 === 0
+        ? "heads"
+        : "tails";
+
+  const progress =
+    FLIP_PROGRESS_BARS[
+      Math.min(
+        frame,
+        FLIP_PROGRESS_BARS.length - 1,
+      )
+    ]!;
 
   return new ContainerBuilder()
-    .setAccentColor(
-      COLORS.primary,
+    .setAccentColor(COLORS.primary)
+
+    .addTextDisplayComponents(
+      text("## 🪙  Coin Flip"),
     )
 
-    // Title
+    // Bet stays at the top.
     .addTextDisplayComponents(
       text(
-        "## 🪙  Coin Flip",
+        `💎 **Bet**  \`${formatAmount(amount)}\``,
       ),
     )
 
-    // Bet
-    .addTextDisplayComponents(
-      text(
-        `💎 **Bet**  \`${formatAmount(
-          amount,
-        )}\``,
-      ),
-    )
-
+    // Divider between the top stats and pick/result.
     .addSeparatorComponents(
       new SeparatorBuilder(),
     )
 
-    // Animated coin
-    .addMediaGalleryComponents(
-      coinImage,
-    )
-
-    .addSeparatorComponents(
-      new SeparatorBuilder(),
-    )
-
-    // Pick only.
-    // The old fake "Result" animation text is removed.
     .addTextDisplayComponents(
       text(
-        `🎯 **Your pick**  \`${SIDE_DISPLAY[
-          choice
-        ]}\``,
+        [
+          `🎯 **Your pick**  \`${SIDE_DISPLAY[choice]!}\``,
+          `🪙 **Result**     \`${SIDE_DISPLAY[animatedResult]!}\``,
+        ].join("\n"),
+      ),
+    )
+
+    .addTextDisplayComponents(
+      text(
+        [
+          "",
+          "🕐 **Flipping the coin…**",
+          progress,
+        ].join("\n"),
       ),
     );
 }
 
-// ─── Final Result Container ──────────────────────────────────────────────────
+// ─── Final result ──────────────────────────────────────────────────────────────
 
 function coinflipResultContainer(
   amount: number,
-  choice: CoinSide,
-  result: CoinSide,
+  choice: string,
+  result: string,
   won: boolean,
 ): ContainerBuilder {
   const container =
@@ -239,7 +139,6 @@ function coinflipResultContainer(
           ? COLORS.success
           : COLORS.danger,
       )
-
       .addTextDisplayComponents(
         text(
           won
@@ -248,11 +147,10 @@ function coinflipResultContainer(
         ),
       );
 
-  // Bet + payout
+  // Bet + Payout are intentionally in ONE text component
+  // so there is no extra component spacing between them.
   const statsLines = [
-    `💎 **Bet**  \`${formatAmount(
-      amount,
-    )}\``,
+    `💎 **Bet**  \`${formatAmount(amount)}\``,
     ...(won
       ? [
           `💰 **Payout**  \`${formatAmount(
@@ -263,25 +161,20 @@ function coinflipResultContainer(
   ];
 
   container.addTextDisplayComponents(
-    text(
-      statsLines.join("\n"),
-    ),
+    text(statsLines.join("\n")),
   );
 
+  // Real Components V2 divider.
   container.addSeparatorComponents(
     new SeparatorBuilder(),
   );
 
-  // Final pick + actual result
+  // Your pick + result stay at the bottom.
   container.addTextDisplayComponents(
     text(
       [
-        `🎯 **Your pick**  \`${SIDE_DISPLAY[
-          choice
-        ]}\``,
-        `🪙 **Result**     \`${SIDE_DISPLAY[
-          result
-        ]}\``,
+        `🎯 **Your pick**  \`${SIDE_DISPLAY[choice]!}\``,
+        `🪙 **Result**     \`${SIDE_DISPLAY[result]!}\``,
       ].join("\n"),
     ),
   );
@@ -289,162 +182,58 @@ function coinflipResultContainer(
   return container;
 }
 
-// ─── Animation ────────────────────────────────────────────────────────────────
-
-function oppositeSide(
-  side: CoinSide,
-): CoinSide {
-  return side === "heads"
-    ? "tails"
-    : "heads";
-}
-
-function drawCoinFace(
-  ctx: ReturnType<
-    ReturnType<typeof createCanvas>["getContext"]
-  >,
-  image: Image,
-  scaleY: number,
-): void {
-  const center =
-    COINFLIP_CANVAS_SIZE / 2;
-  const faceHeight =
-    COINFLIP_RADIUS * 2 * scaleY;
-
-  if (faceHeight <= 1) {
-    return;
-  }
-
-  // Keep the attachment transparent and clip the supplied artwork to the
-  // centered coin shape so no square background or extra shape is visible.
-  ctx.save();
-  ctx.beginPath();
-  ctx.ellipse(
-    center,
-    center,
-    COINFLIP_RADIUS,
-    faceHeight / 2,
-    0,
-    0,
-    Math.PI * 2,
-  );
-  ctx.clip();
-  ctx.drawImage(
-    image,
-    center - COINFLIP_RADIUS,
-    center - faceHeight / 2,
-    COINFLIP_RADIUS * 2,
-    faceHeight,
-  );
-  ctx.restore();
-}
-
-function coinflipFrame(
-  image: Image,
-  scaleY: number,
-): Buffer {
-  const canvas =
-    createCanvas(
-      COINFLIP_CANVAS_SIZE,
-      COINFLIP_CANVAS_SIZE,
-    );
-  const ctx =
-    canvas.getContext("2d");
-
-  drawCoinFace(
-    ctx,
-    image,
-    scaleY,
-  );
-
-  return canvas.toBuffer("image/png");
-}
+// ─── Animation ─────────────────────────────────────────────────────────────────
 
 async function animateCoinflip(
   interaction: ChatInputCommandInteraction,
   amount: number,
-  choice: CoinSide,
-  result: CoinSide,
+  choice: string,
+  result: string,
 ): Promise<void> {
-  const images =
-    await getCoinflipFaceImages();
-  const opposite =
-    oppositeSide(choice);
-  const transitions =
-    result === choice
-      ? [choice, opposite, result]
-      : [choice, result];
-  const imageFilename =
-    "coinflip-frame.png";
+  await interaction
+    .editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        coinflipAnimationContainer(
+          amount,
+          choice,
+          result,
+          0,
+        ),
+      ],
+    })
+    .catch(() => null);
 
   for (
-    let transition = 0;
-    transition < transitions.length - 1;
-    transition++
+    let frame = 1;
+    frame < FLIP_PROGRESS_BARS.length;
+    frame++
   ) {
-    const from =
-      transitions[transition]!;
-    const to =
-      transitions[transition + 1]!;
+    await sleep(350);
 
-    for (
-      let frame = 0;
-      frame < COINFLIP_FRAME_SCALES.length;
-      frame++
-    ) {
-      const scaleY =
-        COINFLIP_FRAME_SCALES[frame]!;
-      const side =
-        frame <
-          COINFLIP_FRAME_SCALES.length / 2
-          ? from
-          : to;
-      const attachment =
-        new AttachmentBuilder(
-          coinflipFrame(
-            images[side],
-            scaleY,
+    await interaction
+      .editReply({
+        flags: MessageFlags.IsComponentsV2,
+        components: [
+          coinflipAnimationContainer(
+            amount,
+            choice,
+            result,
+            frame,
           ),
-        ).setName(
-          imageFilename,
-        );
-
-      try {
-        await interaction.editReply({
-          flags:
-            MessageFlags.IsComponentsV2,
-          components: [
-            coinflipAnimationContainer(
-              amount,
-              choice,
-              imageFilename,
-            ),
-          ],
-          files: [
-            attachment,
-          ],
-        });
-      } catch {
-        // Intermediate animation frames are best-effort. The settled result
-        // is retried separately after the animation completes.
-      }
-
-      await new Promise<void>(
-        (resolve) =>
-          setTimeout(
-            resolve,
-            COINFLIP_FRAME_MS,
-          ),
-      );
-    }
+        ],
+      })
+      .catch(() => null);
   }
+
+  await sleep(350);
 }
 
-// ─── Command Execute ─────────────────────────────────────────────────────────
+// ─── Command ──────────────────────────────────────────────────────────────────
 
 export async function execute(
   interaction: ChatInputCommandInteraction,
-): Promise<void> {
+) {
   const amountStr =
     interaction.options.getString(
       "amount",
@@ -455,33 +244,26 @@ export async function execute(
     interaction.options.getString(
       "choice",
       true,
-    ) as CoinSide;
-
-  const amount =
-    parseAmount(
-      amountStr,
     );
 
-  // ─── Minimum bet ───────────────────────────────────────────────────────────
+  const amount =
+    parseAmount(amountStr);
 
   if (
     !amount ||
     amount < 1_000_000
   ) {
-    return void interaction.reply({
+    return interaction.reply({
       embeds: [
         errorEmbed(
           "Minimum bet is **1M gems**. Try `1m`, `2.5b`, `500k`.",
         ),
       ],
-      flags:
-        MessageFlags.Ephemeral,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
   await interaction.deferReply();
-
-  // ─── User ──────────────────────────────────────────────────────────────────
 
   const user =
     await getOrCreateUser(
@@ -489,12 +271,10 @@ export async function execute(
       interaction.user.username,
     );
 
-  // ─── Balance check ─────────────────────────────────────────────────────────
-
   if (
     user.balance < amount
   ) {
-    return void interaction.editReply({
+    return interaction.editReply({
       embeds: [
         errorEmbed(
           `Insufficient balance. You have **${formatAmount(
@@ -505,11 +285,7 @@ export async function execute(
     });
   }
 
-  // ─── ORIGINAL GAME LOGIC ───────────────────────────────────────────────────
-  //
-  // P(win) = 0.4625
-  // House edge = 7.5%
-
+  // Flip — P(win) = 0.4625 → house edge 7.5%
   const won =
     Math.random() < 0.4625;
 
@@ -520,39 +296,17 @@ export async function execute(
         : choice === "heads"
           ? "tails"
           : "heads"
-    ) as CoinSide;
-
-  // Resolve the animation before charging the player. Missing deployment
-  // assets must never leave a wager debited without a playable result.
-  try {
-    await getCoinflipFaceImages();
-  } catch (error) {
-    console.error(
-      "[coinflip] Face assets unavailable",
-      error,
-    );
-    return void interaction.editReply({
-      embeds: [
-        errorEmbed(
-          "Coinflip is temporarily unavailable because its face images could not be loaded.",
-        ),
-      ],
-    });
-  }
+    ) as typeof SIDES[number];
 
   const payout =
     won
       ? amount
       : -amount;
 
-  // ─── Balance ───────────────────────────────────────────────────────────────
-
   await addBalance(
     interaction.user.id,
     payout,
   );
-
-  // ─── Record bet ────────────────────────────────────────────────────────────
 
   await recordBet(
     interaction.user.id,
@@ -561,8 +315,7 @@ export async function execute(
     "coinflip",
   );
 
-  // ─── Animated coin ─────────────────────────────────────────────────────────
-
+  // Animation has no payout.
   await animateCoinflip(
     interaction,
     amount,
@@ -570,11 +323,9 @@ export async function execute(
     result,
   );
 
-  // ─── Final result ──────────────────────────────────────────────────────────
-
-  const finalPayload = {
-    flags:
-      MessageFlags.IsComponentsV2,
+  // Final result.
+  await interaction.editReply({
+    flags: MessageFlags.IsComponentsV2,
     components: [
       coinflipResultContainer(
         amount,
@@ -583,26 +334,5 @@ export async function execute(
         won,
       ),
     ],
-  };
-
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      await interaction.editReply(
-        finalPayload,
-      );
-      break;
-    } catch (error) {
-      if (attempt === 2) {
-        throw error;
-      }
-
-      await new Promise<void>(
-        (resolve) =>
-          setTimeout(
-            resolve,
-            180 * (attempt + 1),
-          ),
-      );
-    }
-  }
+  });
 }
