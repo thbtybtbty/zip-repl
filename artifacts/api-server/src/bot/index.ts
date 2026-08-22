@@ -9,6 +9,7 @@ import {
   type ModalSubmitInteraction,
   type StringSelectMenuInteraction,
   type UserSelectMenuInteraction,
+  type ChannelSelectMenuInteraction,
   type GuildMember,
 } from "discord.js";
 import { db, usersTable } from "@workspace/db";
@@ -315,6 +316,10 @@ async function handleInteraction(interaction: Interaction) {
       }
 
       // Setup confirmation
+      if (id.startsWith("setup_all_")) return await setup.handleButton(bi, id.slice("setup_all_".length), "all");
+      if (id.startsWith("setup_specific_")) return await setup.handleButton(bi, id.slice("setup_specific_".length), "specific");
+      if (id.startsWith("setup_optional_")) return await setup.handleButton(bi, id.slice("setup_optional_".length), "optional");
+      if (id.startsWith("setup_skip_")) return await setup.handleButton(bi, id.slice("setup_skip_".length), "skip");
       if (id.startsWith("setup_confirm_")) return await setup.handleConfirm(bi, id.slice("setup_confirm_".length));
       if (id.startsWith("setup_cancel_"))  return await setup.handleCancelSetup(bi, id.slice("setup_cancel_".length));
 
@@ -361,6 +366,13 @@ async function handleInteraction(interaction: Interaction) {
         const filter = parts.pop()!;
         const uid    = parts.join("_");
         return await history.handlePage(bi, uid, filter, isNext ? page + 1 : page - 1);
+      }
+      if (id.startsWith("lb_prev_") || id.startsWith("lb_next_")) {
+        const next = id.startsWith("lb_next_");
+        const parts = id.slice(next ? "lb_next_".length : "lb_prev_".length).split("_");
+        const page = parseInt(parts.pop()!, 10);
+        const category = parts.join("_") as "gems" | "profit" | "wager" | "tipped" | "withdrawn" | "deposited";
+        return await leaderboard.handlePage(bi, category, next ? page + 1 : page - 1);
       }
 
       // Reset stats
@@ -455,6 +467,7 @@ async function handleInteraction(interaction: Interaction) {
       if (id === "freeze_unfreeze_select")     return await freeze.handleUnfreezeSelect(si);
       if (id === "game_enable_select")         return await gamedisable.handleEnableSelect(si);
       if (id === "aap_remove_select")          return await addadminperms.handleRemoveSelect(si);
+      if (id.startsWith("setup_pick_")) return await setup.handlePick(si, id.slice("setup_pick_".length));
     } catch (err) {
       if (isExpiredInteractionError(err)) {
         logger.warn({ selectId: id }, "Select interaction expired before Discord acknowledged it");
@@ -499,6 +512,10 @@ async function handleInteraction(interaction: Interaction) {
 
       if (id.startsWith("rs_modal_"))
         return await resetstats.handleModal(mi, id.slice("rs_modal_".length));
+      if (id.startsWith("setup_core_modal_"))
+        return await setup.handleCoreModal(mi, id.slice("setup_core_modal_".length));
+      if (id.startsWith("setup_optional_modal_"))
+        return await setup.handleOptionalModal(mi, id.slice("setup_optional_modal_".length));
 
     } catch (err) {
       if (isExpiredInteractionError(err)) {
@@ -518,6 +535,12 @@ async function handleInteraction(interaction: Interaction) {
         }
       }
     }
+  }
+  if (interaction.isChannelSelectMenu()) {
+    const si = interaction as ChannelSelectMenuInteraction;
+    const id = si.customId;
+    if (id.startsWith("setup_deposit_")) return await setup.handleChannel(si, id.slice("setup_deposit_".length), "deposit");
+    if (id.startsWith("setup_withdraw_")) return await setup.handleChannel(si, id.slice("setup_withdraw_".length), "withdraw");
   }
 }
 

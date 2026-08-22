@@ -785,3 +785,31 @@ mtime_ms = 1787436932055
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:5a648638-8863-4659-a36b-a2bab87e4500/63a4b73b-5d12-4854-b251-af667a0dcaa6/e59cd8a1-b67a-4c9d-a0cf-3a1d2f64052a"
 storage_version_token = "1787436935992397"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "rXO_azxzQ6-KOfnIp3-9b"
+uri = "file://attached_assets/gemspin-wispbyte-updated.zip"
+type = "unspecified"
+title = "Updated WispByte Discord bot bundle"
+description = "Final ZIP containing the corrected updated index_updated_wispbyte.mjs."
+logical_id = "d50c1f41-07ba-49cc-9277-dc06cbb19c6d"
+content_hash = "sha256:918433dff2251eed5ebee2ebaca9509abf569b934cda4efcc9e3e6f423f6e1e9"
+size = 1079252
+mtime_ms = 1787439299291
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:15503c23-39ad-4c50-a15a-cf84e6f94bfc/d50c1f41-07ba-49cc-9277-dc06cbb19c6d/ab561504-04f9-4113-97a0-87e5292c7953"
+storage_version_token = "1787439303464563"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "rC2GHLcnb2Hcb9Xxg0Tkh"
+uri = "file://attached_assets/index_updated_wispbyte.mjs"
+type = "unspecified"
+title = "Final updated index.mjs"
+description = "Standalone final WispByte bundle with the corrected leaderboard category mapping."
+logical_id = "6097c514-0055-4584-b56e-506a989e1401"
+content_hash = "sha256:5835f8d9b63e8a14c822c8abec74d9b52055e9c7da0eb163ca2de5c04f7fefb2"
+size = 5601339
+mtime_ms = 1787439299131
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:15503c23-39ad-4c50-a15a-cf84e6f94bfc/6097c514-0055-4584-b56e-506a989e1401/76f9dc60-8b07-4ffc-bd7e-63e6d079a108"
+storage_version_token = "1787439304157756"
+content_type = "application/octet-stream"

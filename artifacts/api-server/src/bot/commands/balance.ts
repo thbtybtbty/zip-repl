@@ -163,19 +163,6 @@ export async function handleAdvancedStats(
   targetUserId: string,
   commandRunnerId: string,
 ): Promise<void> {
-  // Only the person who ran the command can open this panel
-  if (
-    bi.user.id !== commandRunnerId
-  ) {
-    await bi.reply({
-      content:
-        "❌ This panel belongs to someone else's `/balance`.",
-      flags: MessageFlags.Ephemeral,
-    });
-
-    return;
-  }
-
   await bi.deferReply({
     flags: MessageFlags.Ephemeral,
   });
