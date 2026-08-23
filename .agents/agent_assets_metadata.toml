@@ -827,3 +827,31 @@ mtime_ms = 1787439545967
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:15503c23-39ad-4c50-a15a-cf84e6f94bfc/a037f00b-e0dd-420a-8c7a-b73459fd7d0e/d2906bc0-9ec4-489b-9de9-16677586f2c1"
 storage_version_token = "1787439550602907"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "y0KcRsJCOMfS7gjUda1J2"
+uri = "file://attached_assets/gemspin-index8-setup-invites-updated.zip"
+type = "unspecified"
+title = "Updated index.mjs ZIP"
+description = "ZIP containing the edited file based directly on the supplied index_8...mjs. No workflow was started."
+logical_id = "27fec5b7-a382-4919-b4cd-d113cb903409"
+content_hash = "sha256:a6a5de2592e1b09677c4841a2c4ce6a68e25e58cb49d1f19f6635b8ebbb91441"
+size = 1083781
+mtime_ms = 1787485127866
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:15503c23-39ad-4c50-a15a-cf84e6f94bfc/27fec5b7-a382-4919-b4cd-d113cb903409/277f6944-d152-4a41-a98a-f3ed31f47f35"
+storage_version_token = "1787485132103422"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "o8uXRq7ZRD2efLCjYEsdI"
+uri = "file://attached_assets/index_8_setup_invites_updated.mjs"
+type = "unspecified"
+title = "Updated index.mjs"
+description = "The edited standalone index.mjs based directly on the supplied file."
+logical_id = "c797db36-7f6a-4f52-b284-eff0c116b136"
+content_hash = "sha256:70ff94e294eba903398be18b2ba09253b966e5e3bde1efa44bfcac1b29883df0"
+size = 5623326
+mtime_ms = 1787485127534
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:15503c23-39ad-4c50-a15a-cf84e6f94bfc/c797db36-7f6a-4f52-b284-eff0c116b136/21b9f96d-930a-4b51-8d14-aa5f4cb19472"
+storage_version_token = "1787485132765983"
+content_type = "application/octet-stream"
