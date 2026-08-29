@@ -869,3 +869,17 @@ mtime_ms = 1788027064735
 storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:372fe4b0-b482-4f6f-874c-e9c5f6ebe69e/61fd77af-ab0d-487f-9cd9-692106c747b2/0395735f-3971-4503-b700-1a730e659419"
 storage_version_token = "1788027069548011"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "wqp8mVLnmvBze1eu1NyIw"
+uri = "file://blackjack-side-bets-section.zip"
+type = "unspecified"
+title = "Updated Wispbyte blackjack section"
+description = "The attached blackjack index.mjs section updated with optional Perfect Pairs and 21+3 side bets, validation, payouts, panel text, and image text."
+logical_id = "71deeaf5-4752-4f7a-880e-c495cb2b9d30"
+content_hash = "sha256:45cebcf6c636729a4a47de9b9754ea66726ade5d01daa91b8c59d6c9dfed01c2"
+size = 7380
+mtime_ms = 1788037455353
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:372fe4b0-b482-4f6f-874c-e9c5f6ebe69e/71deeaf5-4752-4f7a-880e-c495cb2b9d30/e23135ad-fc20-4d1d-8d76-c67ec6fcefee"
+storage_version_token = "1788037460346790"
+content_type = "application/octet-stream"
