@@ -138,13 +138,8 @@ function prepareSideBet(game) {
 function getSideBetText(game, status) {
   if (!game.sideBetAmount || !game.sideBetType) return null;
   const label = game.sideBetType === "perfect_pairs" ? "Perfect Pairs" : "21+3";
-  if (status === "active") {
-    return `Side bet (${label}): ${formatAmount(game.sideBetAmount)}`;
-  }
-  if (game.sideBetWon) {
-    return `Side bet (${label}): ${formatAmount(game.sideBetPayout)}`;
-  }
-  return `Side bet (${label}): ${game.sideBetType === "perfect_pairs" ? "No pair" : "No match"}`;
+  const result = game.sideBetWon ? formatAmount(game.sideBetPayout) : game.sideBetType === "perfect_pairs" ? "No pair" : "No match";
+  return `Side bet (${label} ${formatAmount(game.sideBetAmount)}): ${result}`;
 }
 var sleep2 = (ms) => new Promise(
   (resolve) => setTimeout(resolve, ms)
@@ -556,7 +551,7 @@ function blackjackImage(game, status, showDealerFull) {
   );
   if (sideBetText) {
     ctx.font = "bold 17px Arial";
-    ctx.fillStyle = "#d1fae5";
+    ctx.fillStyle = "#ffffff";
     ctx.fillText(
       sideBetText,
       IMAGE_WIDTH2 / 2,
@@ -590,10 +585,11 @@ function blackjackImage(game, status, showDealerFull) {
       159
     );
   }
+  const dealerCardY = sideBetText ? DEALER_Y + 15 : DEALER_Y;
   drawCards(
     ctx,
     game.dealerHand,
-    DEALER_Y,
+    dealerCardY,
     !showDealerFull
   );
   ctx.strokeStyle = "rgba(255,255,255,0.18)";
@@ -729,11 +725,13 @@ function buildBlackjackContainer(game, status, showGameplayButtons, playAgainDis
     )
   );
   if (status === "player_win" || status === "dealer_bust" || status === "push" || status === "blackjack") {
+    const sideBetText = getSideBetText(game, status);
+    const sideBetLine = sideBetText ? `\n\u{1F3B2} **${sideBetText}**` : "";
     container.addTextDisplayComponents(
       createText(
         `\u{1F48E} **Bet:** \`${formatAmount(
           bet
-        )}\`${game.doubled ? "  *(doubled)*" : ""}
+        )}\`${game.doubled ? "  *(doubled)*" : ""}${sideBetLine}
 \u2728 **Multiplier:** \`${multiplier.toFixed(
           2
         )}x (${formatAmount(
@@ -742,19 +740,13 @@ function buildBlackjackContainer(game, status, showGameplayButtons, playAgainDis
       )
     );
   } else {
+    const sideBetText = getSideBetText(game, status);
+    const sideBetLine = sideBetText ? `\n\u{1F3B2} **${sideBetText}**` : "";
     container.addTextDisplayComponents(
       createText(
         `\u{1F48E} **Bet:** \`${formatAmount(
           bet
-        )}\`${game.doubled ? "  *(doubled)*" : ""}`
-      )
-    );
-  }
-  const sideBetText = getSideBetText(game, status);
-  if (sideBetText) {
-    container.addTextDisplayComponents(
-      createText(
-        `\u{1F3B2} **${sideBetText}**`
+        )}\`${game.doubled ? "  *(doubled)*" : ""}${sideBetLine}`
       )
     );
   }
@@ -800,17 +792,9 @@ function buildContainerAnimating(game, shownDealerCards) {
     createText(
       `\u{1F48E} **Bet:** \`${formatAmount(
         bet
-      )}\`${game.doubled ? "  *(doubled)*" : ""}`
+      )}\`${game.doubled ? "  *(doubled)*" : ""}${getSideBetText(game, "active") ? `\n\u{1F3B2} **${getSideBetText(game, "active")}**` : ""}`
     )
   );
-  const sideBetText = getSideBetText(game, "active");
-  if (sideBetText) {
-    container.addTextDisplayComponents(
-      createText(
-        `\u{1F3B2} **${sideBetText}**`
-      )
-    );
-  }
   container.addSeparatorComponents(
     createDivider()
   );
