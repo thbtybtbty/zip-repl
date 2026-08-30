@@ -27,6 +27,7 @@ import * as rps           from "./commands/rps.js";
 import * as coinflip      from "./commands/coinflip.js";
 import * as dice          from "./commands/dice.js";
 import * as blackjack     from "./commands/blackjack.js";
+import * as pvpblackjack  from "./commands/pvpblackjack.js";
 import * as setup         from "./commands/setup.js";
 import * as deposit       from "./commands/deposit.js";
 import * as withdraw      from "./commands/withdraw.js";
@@ -65,6 +66,7 @@ import { isFrozen, isGameDisabled } from "./botState.js";
 const GAMBLING_COMMANDS = new Set([
   "mines","towers","rps","coinflip","blackjack","wheel","slots","roulette",
   "crash","scratchcard","chickencrossing","colordice","dice","upgrader","keno","flip","hilo",
+  "pvpblackjack",
 ]);
 
 function isExpiredInteractionError(error: unknown): boolean {
@@ -76,7 +78,7 @@ function isExpiredInteractionError(error: unknown): boolean {
   );
 }
 
-const commands    = [balance, tip, mines, towers, rps, coinflip, dice, blackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, createcode, redeem, viewcodes, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms, rain, link, invites, cleardata];
+const commands    = [balance, tip, mines, towers, rps, coinflip, dice, blackjack, pvpblackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, createcode, redeem, viewcodes, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms, rain, link, invites, cleardata];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -130,6 +132,7 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "coinflip")      return await coinflip.execute(interaction);
       if (name === "dice")          return await dice.execute(interaction);
       if (name === "blackjack")     return await blackjack.execute(interaction);
+      if (name === "pvpblackjack")  return await pvpblackjack.execute(interaction);
       if (name === "setup")         return await setup.execute(interaction);
       if (name === "deposit")       return await deposit.execute(interaction);
       if (name === "withdraw") {
@@ -211,6 +214,14 @@ async function handleInteraction(interaction: Interaction) {
       if (id === "bj_hit")    return await blackjack.handleHit(bi);
       if (id === "bj_stand")  return await blackjack.handleStand(bi);
       if (id === "bj_double") return await blackjack.handleDouble(bi);
+
+      // PvP Blackjack
+      if (id === "pvpbj_join")   return await pvpblackjack.handleJoin(bi);
+      if (id === "pvpbj_bot")    return await pvpblackjack.handleCallBot(bi);
+      if (id === "pvpbj_cancel") return await pvpblackjack.handleCancel(bi);
+      if (id === "pvpbj_hit")    return await pvpblackjack.handleHit(bi);
+      if (id === "pvpbj_stand")  return await pvpblackjack.handleStand(bi);
+      if (id === "pvpbj_double") return await pvpblackjack.handleDouble(bi);
 
       // Deposit (player side)
       if (id.startsWith("dep_sent_"))   return await deposit.handleSent(bi, id.slice("dep_sent_".length));

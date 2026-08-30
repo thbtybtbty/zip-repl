@@ -925,3 +925,17 @@ mtime_ms = 1788096683612
 storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:372fe4b0-b482-4f6f-874c-e9c5f6ebe69e/f4624ee0-5144-4188-aecf-eced2580f7c2/f3b29909-6828-452e-a64a-883cb079bba6"
 storage_version_token = "1788096688517752"
 content_type = "text/plain"
+
+[[outputs]]
+id = "Z0WHz8_SeFnCNosbwhgJs"
+uri = "file://wispbyte-pvpblackjack-update.tar.gz"
+type = "unspecified"
+title = "WispByte PvP Blackjack update"
+description = "Ready-to-upload runtime package containing the rebuilt dist bundle, launcher, and npm metadata for /pvpblackjack."
+logical_id = "b754e8c7-5975-49ac-a6a7-6ccf2c810455"
+content_hash = "sha256:e88e7cbe3302e873b74072089393d10c6324694623265425b997d405797bb0df"
+size = 3172567
+mtime_ms = 1788102167066
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:372fe4b0-b482-4f6f-874c-e9c5f6ebe69e/b754e8c7-5975-49ac-a6a7-6ccf2c810455/7f0e5875-4c5e-4b7e-8fa6-08d412499b1d"
+storage_version_token = "1788102172442027"
+content_type = "application/octet-stream"
