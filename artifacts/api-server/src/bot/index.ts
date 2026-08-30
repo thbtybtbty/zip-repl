@@ -10,12 +10,15 @@ import {
   type StringSelectMenuInteraction,
   type UserSelectMenuInteraction,
   type ChannelSelectMenuInteraction,
+  type RoleSelectMenuInteraction,
+  type Guild,
   type GuildMember,
+  type PartialGuildMember,
 } from "discord.js";
-import { db, usersTable } from "@workspace/db";
+import { db, sqlite, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
-import { formatAmount, addLocked } from "./utils.js";
+import { formatAmount, setStarterLocked } from "./utils.js";
 import { getServerConfig } from "./botConfig.js";
 
 // ─── Commands ─────────────────────────────────────────────────────────────────
@@ -86,6 +89,7 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildInvites,
   ],
 });
 
@@ -478,6 +482,7 @@ async function handleInteraction(interaction: Interaction) {
       if (id === "game_enable_select")         return await gamedisable.handleEnableSelect(si);
       if (id === "aap_remove_select")          return await addadminperms.handleRemoveSelect(si);
       if (id.startsWith("setup_pick_")) return await setup.handlePick(si, id.slice("setup_pick_".length));
+      if (id.startsWith("setup_starter_lock_")) return await setup.handleStarterLock(si, id.slice("setup_starter_lock_".length));
     } catch (err) {
       if (isExpiredInteractionError(err)) {
         logger.warn({ selectId: id }, "Select interaction expired before Discord acknowledged it");
@@ -552,14 +557,31 @@ async function handleInteraction(interaction: Interaction) {
     if (id.startsWith("setup_deposit_")) return await setup.handleChannel(si, id.slice("setup_deposit_".length), "deposit");
     if (id.startsWith("setup_withdraw_")) return await setup.handleChannel(si, id.slice("setup_withdraw_".length), "withdraw");
   }
+  if (interaction.isRoleSelectMenu()) {
+    const ri = interaction as RoleSelectMenuInteraction;
+    const id = ri.customId;
+    if (id.startsWith("setup_verified_role_")) return await setup.handleRole(ri, id.slice("setup_verified_role_".length), "verified");
+    if (id.startsWith("setup_unverified_role_")) return await setup.handleRole(ri, id.slice("setup_unverified_role_".length), "unverified");
+  }
 }
 
 // ─── Welcome bonus ────────────────────────────────────────────────────────────
 const WELCOME_BONUS = 10_000_000; // 10m
+const inviteSnapshots = new Map<string, Map<string, number>>();
+
+async function cacheGuildInvites(guild: Guild) {
+  try {
+    const invites = await guild.invites.fetch();
+    inviteSnapshots.set(guild.id, new Map(invites.map((invite) => [invite.code, invite.uses ?? 0])));
+  } catch (err) {
+    logger.warn({ err, guildId: guild.id }, "Could not cache guild invites");
+  }
+}
 
 async function handleNewMember(member: GuildMember) {
   const userId   = member.id;
   const username = member.user.username;
+  const cfg = getServerConfig();
 
   // ── Welcome bonus (only for first-time joins) ─────────────────────────────
   const existing = await db
@@ -569,30 +591,72 @@ async function handleNewMember(member: GuildMember) {
     .limit(1);
 
   if (existing.length > 0) {
+    sqlite
+      .prepare("UPDATE invite_log SET left_server = 2 WHERE invited_id = ? AND left_server = 1")
+      .run(userId);
     logger.info({ userId, username }, "Returning member joined — no bonus awarded");
     return;
   }
 
+  const welcomeBonus = Math.max(0, cfg?.starterBalance ?? WELCOME_BONUS);
   await db.insert(usersTable).values({
     id: userId,
     username,
-    balance: WELCOME_BONUS,
+    balance: welcomeBonus,
   });
-  // Conditionally lock the starter balance based on server config
-  const cfg = getServerConfig();
-  if (cfg?.lockStarterBalance ?? true) {
-    await addLocked(userId, WELCOME_BONUS);
+  if (welcomeBonus > 0 && (cfg?.lockStarterBalance ?? true)) {
+    await setStarterLocked(userId, welcomeBonus);
   }
 
-  logger.info({ userId, username, bonus: WELCOME_BONUS }, "New member joined — welcome bonus awarded");
+  if (cfg?.unverifiedRoleId) await member.roles.add(cfg.unverifiedRoleId).catch(() => null);
 
   try {
-    await member.send(
-      `👋 Welcome to the server! You've received a **${formatAmount(WELCOME_BONUS)}** welcome bonus. Use \`/balance\` to check your balance!`,
-    );
+    const before = inviteSnapshots.get(member.guild.id) ?? new Map<string, number>();
+    const current = await member.guild.invites.fetch();
+    const used = current.find((invite) => (invite.uses ?? 0) > (before.get(invite.code) ?? 0));
+    if (used?.inviter?.id) {
+      sqlite
+        .prepare(
+          "INSERT INTO invite_log (inviter_id, invited_id, invite_code, account_created_at) VALUES (?, ?, ?, ?)",
+        )
+        .run(used.inviter.id, userId, used.code, Math.floor(member.user.createdTimestamp / 1000));
+    }
+    inviteSnapshots.set(member.guild.id, new Map(current.map((invite) => [invite.code, invite.uses ?? 0])));
+  } catch (err) {
+    logger.warn({ err, guildId: member.guild.id }, "Could not record invite join");
+  }
+
+  try {
+    if (welcomeBonus > 0) {
+      await member.send(
+        `👋 Welcome to the server! You've received a **${formatAmount(welcomeBonus)}** welcome bonus. Use \`/balance\` to check your balance!`,
+      );
+    }
   } catch {
     // User may have DMs disabled
   }
+}
+
+async function handleMemberLeave(member: GuildMember | PartialGuildMember) {
+  sqlite
+    .prepare("UPDATE invite_log SET left_server = 1 WHERE invited_id = ? AND left_server IN (0, 2)")
+    .run(member.id);
+}
+
+async function handleMemberUpdate(
+  oldMember: GuildMember | PartialGuildMember,
+  newMember: GuildMember | PartialGuildMember,
+) {
+  const cfg = getServerConfig();
+  if (!cfg?.verifiedRoleId) return;
+  if (!newMember.roles.cache.has(cfg.verifiedRoleId) || oldMember.roles.cache.has(cfg.verifiedRoleId)) return;
+
+  sqlite
+    .prepare(
+      "UPDATE invite_log SET verified = 1, verified_at = ? WHERE invited_id = ? AND verified = 0 AND left_server = 0",
+    )
+    .run(Math.floor(Date.now() / 1000), newMember.id);
+  if (cfg.unverifiedRoleId) await newMember.roles.remove(cfg.unverifiedRoleId).catch(() => null);
 }
 
 // ─── Start bot ────────────────────────────────────────────────────────────────
@@ -609,6 +673,7 @@ export async function startBot() {
 
   client.once(Events.ClientReady, async (c) => {
     logger.info({ tag: c.user.tag }, "Discord bot ready");
+    await Promise.all([...c.guilds.cache.values()].map((guild) => cacheGuildInvites(guild)));
 
     try {
       await rest.put(Routes.applicationCommands(clientId), { body: [] });
@@ -637,6 +702,18 @@ export async function startBot() {
     logger.info({ guildCount: guilds.length, commandCount: commandData.length }, "Guild command registration complete");
   });
 
+  client.on(Events.InviteCreate, (invite) => {
+    if (invite.guild) void cacheGuildInvites(invite.guild);
+  });
+  client.on(Events.InviteDelete, (invite) => {
+    if (invite.guild) void cacheGuildInvites(invite.guild);
+  });
+  client.on(Events.GuildMemberRemove, (member) => {
+    handleMemberLeave(member).catch((err) => logger.warn({ err, userId: member.id }, "Could not record member leave"));
+  });
+  client.on(Events.GuildMemberUpdate, (oldMember, newMember) => {
+    handleMemberUpdate(oldMember, newMember).catch((err) => logger.warn({ err, userId: newMember.id }, "Could not process verified role"));
+  });
   client.on(Events.GuildMemberAdd, (member: GuildMember) => {
     handleNewMember(member).catch((err) => {
       logger.error({ err, userId: member.id }, "Error handling new member join");

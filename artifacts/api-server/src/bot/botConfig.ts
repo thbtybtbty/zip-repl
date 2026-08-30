@@ -14,6 +14,7 @@ export interface ServerConfig {
   robloxUser:        string;
   minDeposit?:       number; // minimum deposit amount in gems (default: none)
   minWithdraw?:      number; // minimum withdrawal amount in gems (default: none)
+  starterBalance?:   number; // welcome bonus amount for new members (default: 10M)
   rakebackRate?:     number; // rakeback percentage; undefined disables rakeback
   affiliateRate?:    number; // affiliate percentage; undefined disables affiliates
   affiliateChannelId?: string;
@@ -23,6 +24,8 @@ export interface ServerConfig {
   lockCodes?:           boolean; // lock promo code earnings (default: true)
   lockStarterBalance?:  boolean; // lock the 10M welcome bonus (default: true)
   lockAddBalance?:      boolean; // lock gems added via /addbalance (default: false)
+  verifiedRoleId?:       string; // role applied when an invited member is verified
+  unverifiedRoleId?:     string; // role applied to a newly tracked invite
 }
 
 // ─── Server config (stored in SQLite config table) ───────────────────────────

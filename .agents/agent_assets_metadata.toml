@@ -995,3 +995,17 @@ mtime_ms = 1788131014379
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:92764364-a2af-46bc-a1ec-2fedbb5adbca/e5fb6528-b66c-4e93-837c-f6e5f6445ade/060521f6-10d5-4de1-9f3a-b361d1859763"
 storage_version_token = "1788131017999912"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "JiST_4iMYeD-ynEMWio7y"
+uri = "file://updated_assets/wispbyte-starter-lock-invites-2026-08-31.tar.gz"
+type = "unspecified"
+title = "WispByte package — starter lock and invite roles"
+description = "Final rebuilt archive with configurable starter-balance withdrawal locking, approved-deposit unlock behavior, verified/unverified invite roles, invite tracking, current PvP Blackjack, and returning-member role preservation. Excludes secrets, databases, admin files, and node_modules."
+logical_id = "3369667c-5006-4ef2-9a53-26ea6986f114"
+content_hash = "sha256:29d240c12b99ec9025e33713841db0c0ae1fffddc27dc5e718fe70dd42601b5c"
+size = 3179136
+mtime_ms = 1788133708007
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:92764364-a2af-46bc-a1ec-2fedbb5adbca/3369667c-5006-4ef2-9a53-26ea6986f114/3da490d0-bf99-48f4-8a47-8a30ed1242be"
+storage_version_token = "1788133728429423"
+content_type = "application/octet-stream"

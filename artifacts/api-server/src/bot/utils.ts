@@ -127,6 +127,22 @@ export async function addLocked(userId: string, amount: number): Promise<void> {
     .where(eq(usersTable.id, userId));
 }
 
+/** Hold the welcome bonus separately so an approved deposit can unlock only it. */
+export async function setStarterLocked(userId: string, amount: number): Promise<void> {
+  await db
+    .update(usersTable)
+    .set({
+      starterLockedBalance: Math.max(0, amount),
+      updatedAt: new Date(),
+    })
+    .where(eq(usersTable.id, userId));
+}
+
+/** Release a user's welcome bonus after an approved deposit. */
+export async function unlockStarterLocked(userId: string): Promise<void> {
+  await setStarterLocked(userId, 0);
+}
+
 /** Decrease locked balance by up to `amount` (never below 0). Internal — called by recordBet. */
 async function unlockWager(userId: string, amount: number): Promise<void> {
   if (amount <= 0) return;
@@ -187,6 +203,7 @@ export async function addDeposited(userId: string, amount: number): Promise<void
       updatedAt: new Date(),
     })
     .where(eq(usersTable.id, userId));
+  if (amount > 0) await unlockStarterLocked(userId);
 }
 
 /** Increment lifetime withdrawn counter (call on approved withdrawal). */

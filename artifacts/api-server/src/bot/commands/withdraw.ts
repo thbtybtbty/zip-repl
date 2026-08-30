@@ -84,13 +84,23 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     });
   }
 
-  const lockedBalance = dbUser.lockedBalance ?? 0;
+  const wagerLockedBalance = dbUser.lockedBalance ?? 0;
+  const starterLockedBalance = dbUser.starterLockedBalance ?? 0;
+  const lockedBalance = wagerLockedBalance + starterLockedBalance;
   const withdrawable  = Math.max(0, dbUser.balance - lockedBalance);
   if (amount > withdrawable) {
+    const lockReasons = [
+      starterLockedBalance > 0
+        ? `**${formatAmount(starterLockedBalance)} 💎** is starter balance locked until you make an approved deposit`
+        : "",
+      wagerLockedBalance > 0
+        ? `**${formatAmount(wagerLockedBalance)} 💎** is bonus balance that must be wagered at **1.8× or higher**`
+        : "",
+    ].filter(Boolean).join("\n");
     return interaction.editReply({
       embeds: [errorEmbed(
         `You can only withdraw **${formatAmount(withdrawable)} 💎** right now.\n\n` +
-        `**${formatAmount(lockedBalance)} 💎** of your balance is locked (welcome bonus, rain winnings, promo codes, or tips received) and must be wagered at **1.8× or higher** before it can be withdrawn.`,
+        `${lockReasons || `**${formatAmount(lockedBalance)} 💎** of your balance is currently locked.`}`,
       )],
     });
   }

@@ -1,9 +1,10 @@
 import {
   SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder,
   ChannelSelectMenuBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
+  RoleSelectMenuBuilder,
   ModalBuilder, TextInputBuilder, TextInputStyle, ChannelType,
   type ChatInputCommandInteraction, type ButtonInteraction, type StringSelectMenuInteraction,
-  type ChannelSelectMenuInteraction, type ModalSubmitInteraction,
+  type ChannelSelectMenuInteraction, type RoleSelectMenuInteraction, type ModalSubmitInteraction,
 } from "discord.js";
 import { COLORS, errorEmbed, parseAmount } from "../utils.js";
 import { isAdmin, getServerConfig, saveServerConfig, type ServerConfig } from "../botConfig.js";
@@ -21,10 +22,11 @@ function summary(cfg: Partial<ServerConfig>) {
     `📥 Deposit: ${ch(cfg.depositChannelId)}`, `📤 Withdraw: ${ch(cfg.withdrawChannelId)}`,
     `📋 Requests: ${ch(cfg.requestChannelId)}`, `🪙 Flip: ${ch(cfg.flipChannelId)}`,
     `🎮 Roblox: \`${cfg.robloxUser ?? "Not set"}\``, `🎁 Affiliate channel: ${ch(cfg.affiliateChannelId)}`,
+    `🛡️ Verified role: ${ro(cfg.verifiedRoleId)}`, `🔒 Unverified role: ${ro(cfg.unverifiedRoleId)}`,
     `📥 Min deposit: ${amount(cfg.minDeposit)}`, `📤 Min withdraw: ${amount(cfg.minWithdraw)}`,
     `💸 Rakeback: ${rate(cfg.rakebackRate)}`, `🎁 Affiliate rate: ${rate(cfg.affiliateRate)}`,
     `🌧️ Rain: ${ch(cfg.rainChannelId)} · 🎰 Codes: ${ch(cfg.codesChannelId)}`,
-    `🔒 Locks: tips ${cfg.lockTips ?? true ? "on" : "off"} · rain ${cfg.lockRain ?? true ? "on" : "off"} · codes ${cfg.lockCodes ?? true ? "on" : "off"}`,
+    `🔒 Locks: tips ${cfg.lockTips ?? true ? "on" : "off"} · rain ${cfg.lockRain ?? true ? "on" : "off"} · codes ${cfg.lockCodes ?? true ? "on" : "off"} · starter ${cfg.lockStarterBalance ?? true ? "until deposit" : "off"}`,
   ].join("\n");
 }
 function panel(title: string, description: string, cfg?: Partial<ServerConfig>) {
@@ -64,6 +66,40 @@ function optionalModal(id: string, cfg: Partial<ServerConfig>) {
     field("affiliate_rate", "Affiliate percentage (blank disables)", cfg.affiliateRate?.toString()),
   );
   return modal;
+}
+function rolesPanel(id: string, cfg: Partial<ServerConfig>) {
+  return {
+    ...panel("⚙️ Setup · Step 3 of 4", "Choose the roles used by `/invites`. New members receive the unverified role; moderators can assign the verified role when they approve a member.", cfg),
+    components: [
+      new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(new RoleSelectMenuBuilder().setCustomId(`setup_verified_role_${id}`).setPlaceholder("Select verified role").setMinValues(1).setMaxValues(1)),
+      new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(new RoleSelectMenuBuilder().setCustomId(`setup_unverified_role_${id}`).setPlaceholder("Select unverified role").setMinValues(1).setMaxValues(1)),
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId(`setup_roles_done_${id}`).setLabel("Continue").setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId(`setup_cancel_${id}`).setLabel("Cancel").setStyle(ButtonStyle.Secondary),
+      ),
+    ],
+  };
+}
+function optionalStep(id: string, cfg: Partial<ServerConfig>) {
+  const lockMenu = new StringSelectMenuBuilder()
+    .setCustomId(`setup_starter_lock_${id}`)
+    .setPlaceholder("Starter balance withdrawal lock")
+    .setMinValues(1)
+    .setMaxValues(1)
+    .addOptions(
+      new StringSelectMenuOptionBuilder().setLabel("Lock until approved deposit").setValue("lock").setEmoji("🔒"),
+      new StringSelectMenuOptionBuilder().setLabel("Allow starter balance withdrawal").setValue("unlock").setEmoji("🔓"),
+    );
+  return {
+    ...panel("⚙️ Setup · Step 4 of 4", "Optional settings are next. You can skip this step; setup will keep existing values.", cfg),
+    components: [
+      new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(lockMenu),
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId(`setup_optional_${id}`).setLabel("Configure optional settings").setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId(`setup_skip_${id}`).setLabel("Skip optional settings").setStyle(ButtonStyle.Secondary),
+      ),
+    ],
+  };
 }
 function editSteps(id: string) {
   const menu = new StringSelectMenuBuilder().setCustomId(`setup_pick_${id}`).setPlaceholder("Select step(s) to change").setMinValues(1).setMaxValues(3).addOptions(
@@ -109,7 +145,24 @@ export async function handleCoreModal(interaction: ModalSubmitInteraction, id: s
   session.cfg.flipChannelId = readId(interaction.fields.getTextInputValue("flip_channel"));
   session.cfg.robloxUser = interaction.fields.getTextInputValue("roblox_user").trim();
   session.cfg.affiliateChannelId = readId(interaction.fields.getTextInputValue("affiliate_channel"));
-  await interaction.reply({ ...panel("⚙️ Setup · Step 3 of 3", "Optional settings are next. You can skip this step; setup will keep existing values.", session.cfg), ephemeral: true, components: [new ActionRowBuilder<ButtonBuilder>().addComponents(new ButtonBuilder().setCustomId(`setup_optional_${id}`).setLabel("Configure optional settings").setStyle(ButtonStyle.Primary), new ButtonBuilder().setCustomId(`setup_skip_${id}`).setLabel("Skip optional settings").setStyle(ButtonStyle.Secondary))] });
+  await interaction.reply({ ...rolesPanel(id, session.cfg), ephemeral: true });
+}
+export async function handleRole(interaction: RoleSelectMenuInteraction, id: string, kind: "verified" | "unverified") {
+  const session = sessions.get(id);
+  if (!session || session.adminId !== interaction.user.id) return interaction.reply({ content: "❌ This setup session expired.", ephemeral: true });
+  session.cfg[kind === "verified" ? "verifiedRoleId" : "unverifiedRoleId"] = interaction.values[0];
+  return interaction.update(rolesPanel(id, session.cfg));
+}
+export async function handleRolesDone(interaction: ButtonInteraction, id: string) {
+  const session = sessions.get(id);
+  if (!session || session.adminId !== interaction.user.id) return interaction.reply({ content: "❌ This setup session expired.", ephemeral: true });
+  return interaction.update(optionalStep(id, session.cfg));
+}
+export async function handleStarterLock(interaction: StringSelectMenuInteraction, id: string) {
+  const session = sessions.get(id);
+  if (!session || session.adminId !== interaction.user.id) return interaction.reply({ content: "❌ This setup session expired.", ephemeral: true });
+  session.cfg.lockStarterBalance = interaction.values[0] === "lock";
+  return interaction.update(optionalStep(id, session.cfg));
 }
 export async function handleOptionalModal(interaction: ModalSubmitInteraction, id: string) {
   const session = sessions.get(id);
@@ -130,6 +183,7 @@ export async function handleButton(interaction: ButtonInteraction, id: string, a
   if (action === "cancel") return handleCancelSetup(interaction, id);
   if (action === "all") return interaction.update(step1(id, session.cfg));
   if (action === "specific") return interaction.update({ ...panel("⚙️ Change specific setup steps", "Select one or more steps. Unselected values will stay unchanged.", session.cfg), ...editSteps(id) });
+  if (action === "roles") return handleRolesDone(interaction, id);
   if (action === "optional") return interaction.showModal(optionalModal(id, session.cfg));
   if (action === "skip") return finish(interaction, id, session.cfg);
 }
@@ -139,10 +193,10 @@ export async function handlePick(interaction: StringSelectMenuInteraction, id: s
   session.selected = interaction.values;
   if (session.selected.includes("channels")) return interaction.update(step1(id, session.cfg));
   if (session.selected.includes("core")) return interaction.showModal(coreModal(id, session.cfg));
-  return interaction.showModal(optionalModal(id, session.cfg));
+  return interaction.update(optionalStep(id, session.cfg));
 }
 async function finish(interaction: ButtonInteraction | ModalSubmitInteraction, id: string, cfg: Partial<ServerConfig>) {
-  if (!cfg.depositChannelId || !cfg.withdrawChannelId || !cfg.requestChannelId || !cfg.flipChannelId || !cfg.robloxUser || !cfg.affiliateChannelId) return interaction.reply({ content: "❌ Complete all required setup fields first.", ephemeral: true });
+  if (!cfg.depositChannelId || !cfg.withdrawChannelId || !cfg.requestChannelId || !cfg.flipChannelId || !cfg.robloxUser || !cfg.affiliateChannelId || !cfg.verifiedRoleId || !cfg.unverifiedRoleId) return interaction.reply({ content: "❌ Complete all required setup fields, including verified and unverified roles.", ephemeral: true });
   saveServerConfig(cfg as ServerConfig); sessions.delete(id);
   return interaction.editReply({ ...panel("✅ Setup saved successfully", "All setup changes have been saved.", cfg), components: [] });
 }

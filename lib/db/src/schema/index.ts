@@ -12,6 +12,7 @@ export const usersTable = sqliteTable("users", {
   wagered:       integer("wagered").notNull().default(0),         // lifetime amount bet
   profit:        integer("profit").notNull().default(0),           // lifetime net profit (can be negative)
   lockedBalance: integer("locked_balance").notNull().default(0),    // bonus gems (rain/codes/tips/welcome) that must be wagered ≥1.8× before withdrawal
+  starterLockedBalance: integer("starter_locked_balance").notNull().default(0), // welcome bonus held until the first approved deposit
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
