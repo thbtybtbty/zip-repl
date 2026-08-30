@@ -138609,7 +138609,7 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
       creatorStake = totalStake(game, game.creator),
       opponentStake = totalStake(game, game.opponent),
       score = participantMention(getParticipant(game, game.creator.id)) + " " + (game.wins[game.creator.id] ?? 0) + " — " + (game.wins[game.opponent.id] ?? 0) + " " + participantMention(getParticipant(game, game.opponent.id)),
-      payoutText = tied ? "Each player was refunded their stake." : "💰 **Winner payout**  `" + formatAmount(game.payout) + "`  *(after " + formatAmount(game.tax) + " tax)*";
+      payoutText = tied ? "Each player was refunded their stake." : "💰 **Winner payout**  `" + formatAmount(game.payout) + "`";
     return new ContainerBuilder().setAccentColor(tied ? COLORS.warning : COLORS.success).addTextDisplayComponents(text(`## \u{1F0CF} PvP Blackjack \u2014 ${status}`)).addTextDisplayComponents(
       text(
         [
@@ -138643,7 +138643,7 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
   }
   async function publish(game, interaction) {
     if (interaction) {
-      interaction.deferred || interaction.replied ? await interaction.editReply(payload(game, game.phase === "finished" ? "final" : game.phase === "lobby" ? "lobby" : "active")) : await interaction.update(payload(game, game.phase === "finished" ? "final" : game.phase === "lobby" ? "lobby" : "active"));
+      interaction.deferred || interaction.replied ? await interaction.editReply(payload(game, game.phase === "finished" ? "final" : game.phase === "lobby" ? "lobby" : game.phase === "cancelled" ? "cancelled" : "active")) : await interaction.update(payload(game, game.phase === "finished" ? "final" : game.phase === "lobby" ? "lobby" : game.phase === "cancelled" ? "cancelled" : "active"));
       return;
     }
     game.message && await game.message.edit(payload(game, game.phase === "finished" ? "final" : game.phase === "cancelled" ? "cancelled" : "active"));
