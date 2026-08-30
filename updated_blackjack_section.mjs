@@ -357,6 +357,29 @@ function drawCards(ctx, hand, y, hiddenSecondCard) {
       startX = (IMAGE_WIDTH2 - totalWidth) / 2;
     }
   }
+  if (startX < CARD_TEXT_SAFE_RIGHT) {
+    const stackAvailableWidth = rightEdge - CARD_TEXT_SAFE_RIGHT;
+    const stackOverlap =
+      hand.length > 1
+        ? Math.max(
+            28,
+            Math.min(
+              50,
+              (stackAvailableWidth - CARD_WIDTH) /
+                (hand.length - 1)
+            )
+          )
+        : 0;
+    drawStackedCards(
+      ctx,
+      hand,
+      CARD_TEXT_SAFE_RIGHT,
+      y,
+      stackOverlap,
+      hiddenSecondCard
+    );
+    return;
+  }
   hand.forEach(
     (card, index) => {
       const x = startX + index * (cardWidth + gap);
@@ -381,17 +404,34 @@ function drawCards(ctx, hand, y, hiddenSecondCard) {
     }
   );
 }
-function drawStackedCards(ctx, hand, x, y) {
-  const overlap = 50;
+function drawStackedCards(
+  ctx,
+  hand,
+  x,
+  y,
+  overlap = 50,
+  hiddenSecondCard = false
+) {
   hand.forEach((card, index) => {
-    drawCard(
-      ctx,
-      card,
-      x + index * overlap,
-      y,
-      CARD_WIDTH,
-      CARD_HEIGHT
-    );
+    const cardX = x + index * overlap;
+    if (hiddenSecondCard && index === 1) {
+      drawHiddenCard(
+        ctx,
+        cardX,
+        y,
+        CARD_WIDTH,
+        CARD_HEIGHT
+      );
+    } else {
+      drawCard(
+        ctx,
+        card,
+        cardX,
+        y,
+        CARD_WIDTH,
+        CARD_HEIGHT
+      );
+    }
   });
 }
 function isSplitGame(game) {
@@ -624,7 +664,7 @@ function blackjackImage(game, status, showDealerFull) {
     43
   );
   const displayedBet = isSplitGame(game)
-    ? game.bet
+    ? game.bet * 2
     : game.bet * (currentDoubled(game) ? 2 : 1);
   const betText = isSplitGame(game)
     ? `Bet: ${formatAmount(displayedBet)} (split)`
