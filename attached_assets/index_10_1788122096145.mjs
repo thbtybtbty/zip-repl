@@ -136296,8 +136296,6 @@ var import_discord30 = __toESM(require_src2(), 1);
 var PAGE_SIZE = 10;
 var GAME_COMMANDS = [
   "blackjack",
-  "pvpblackjack",
-  "pvpblackjack",
   "mines",
   "towers",
   "rps",

@@ -1,0 +1,40 @@
+[22:48:07][boot] Starting GemSpin...
+[22:48:08]file:///home/container/artifacts/api-server/dist/index.mjs:69124
+[22:48:08]return errors.length === 0 ? Result.ok(transformed) : Result.err(new CombinedPropertyError(errors, this.validatorOptions));
+[22:48:08]^
+[22:48:08]CombinedPropertyError: Received one or more errors
+[22:48:08]at _ArrayValidator.handle (file:///home/container/artifacts/api-server/dist/index.mjs:69124:74)
+[22:48:08]at _ArrayValidator.parse (file:///home/container/artifacts/api-server/dist/index.mjs:68852:94)
+[22:48:08]at MixedClass.addChoices (file:///home/container/artifacts/api-server/dist/index.mjs:75262:26)
+[22:48:08]at file:///home/container/artifacts/api-server/dist/index.mjs:136371:9
+[22:48:08]at MixedClass._sharedAddOptionMethod (file:///home/container/artifacts/api-server/dist/index.mjs:75569:54)
+[22:48:08]at MixedClass.addStringOption (file:///home/container/artifacts/api-server/dist/index.mjs:75541:21)
+[22:48:08]at file:///home/container/artifacts/api-server/dist/index.mjs:136368:3
+[22:48:08] at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+[22:48:08] at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)
+[22:48:08] at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {
+[22:48:08]errors: [
+[22:48:08][
+[22:48:08]0,
+[22:48:08]CombinedPropertyError: Received one or more errors
+[22:48:08]at _ObjectValidator2.handleIgnoreStrategy (file:///home/container/artifacts/api-server/dist/index.mjs:69951:76)
+[22:48:08]at _ObjectValidator2.handleStrategy (file:///home/container/artifacts/api-server/dist/index.mjs:69815:51)
+[22:48:08]at _ObjectValidator2.handle (file:///home/container/artifacts/api-server/dist/index.mjs:69921:21)
+[22:48:08]at _ObjectValidator2.run (file:///home/container/artifacts/api-server/dist/index.mjs:68838:27)
+[22:48:08]at _ArrayValidator.handle (file:///home/container/artifacts/api-server/dist/index.mjs:69118:41)
+[22:48:08]at _ArrayValidator.parse (file:///home/container/artifacts/api-server/dist/index.mjs:68852:94)
+[22:48:08]at MixedClass.addChoices (file:///home/container/artifacts/api-server/dist/index.mjs:75262:26)
+[22:48:08]at file:///home/container/artifacts/api-server/dist/index.mjs:136371:9
+[22:48:08]at MixedClass._sharedAddOptionMethod (file:///home/container/artifacts/api-server/dist/index.mjs:75569:54)
+[22:48:08]at MixedClass.addStringOption (file:///home/container/artifacts/api-server/dist/index.mjs:75541:21) {
+[22:48:08]errors: [ [ 'name', [ValidationError] ] ]
+[22:48:08]}
+[22:48:08]]
+[22:48:08]]
+[22:48:08]}
+[22:48:08]Node.js v20.20.2
+[22:48:08]Server marked as offline
+[22:48:09][Wispbyte]: ---------- Detected server process in a crashed state! ----------
+[22:48:09][Wispbyte]: Exit code: 1
+[22:48:09][Wispbyte]: Out of memory: false
+[22:48:09][Wispbyte]: Aborting automatic restart, last crash occurred less than 60 seconds ago.
