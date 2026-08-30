@@ -911,3 +911,17 @@ mtime_ms = 1788096160216
 storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:372fe4b0-b482-4f6f-874c-e9c5f6ebe69e/7db034c1-14dc-4269-bfc1-5286fb7f68dc/520ce503-fb63-40ed-8e39-76f2553b05f8"
 storage_version_token = "1788096165025617"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "PQtF45EzK1VNV722sdsxQ"
+uri = "file://blackjack-split-router-patch.txt"
+type = "text"
+title = "Blackjack Split router patch"
+description = "One-line outer interaction-router addition required so bj_split calls the exported Split handler."
+logical_id = "f4624ee0-5144-4188-aecf-eced2580f7c2"
+content_hash = "sha256:7601c1e556b79fcc0ad93093b64b16a8212a497b1574ce40ad7d7c5e120acf4d"
+size = 637
+mtime_ms = 1788096683612
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:372fe4b0-b482-4f6f-874c-e9c5f6ebe69e/f4624ee0-5144-4188-aecf-eced2580f7c2/f3b29909-6828-452e-a64a-883cb079bba6"
+storage_version_token = "1788096688517752"
+content_type = "text/plain"

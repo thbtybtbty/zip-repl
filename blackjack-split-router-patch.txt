@@ -1,0 +1,16 @@
+BLACKJACK SPLIT ROUTER PATCH
+
+Your main bundled bot interaction router must dispatch the Split button.
+Add this line immediately after the existing bj_double route:
+
+  if (id === "bj_split") return await handleSplit(bi);
+
+The surrounding section should look like:
+
+  if (id === "bj_hit") return await handleHit(bi);
+  if (id === "bj_stand") return await handleStand(bi);
+  if (id === "bj_double") return await handleDouble(bi);
+  if (id === "bj_split") return await handleSplit(bi);
+
+Make sure the blackjack section copied into the same bundle is the updated
+section from blackjack-side-bets-section-fixed.zip, which exports handleSplit.
