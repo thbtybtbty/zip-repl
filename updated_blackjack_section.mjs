@@ -382,7 +382,7 @@ function drawCards(ctx, hand, y, hiddenSecondCard) {
   );
 }
 function drawStackedCards(ctx, hand, x, y) {
-  const overlap = 38;
+  const overlap = 50;
   hand.forEach((card, index) => {
     drawCard(
       ctx,
@@ -423,6 +423,7 @@ function canSplitHand(game) {
 }
 function canDoubleHand(game) {
   return (
+    !isSplitGame(game) &&
     currentPlayerHand(game).length === 2 &&
     !currentDoubled(game)
   );
@@ -456,25 +457,6 @@ function handResultColor(status) {
     default:
       return "#ffffff";
   }
-}
-function getSplitPanelLine(game) {
-  if (!isSplitGame(game)) return "";
-  return game.playerHands
-    .map((hand, index) => {
-      const arrow =
-        game.handStatuses?.[index] === "active" &&
-        game.activeHandIndex === index
-          ? "➡️ "
-          : "";
-      const label = `Your hand ${index + 1}`;
-      const value = handValue(hand);
-      const result = game.handStatuses?.[index] &&
-        game.handStatuses[index] !== "active"
-        ? ` — ${handResultLabel(game.handStatuses[index])}`
-        : "";
-      return `${arrow}**${label}:** \`${value}\`${result}`;
-    })
-    .join("  |  ");
 }
 function getSplitImageResult(game) {
   return game.handStatuses
@@ -641,8 +623,12 @@ function blackjackImage(game, status, showDealerFull) {
     IMAGE_WIDTH2 / 2,
     43
   );
-  const displayedBet = game.bet * (currentDoubled(game) ? 2 : 1);
-  const betText = `Bet: ${formatAmount(displayedBet)}${currentDoubled(game) ? " (doubled)" : ""}`;
+  const displayedBet = isSplitGame(game)
+    ? game.bet
+    : game.bet * (currentDoubled(game) ? 2 : 1);
+  const betText = isSplitGame(game)
+    ? `Bet: ${formatAmount(displayedBet)} (split)`
+    : `Bet: ${formatAmount(displayedBet)}${currentDoubled(game) ? " (doubled)" : ""}`;
   const sideBetText = getSideBetText(game, status);
   ctx.font = "bold 21px Arial";
   const betPaddingX = 18;
@@ -739,10 +725,36 @@ function blackjackImage(game, status, showDealerFull) {
       ctx.fillStyle = handResultColor(statusForHand);
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
+      const handLabelX = x + (isActive ? 48 : 0);
+      if (isActive) {
+        ctx.fillStyle = "#facc15";
+        drawRoundedRect(
+          ctx,
+          x - 8,
+          344,
+          42,
+          30,
+          8
+        );
+        ctx.fillStyle = "#071a12";
+        ctx.beginPath();
+        ctx.moveTo(x + 2, 354);
+        ctx.lineTo(x + 18, 354);
+        ctx.lineTo(x + 18, 349);
+        ctx.lineTo(x + 32, 359);
+        ctx.lineTo(x + 18, 369);
+        ctx.lineTo(x + 18, 364);
+        ctx.lineTo(x + 2, 364);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.fillStyle = handResultColor(statusForHand);
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
       ctx.font = "bold 22px Arial";
       ctx.fillText(
-        `${isActive ? "➡️ " : ""}YOUR HAND ${index + 1}`,
-        x,
+        `YOUR HAND ${index + 1}`,
+        handLabelX,
         350
       );
       ctx.font = "bold 20px Arial";
@@ -903,15 +915,13 @@ function buildBlackjackContainer(game, status, showGameplayButtons, playAgainDis
       `## ${meta.title}`
     )
   );
-  const splitLine = getSplitPanelLine(game);
-  const splitPanelText = splitLine ? `\n\ud83c\udccf ${splitLine}` : "";
   if (status === "player_win" || status === "dealer_bust" || status === "push" || status === "blackjack") {
     const sideBetLine = getSideBetPanelLine(game);
     container.addTextDisplayComponents(
       createText(
         `\u{1F48E} **Bet:** \`${formatAmount(
           bet
-        )}\`${currentDoubled(game) ? "  *(doubled)*" : ""}${sideBetLine}${splitPanelText}
+        )}\`${currentDoubled(game) ? "  *(doubled)*" : ""}${sideBetLine}
 \u2728 **Multiplier:** \`${multiplier.toFixed(
           2
         )}x (${formatAmount(
@@ -925,7 +935,7 @@ function buildBlackjackContainer(game, status, showGameplayButtons, playAgainDis
       createText(
         `\u{1F48E} **Bet:** \`${formatAmount(
           bet
-        )}\`${currentDoubled(game) ? "  *(doubled)*" : ""}${sideBetLine}${splitPanelText}`
+        )}\`${currentDoubled(game) ? "  *(doubled)*" : ""}${sideBetLine}`
       )
     );
   }
@@ -971,7 +981,7 @@ function buildContainerAnimating(game, shownDealerCards) {
     createText(
       `\u{1F48E} **Bet:** \`${formatAmount(
         bet
-        )}\`${currentDoubled(game) ? "  *(doubled)*" : ""}${getSideBetText(game, "active") ? `\n\u{1F3B2} **${getSideBetText(game, "active")}**` : ""}${getSplitPanelLine(game) ? `\n\ud83c\udccf ${getSplitPanelLine(game)}` : ""}`
+        )}\`${currentDoubled(game) ? "  *(doubled)*" : ""}${getSideBetText(game, "active") ? `\n\u{1F3B2} **${getSideBetText(game, "active")}**` : ""}`
     )
   );
   container.addSeparatorComponents(

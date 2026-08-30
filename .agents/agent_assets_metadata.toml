@@ -902,14 +902,14 @@ content_type = "application/octet-stream"
 id = "BGLnh3W7PTZdw8iozNTEP"
 uri = "file://blackjack-side-bets-section-fixed.zip"
 type = "unspecified"
-title = "Blackjack section with Split"
-description = "Standalone blackjack section with two-hand splitting, active-hand arrow layout, hidden unavailable Double/Split buttons, side-bet replay carryover, and matching-size image bet text."
+title = "Updated Blackjack split layout"
+description = "Standalone blackjack section with a clearer active-hand arrow, wider split-card spacing, no Double Down on split hands, split bet labeling in the image, and no split hand-summary line in the panel."
 logical_id = "7db034c1-14dc-4269-bfc1-5286fb7f68dc"
-content_hash = "sha256:693987b93b301b9f00823c333170b57638a6abae1e8b6f399cd1b8749ecab80f"
-size = 9339
-mtime_ms = 1788096160216
-storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:372fe4b0-b482-4f6f-874c-e9c5f6ebe69e/7db034c1-14dc-4269-bfc1-5286fb7f68dc/520ce503-fb63-40ed-8e39-76f2553b05f8"
-storage_version_token = "1788096165025617"
+content_hash = "sha256:cd97e15c7381c5008e552e44d0fdb58753c763d8b995d459e7ec3531ba5d6635"
+size = 9273
+mtime_ms = 1788100022554
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:372fe4b0-b482-4f6f-874c-e9c5f6ebe69e/7db034c1-14dc-4269-bfc1-5286fb7f68dc/188acd53-0aa5-4897-866a-b033d007d9aa"
+storage_version_token = "1788100030769297"
 content_type = "application/octet-stream"
 
 [[outputs]]
