@@ -138614,10 +138614,6 @@ delete globalThis.__pvpDiscord;
 delete globalThis.__pvpCanvas;
 delete globalThis.__pvpDeps;
 
-Discord;
-delete globalThis.__pvpCanvas;
-delete globalThis.__pvpDeps;
-
 // src/bot/index.ts
 var GAMBLING_COMMANDS = /* @__PURE__ */ new Set([
   "mines",
