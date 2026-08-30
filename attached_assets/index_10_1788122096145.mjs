@@ -138170,6 +138170,7 @@ async function handleCancel6(interaction) {
 globalThis.__pvpDiscord = import_discord42;
 globalThis.__pvpCanvas = { createCanvas: createCanvas3 };
 globalThis.__pvpDeps = { COLORS, addBalance, errorEmbed, formatAmount, getOrCreateUser, parseAmount, recordBet };
+globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
 (() => {
   const { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, MediaGalleryBuilder, MediaGalleryItemBuilder, MessageFlags, SeparatorBuilder, SlashCommandBuilder, TextDisplayBuilder } = globalThis.__pvpDiscord, { createCanvas } = globalThis.__pvpCanvas, { COLORS, addBalance, errorEmbed, formatAmount, getOrCreateUser, parseAmount, recordBet } = globalThis.__pvpDeps, gamesByMessage = /* @__PURE__ */ new Map(), gameByUser = /* @__PURE__ */ new Map(), RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"], SUITS = ["\u2660", "\u2665", "\u2666", "\u2663"], IMAGE_WIDTH = 1200, IMAGE_HEIGHT = 650, CARD_WIDTH = 125;
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -138243,13 +138244,43 @@ globalThis.__pvpDeps = { COLORS, addBalance, errorEmbed, formatAmount, getOrCrea
       hideSecond && index === 1 ? drawHiddenCard(ctx, x, y, width, height) : drawCard(ctx, card, x, y, width, height);
     });
   }
+  function drawPvpFinalResult(ctx, game) {
+    const creatorName = getNameById(game, game.creator.id);
+    const opponentName = getNameById(game, game.opponent.id);
+    const creatorScore = game.wins[game.creator.id] ?? 0;
+    const opponentScore = game.wins[game.opponent.id] ?? 0;
+    const winnerName = game.winnerId ? getNameById(game, game.winnerId) + " WINS" : "PUSH";
+    const scoreText = creatorName + "  " + creatorScore + "   \u2014   " + opponentScore + "  " + opponentName;
+    ctx.save();
+    ctx.fillStyle = "rgba(3, 12, 9, 0.94)";
+    roundedRect(ctx, 65, 495, IMAGE_WIDTH - 130, 125, 20);
+    ctx.strokeStyle = game.winnerId ? "#4ade80" : "#facc15";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(65, 495, IMAGE_WIDTH - 130, 125, 20);
+    ctx.stroke();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = game.winnerId ? "#4ade80" : "#facc15";
+    ctx.font = "900 30px Arial";
+    ctx.fillText(winnerName, IMAGE_WIDTH / 2, 528);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 22px Arial";
+    if (ctx.measureText(scoreText).width > IMAGE_WIDTH - 180) ctx.font = "700 17px Arial";
+    ctx.fillText(scoreText, IMAGE_WIDTH / 2, 570);
+    ctx.fillStyle = "#aebbd0";
+    ctx.font = "italic 17px Arial";
+    ctx.fillText("FINAL SCORE", IMAGE_WIDTH / 2, 602);
+    ctx.restore();
+  }
+
   function pvpImage(game, showDealerFull, overlay = "") {
     const round = game.round, canvas = createCanvas(IMAGE_WIDTH, IMAGE_HEIGHT), ctx = canvas.getContext("2d");
     ctx.fillStyle = "#071a12", ctx.fillRect(0, 0, IMAGE_WIDTH, IMAGE_HEIGHT), ctx.fillStyle = "#0b3d2e", ctx.beginPath(), ctx.roundRect(25, 25, IMAGE_WIDTH - 50, IMAGE_HEIGHT - 50, 30), ctx.fill(), ctx.strokeStyle = "#c9a227", ctx.lineWidth = 4, ctx.stroke(), ctx.fillStyle = "#ffffff", ctx.textAlign = "center", ctx.textBaseline = "top", ctx.font = "bold 34px Arial", ctx.fillText("BLACKJACK", IMAGE_WIDTH / 2, 43);
     const betText = "Bet: " + formatAmount(game.amount) + " each";
     ctx.font = "bold 21px Arial";
     const betBoxWidth = ctx.measureText(betText).width + 36, betBoxHeight = 37, betBoxX = (IMAGE_WIDTH - betBoxWidth) / 2;
-    return ctx.fillStyle = "rgba(0, 0, 0, 0.28)", drawRoundedRect(ctx, betBoxX, 78, betBoxWidth, betBoxHeight, 10), ctx.fillStyle = "#ffffff", ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillText(betText, IMAGE_WIDTH / 2, 78 + betBoxHeight / 2), ctx.textAlign = "left", ctx.textBaseline = "top", ctx.font = "bold 25px Arial", ctx.fillStyle = "#ffffff", ctx.fillText("DEALER", 70, 124), ctx.font = "bold 22px Arial", ctx.fillText("Value: " + (showDealerFull ? handValue(round.dealerHand) : "?"), 70, 159), showDealerFull && isBust(round.dealerHand) && (ctx.fillStyle = "#ff5c5c", ctx.fillText("BUST", 205, 159)), drawCards(ctx, round.dealerHand, DEALER_Y, !showDealerFull), ctx.strokeStyle = "rgba(255,255,255,0.18)", ctx.lineWidth = 2, ctx.beginPath(), ctx.moveTo(70, 335), ctx.lineTo(IMAGE_WIDTH - 70, 335), ctx.stroke(), ctx.fillStyle = "#ffffff", ctx.font = "bold 25px Arial", ctx.fillText("PLAYER HAND", 70, 350), ctx.font = "bold 22px Arial", ctx.fillText("Value: " + handValue(round.playerHand), 70, 378), isBust(round.playerHand) && (ctx.fillStyle = "#ff5c5c", ctx.fillText("BUST", 205, 378)), drawCards(ctx, round.playerHand, PLAYER_Y, !1), overlay && drawResultOverlay(ctx, overlay), canvas.toBuffer("image/png");
+    return ctx.fillStyle = "rgba(0, 0, 0, 0.28)", drawRoundedRect(ctx, betBoxX, 78, betBoxWidth, betBoxHeight, 10), ctx.fillStyle = "#ffffff", ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillText(betText, IMAGE_WIDTH / 2, 78 + betBoxHeight / 2), ctx.textAlign = "left", ctx.textBaseline = "top", ctx.font = "bold 25px Arial", ctx.fillStyle = "#ffffff", ctx.fillText("DEALER", 70, 124), ctx.font = "bold 22px Arial", ctx.fillText("Value: " + (showDealerFull ? handValue(round.dealerHand) : "?"), 70, 159), showDealerFull && isBust(round.dealerHand) && (ctx.fillStyle = "#ff5c5c", ctx.fillText("BUST", 205, 159)), globalThis.__pvpBlackjackRenderer.drawCards(ctx, round.dealerHand, DEALER_Y, !showDealerFull), ctx.strokeStyle = "rgba(255,255,255,0.18)", ctx.lineWidth = 2, ctx.beginPath(), ctx.moveTo(70, 335), ctx.lineTo(IMAGE_WIDTH - 70, 335), ctx.stroke(), ctx.fillStyle = "#ffffff", ctx.font = "bold 25px Arial", ctx.fillText("PLAYER HAND", 70, 350), ctx.font = "bold 22px Arial", ctx.fillText("Value: " + handValue(round.playerHand), 70, 378), isBust(round.playerHand) && (ctx.fillStyle = "#ff5c5c", ctx.fillText("BUST", 205, 378)), globalThis.__pvpBlackjackRenderer.drawCards(ctx, round.playerHand, PLAYER_Y, !1), overlay && (game.phase === "finished" ? drawPvpFinalResult(ctx, game) : globalThis.__pvpBlackjackRenderer.drawResultOverlay(ctx, overlay)), canvas.toBuffer("image/png");
   }
   function imageFile(game, showDealerFull, overlay = "") {
     return new AttachmentBuilder(pvpImage(game, showDealerFull, overlay), { name: "pvpblackjack.png" });
@@ -138356,7 +138387,7 @@ globalThis.__pvpDeps = { COLORS, addBalance, errorEmbed, formatAmount, getOrCrea
         [
           `\u{1F48E} **Stake each**  \`${formatAmount(game.amount)}\``,
           "\u{1F3E6} **Tax**  `5% of the final pot`",
-          `\u{1F3C6} **Score**  ${getNameById(game, game.creator.id)} \`${game.wins[game.creator.id] ?? 0}\` \u2014 ${getNameById(game, game.opponent.id)} \`${game.wins[game.opponent.id] ?? 0}\``
+          `\u{1F3C6} **Score**  ${participantMention(getParticipant(game, game.creator.id))} \`${game.wins[game.creator.id] ?? 0}\` \u2014 ${participantMention(getParticipant(game, game.opponent.id))} \`${game.wins[game.opponent.id] ?? 0}\``
         ].join(`
 `)
       )
@@ -138383,13 +138414,18 @@ globalThis.__pvpDeps = { COLORS, addBalance, errorEmbed, formatAmount, getOrCrea
     ), container;
   }
   function finalContainer(game) {
-    const tied = !game.winnerId, winnerName = game.winnerId ? getNameById(game, game.winnerId) : "Nobody", status = tied ? "PUSH" : `${winnerName} WINS`, creatorStake = totalStake(game, game.creator), opponentStake = totalStake(game, game.opponent), score = `${getNameById(game, game.creator.id)} ${game.wins[game.creator.id] ?? 0} \u2014 ${game.wins[game.opponent.id] ?? 0} ${getNameById(game, game.opponent.id)}`, payoutText = tied ? "Each player was refunded their stake." : `\u{1F4B0} **Winner payout**  \`${formatAmount(game.payout)}\`  *(after ${formatAmount(game.tax)} tax)*`;
+    const tied = !game.winnerId,
+      winnerMention = game.winnerId ? participantMention(getParticipant(game, game.winnerId)) : "Nobody",
+      status = tied ? "PUSH" : winnerMention + " WINS",
+      creatorStake = totalStake(game, game.creator),
+      opponentStake = totalStake(game, game.opponent),
+      score = participantMention(getParticipant(game, game.creator.id)) + " " + (game.wins[game.creator.id] ?? 0) + " — " + (game.wins[game.opponent.id] ?? 0) + " " + participantMention(getParticipant(game, game.opponent.id)),
+      payoutText = tied ? "Each player was refunded their stake." : "💰 **Winner payout**  `" + formatAmount(game.payout) + "`  *(after " + formatAmount(game.tax) + " tax)*";
     return new ContainerBuilder().setAccentColor(tied ? COLORS.warning : COLORS.success).addTextDisplayComponents(text(`## \u{1F0CF} PvP Blackjack \u2014 ${status}`)).addTextDisplayComponents(
       text(
         [
           `\u{1F3C6} **Final score**  ${score}`,
           `\u{1F48E} **Pot**  \`${formatAmount(creatorStake + opponentStake)}\``,
-          `\u{1F3E6} **Tax**  \`${formatAmount(game.tax)}\`  *(5%)*`,
           payoutText
         ].join(`
 `)
@@ -138406,7 +138442,7 @@ globalThis.__pvpDeps = { COLORS, addBalance, errorEmbed, formatAmount, getOrCrea
     );
   }
   function payload(game, mode) {
-    const component = mode === "lobby" ? lobbyContainer(game) : mode === "active" ? activeContainer(game) : mode === "final" ? finalContainer(game) : cancelledContainer(game), showDealerFull = mode === "final" || mode === "active" && game.round?.phase === "resolved", overlay = mode === "final" ? game.winnerId ? `${getNameById(game, game.winnerId)} wins the match` : "Match tied \u2014 stakes refunded" : mode === "active" && game.round?.phase === "resolved" ? `Round ${game.round.number}: ${game.roundResult}` : "";
+    const component = mode === "lobby" ? lobbyContainer(game) : mode === "active" ? activeContainer(game) : mode === "final" ? finalContainer(game) : cancelledContainer(game), showDealerFull = mode === "final" || mode === "active" && game.round?.phase === "resolved", overlay = mode === "final" ? game.winnerId ? `${participantMention(getParticipant(game, game.winnerId))} wins the match` : "Match tied \u2014 stakes refunded" : mode === "active" && game.round?.phase === "resolved" ? `Round ${game.round.number}: ${game.roundResult}` : "";
     return mode === "lobby" || mode === "cancelled" ? {
       flags: MessageFlags.IsComponentsV2,
       components: [component]
@@ -138575,6 +138611,10 @@ globalThis.__pvpDeps = { COLORS, addBalance, errorEmbed, formatAmount, getOrCrea
 
 var pvpblackjack_exports = globalThis.__pvpblackjack;
 delete globalThis.__pvpDiscord;
+delete globalThis.__pvpCanvas;
+delete globalThis.__pvpDeps;
+
+Discord;
 delete globalThis.__pvpCanvas;
 delete globalThis.__pvpDeps;
 
