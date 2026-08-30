@@ -24,9 +24,10 @@ A TypeScript Discord gambling/games bot with an Express HTTP API and SQLite data
 
 ## How to run
 
-The bot starts via the **"API Server"** workflow, which:
-1. Builds TypeScript → `dist/` with esbuild (`pnpm run build`)
-2. Starts the server (`node ./dist/index.mjs`)
+The bot starts via the **"Discord Bot"** workflow, which:
+1. Installs the workspace dependencies with `pnpm install`
+2. Builds TypeScript → `dist/` with esbuild (`pnpm --filter @workspace/api-server run build`)
+3. Starts the wrapper (`node index.js`), which launches the compiled bot
 
 The Discord bot and HTTP server both start from the same entry point (`artifacts/api-server/src/index.ts`).
 

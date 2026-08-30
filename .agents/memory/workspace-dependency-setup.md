@@ -10,3 +10,7 @@ The imported pnpm lockfile can be older than the workspace package manifests, so
 Imported bot repositories may also ship only source code while their launcher expects a compiled bundle, so workspace linking and the package build are part of setup—not optional post-install steps.
 
 **How to apply:** When setting up this repo, install the workspace with pnpm, build `@workspace/api-server`, and keep WispByte archives limited to the launcher, npm metadata, and compiled `dist/` output. Rewrite archive lockfile URLs from Replit's internal package mirror to `registry.npmjs.org`; if an unrelated workspace dev package is blocked by the package firewall, use a production-only filtered install for the bot graph rather than bypassing the firewall.
+
+For nested Node launchers on Replit, use the current process's `process.execPath`; the first Node wrapper found on `PATH` can be a stale Nix path that starts the parent process but fails when spawned.
+
+Large generated WispByte bundles can overflow the patch engine; source-driven temporary transforms are safer than trying to apply a large inline diff, followed by syntax and route-count validation.

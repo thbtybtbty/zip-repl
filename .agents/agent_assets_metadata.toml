@@ -953,3 +953,31 @@ mtime_ms = 1788109670762
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:5cc3bb55-414b-403a-8f09-077649c9a8da/1bdd7163-b013-4f0d-89f5-e879d2d559d6/1a895aa5-0aec-4c13-adb9-628ee1a7b0dc"
 storage_version_token = "1788109676681247"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "VMf8TBu7FXXrHCJ9rJHo-"
+uri = "file://discord-gambling-bot-replit-ready.tar.gz"
+type = "unspecified"
+title = "Discord gambling bot — Replit-ready archive"
+description = "Runnable bot archive with the launcher, npm metadata, and rebuilt artifacts/api-server/dist. Secrets, databases, server configuration, admin files, and node_modules are excluded."
+logical_id = "a309e1cf-89d1-4ec6-97cb-88af19ffff4a"
+content_hash = "sha256:714d5a1c08b576ebdcb8faa984d42377f5063af4e64ea6fa5de0cc6e953770df"
+size = 3177356
+mtime_ms = 1788122251634
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:d2bf4979-8beb-46cb-a704-8ea4a08204aa/a309e1cf-89d1-4ec6-97cb-88af19ffff4a/3fb9d8ca-3f24-4e29-a44e-8ded59454185"
+storage_version_token = "1788122272959373"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "hskxxZpLc-Ne873_FDpwj"
+uri = "file://pvpblackjack-wispbyte-updated.zip"
+type = "unspecified"
+title = "Updated WispByte index.mjs — PvP Blackjack"
+description = "Contains only the updated index.mjs. Adds /pvpblackjack from Replit, matches the regular Blackjack image style, uses Discord mentions in the PvP panel, removes Double Down, and slows the casino bot turns slightly."
+logical_id = "ce3eba72-f08f-484e-b20e-623f0fe41266"
+content_hash = "sha256:6be206553b443064047c772e8556f2d75d44c7dd8489d159c2d0ffff815e64f1"
+size = 1091874
+mtime_ms = 1788122629167
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:d2bf4979-8beb-46cb-a704-8ea4a08204aa/ce3eba72-f08f-484e-b20e-623f0fe41266/2065bbe7-a9e8-4250-8ec8-46eb95a77a93"
+storage_version_token = "1788122642683510"
+content_type = "application/octet-stream"
