@@ -43,9 +43,16 @@ export interface BlackjackGame {
   deck: Card[];
   playerHand: Card[];
   dealerHand: Card[];
+  sideBetType: SideBetType | null;
+  sideBetAmount: number;
+  sideBetMultiplier: number;
+  sideBetWon: boolean;
+  sideBetPayout: number;
   doubled: boolean;
   messageId: string;
 }
+
+type SideBetType = "perfect_pairs" | "21+3";
 
 type GameStatus =
   | "active"
@@ -160,6 +167,119 @@ function isBlackjack(hand: Card[]): boolean {
 
 function isBust(hand: Card[]): boolean {
   return handValue(hand) > 21;
+}
+
+function isRedSuit(suit: string): boolean {
+  return suit === "♥" || suit === "♦";
+}
+
+function rankNumber(rank: string): number {
+  if (rank === "A") return 14;
+  if (rank === "J") return 11;
+  if (rank === "Q") return 12;
+  if (rank === "K") return 13;
+  return Number(rank);
+}
+
+function isThreeCardStraight(cards: Card[]): boolean {
+  const values = cards
+    .map((card) => rankNumber(card.rank))
+    .sort((a, b) => a - b);
+
+  if (new Set(values).size !== 3) return false;
+
+  return (
+    values[2]! - values[0]! === 2 ||
+    (values[0] === 2 && values[1] === 3 && values[2] === 14)
+  );
+}
+
+function getPerfectPairsMultiplier(playerHand: Card[]): number {
+  const first = playerHand[0];
+  const second = playerHand[1];
+
+  if (!first || !second || first.rank !== second.rank) return 0;
+  if (first.suit === second.suit) return 25;
+  if (isRedSuit(first.suit) === isRedSuit(second.suit)) return 12;
+  return 6;
+}
+
+function get21Plus3Multiplier(game: BlackjackGame): number {
+  const cards = [
+    game.playerHand[0],
+    game.playerHand[1],
+    game.dealerHand[0],
+  ];
+
+  if (cards.some((card) => !card)) return 0;
+
+  const sameRank =
+    cards[0]!.rank === cards[1]!.rank &&
+    cards[1]!.rank === cards[2]!.rank;
+  const flush = cards.every(
+    (card) => card!.suit === cards[0]!.suit,
+  );
+  const straight = isThreeCardStraight(cards as Card[]);
+
+  if (sameRank) return 100;
+  if (straight && flush) return 40;
+  if (straight) return 10;
+  if (flush) return 5;
+  return 0;
+}
+
+function getSideBetMultiplier(game: BlackjackGame): number {
+  if (!game.sideBetAmount || !game.sideBetType) return 0;
+
+  return game.sideBetType === "perfect_pairs"
+    ? getPerfectPairsMultiplier(game.playerHand)
+    : get21Plus3Multiplier(game);
+}
+
+function prepareSideBet(game: BlackjackGame): void {
+  const multiplier = getSideBetMultiplier(game);
+
+  game.sideBetMultiplier = multiplier;
+  game.sideBetWon = multiplier > 0;
+  game.sideBetPayout = game.sideBetWon
+    ? game.sideBetAmount + game.sideBetAmount * multiplier
+    : 0;
+}
+
+function getSideBetDetails(game: BlackjackGame): {
+  label: string;
+  amount: string;
+  result: string;
+} | null {
+  if (!game.sideBetAmount || !game.sideBetType) return null;
+
+  const label =
+    game.sideBetType === "perfect_pairs" ? "Perfect Pairs" : "21+3";
+  const result = game.sideBetWon
+    ? formatAmount(game.sideBetPayout)
+    : game.sideBetType === "perfect_pairs"
+      ? "No pair"
+      : "No match";
+
+  return {
+    label,
+    amount: formatAmount(game.sideBetAmount),
+    result,
+  };
+}
+
+function getSideBetText(game: BlackjackGame): string | null {
+  const details = getSideBetDetails(game);
+  return details
+    ? `Side bet (${details.label}) ${details.amount}: ${details.result}`
+    : null;
+}
+
+function getSideBetPanelLine(game: BlackjackGame): string {
+  const details = getSideBetDetails(game);
+  return details
+    ? `\n🎲 **Side bet (${details.label}) ${details.amount}:** \`${details.result}\``
+    : "";
 }
 
 const sleep = (ms: number) =>
@@ -814,6 +934,7 @@ function blackjackImage(
         ? " (doubled)"
         : ""
     }`;
+  const sideBetText = getSideBetText(game);
 
   ctx.font = "bold 21px Arial";
 
@@ -821,14 +942,19 @@ function blackjackImage(
   const betPaddingY = 8;
   const betTextWidth =
     ctx.measureText(betText).width;
+  const sideBetTextWidth = sideBetText
+    ? (ctx.font = "bold 17px Arial",
+      ctx.measureText(sideBetText).width)
+    : 0;
 
   const betBoxWidth =
-    betTextWidth +
+    Math.max(betTextWidth, sideBetTextWidth) +
     betPaddingX * 2;
 
   const betBoxHeight =
-    21 +
-    betPaddingY * 2;
+    sideBetText
+      ? 45
+      : 21 + betPaddingY * 2;
 
   const betBoxX =
     (IMAGE_WIDTH - betBoxWidth) / 2;
@@ -854,9 +980,19 @@ function blackjackImage(
   ctx.fillText(
     betText,
     IMAGE_WIDTH / 2,
-    betBoxY +
-      betBoxHeight / 2,
+    sideBetText
+      ? betBoxY + 14
+      : betBoxY + betBoxHeight / 2,
   );
+  if (sideBetText) {
+    ctx.font = "bold 17px Arial";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(
+      sideBetText,
+      IMAGE_WIDTH / 2,
+      betBoxY + 34,
+    );
+  }
 
   // ── Dealer information ──────────────────────────────────────────────────
 
@@ -904,10 +1040,14 @@ function blackjackImage(
     );
   }
 
+  const dealerCardY = sideBetText
+    ? DEALER_Y + 15
+    : DEALER_Y;
+
   drawCards(
     ctx,
     game.dealerHand,
-    DEALER_Y,
+    dealerCardY,
     !showDealerFull,
   );
 
@@ -1161,11 +1301,14 @@ function buildBlackjackContainer(
     status === "push" ||
     status === "blackjack"
   ) {
+    const sideBetLine = getSideBetPanelLine(game);
+
     container.addTextDisplayComponents(
       createText(
         `💎 **Bet:** \`${formatAmount(
           bet,
         )}\`${game.doubled ? "  *(doubled)*" : ""}\n` +
+        `${sideBetLine ? `${sideBetLine}\n` : ""}` +
         `✨ **Multiplier:** \`${multiplier.toFixed(
           2,
         )}x (${formatAmount(
@@ -1174,11 +1317,13 @@ function buildBlackjackContainer(
       ),
     );
   } else {
+    const sideBetLine = getSideBetPanelLine(game);
+
     container.addTextDisplayComponents(
       createText(
         `💎 **Bet:** \`${formatAmount(
           bet,
-        )}\`${game.doubled ? "  *(doubled)*" : ""}`,
+        )}\`${game.doubled ? "  *(doubled)*" : ""}${sideBetLine}`,
       ),
     );
   }
@@ -1243,7 +1388,7 @@ function buildContainerAnimating(
     createText(
       `💎 **Bet:** \`${formatAmount(
         bet,
-      )}\`${game.doubled ? "  *(doubled)*" : ""}`,
+      )}\`${game.doubled ? "  *(doubled)*" : ""}${getSideBetPanelLine(game)}`,
     ),
   );
 
@@ -1395,6 +1540,11 @@ async function resolveGame(
       -totalStake;
   }
 
+  const sideBetAmount = game.sideBetAmount || 0;
+  const sideBetPayout = game.sideBetPayout || 0;
+  payout += sideBetPayout;
+  netDelta += sideBetPayout - sideBetAmount;
+
   await addBalance(
     game.userId,
     payout,
@@ -1402,7 +1552,7 @@ async function resolveGame(
 
   await recordBet(
     game.userId,
-    totalStake,
+    totalStake + sideBetAmount,
     netDelta,
     "blackjack",
   );
@@ -1554,6 +1704,30 @@ export const data =
             "Bet amount (e.g. 1m, 2.5b)",
           )
           .setRequired(true),
+    )
+    .addStringOption(
+      (opt) =>
+        opt
+          .setName("side_bet_amount")
+          .setDescription(
+            "Optional side bet amount (e.g. 1m, 2.5b)",
+          ),
+    )
+    .addStringOption(
+      (opt) =>
+        opt
+          .setName("side_bet_type")
+          .setDescription("Optional side bet type")
+          .addChoices(
+            {
+              name: "Perfect Pairs",
+              value: "perfect_pairs",
+            },
+            {
+              name: "21+3",
+              value: "21+3",
+            },
+          ),
     );
 
 export async function execute(
@@ -1583,6 +1757,49 @@ export async function execute(
     });
   }
 
+  const sideBetAmountStr =
+    interaction.options.getString(
+      "side_bet_amount",
+    );
+  const sideBetType =
+    interaction.options.getString(
+      "side_bet_type",
+    ) as SideBetType | null;
+
+  if (
+    Boolean(sideBetType) !==
+    Boolean(sideBetAmountStr)
+  ) {
+    return interaction.reply({
+      embeds: [
+        errorEmbed(
+          "To place a side bet, provide both **side_bet_amount** and **side_bet_type**.",
+        ),
+      ],
+      flags:
+        MessageFlags.Ephemeral,
+    });
+  }
+
+  const sideBetAmount = sideBetAmountStr
+    ? parseAmount(sideBetAmountStr) ?? 0
+    : 0;
+
+  if (
+    sideBetAmountStr &&
+    (!sideBetAmount || sideBetAmount < 1_000_000)
+  ) {
+    return interaction.reply({
+      embeds: [
+        errorEmbed(
+          "Minimum side bet is **1m gems**. Try `1m`, `2.5b`, `500k`.",
+        ),
+      ],
+      flags:
+        MessageFlags.Ephemeral,
+    });
+  }
+
   await interaction.deferReply();
 
   if (
@@ -1605,15 +1822,20 @@ export async function execute(
       interaction.user.username,
     );
 
+  const totalInitialStake =
+    amount + sideBetAmount;
+
   if (
-    user.balance < amount
+    user.balance < totalInitialStake
   ) {
     return interaction.editReply({
       embeds: [
         errorEmbed(
           `Insufficient balance. You have **${formatAmount(
             user.balance,
-          )} gems**.`,
+          )} gems**. You need **${formatAmount(
+            totalInitialStake,
+          )} gems** for the bet and side bet.`,
         ),
       ],
     });
@@ -1621,7 +1843,7 @@ export async function execute(
 
   await addBalance(
     interaction.user.id,
-    -amount,
+    -totalInitialStake,
   );
 
   const deck =
@@ -1648,9 +1870,16 @@ export async function execute(
       deal(deck),
       deal(deck),
     ],
+    sideBetType,
+    sideBetAmount,
+    sideBetMultiplier: 0,
+    sideBetWon: false,
+    sideBetPayout: 0,
     doubled: false,
     messageId: "",
   };
+
+  prepareSideBet(game);
 
   const playerBJ =
     isBlackjack(
@@ -1685,6 +1914,8 @@ export async function execute(
           amount * 1.5,
         );
     }
+
+    payout += game.sideBetPayout;
 
     await addBalance(
       interaction.user.id,
@@ -2056,6 +2287,11 @@ export async function handlePlayAgain(
       deal(deck),
       deal(deck),
     ],
+    sideBetType: null,
+    sideBetAmount: 0,
+    sideBetMultiplier: 0,
+    sideBetWon: false,
+    sideBetPayout: 0,
     doubled: false,
     messageId: "",
   };

@@ -883,3 +883,17 @@ mtime_ms = 1788093863694
 storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:372fe4b0-b482-4f6f-874c-e9c5f6ebe69e/71deeaf5-4752-4f7a-880e-c495cb2b9d30/992972c3-2f7c-4265-9503-4b23b7337eca"
 storage_version_token = "1788093868747300"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "L0ZCmL3i-XYLw2qWVaCiS"
+uri = "file://wispbyte-blackjack-side-bets-runtime.tar.gz"
+type = "unspecified"
+title = "Wispbyte runtime — fixed blackjack side bets"
+description = "Actual rebuilt runtime package containing index.js, package metadata, start.sh, and rebuilt artifacts/api-server/dist. Includes side-bet amount-before-type ordering and the corrected panel/image formats. Does not include secrets, database files, or production configuration."
+logical_id = "e5f1d79e-0cbc-4849-940d-523e6895fd09"
+content_hash = "sha256:a7b750ee129d63a98ce6860d101f11bae3dd2733d41577595da739bd96d1ceba"
+size = 3163343
+mtime_ms = 1788094363785
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:372fe4b0-b482-4f6f-874c-e9c5f6ebe69e/e5f1d79e-0cbc-4849-940d-523e6895fd09/bc50e932-a270-4c00-8a3e-84867b2d62df"
+storage_version_token = "1788094387359788"
+content_type = "application/octet-stream"

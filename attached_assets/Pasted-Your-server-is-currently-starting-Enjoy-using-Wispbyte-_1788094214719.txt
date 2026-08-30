@@ -1,0 +1,41 @@
+Your server is currently starting! Enjoy using Wispbyte
+[14:49:28][Wispbyte] : Docker image pulled successfully
+[14:49:29]v20.20.2
+[14:49:29]Server marked as running
+[14:49:29]:/home/container$ bash start.sh
+[14:49:29][boot] Node v20.20.2
+[14:49:29][boot] Checking @napi-rs/canvas...
+[14:49:29][boot] Current Canvas version: 1.0.7
+[14:49:29][boot] Canvas path: /home/container/node_modules/@napi-rs/canvas/index.js
+[14:49:29][boot] Canvas version: 1.0.7
+[14:49:30][boot] Creating Canvas test...
+[14:49:30][boot] Canvas generated: 7414 bytes
+[14:49:30][boot] Canvas PNG test passed.
+[14:49:30][boot] Test image: /home/container/canvas-test.png
+[14:49:30][boot] Real Canvas OK.
+[14:49:30][boot] sql.js OK
+[14:49:30][boot] libSQL OK
+[14:49:30][boot] Loading .env...
+[14:49:30][boot] .env loaded.
+[14:49:30][boot] Turso credentials loaded.
+[14:49:30][boot] Main bundle found.
+[14:49:30][boot] Checking database adapter...
+[14:49:30][boot] valuesFor() already exists.
+[14:49:30][boot] Database adapter OK.
+[14:49:30][boot] Database adapter verified.
+[14:49:30][boot] Starting GemSpin...
+[14:49:30]file:///home/container/artifacts/api-server/dist/index.mjs:1
+[14:49:30]blackjack.tsimport { createRequire as __bannerCrReq } from 'node:module';
+[14:49:30]^
+[14:49:30]SyntaxError: Unexpected token '{'
+[14:49:30] at compileSourceTextModule (node:internal/modules/esm/utils:346:16)
+[14:49:30] at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:146:18)
+[14:49:30] at #translate (node:internal/modules/esm/loader:497:12)
+[14:49:30] at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:544:27)
+[14:49:30] at async ModuleJob._link (node:internal/modules/esm/module_job:148:19)
+[14:49:30]Node.js v20.20.2
+[14:49:30]Server marked as offline
+[14:49:31][Wispbyte]: ---------- Detected server process in a crashed state! ----------
+[14:49:31][Wispbyte]: Exit code: 1
+[14:49:31][Wispbyte]: Out of memory: false
+[14:49:31][Wispbyte]: Aborting automatic restart, last crash occurred less than 60 seconds ago.
