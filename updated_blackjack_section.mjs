@@ -135,11 +135,23 @@ function prepareSideBet(game) {
   game.sideBetWon = multiplier > 0;
   game.sideBetPayout = game.sideBetWon ? game.sideBetAmount + game.sideBetAmount * multiplier : 0;
 }
-function getSideBetText(game, status) {
+function getSideBetDetails(game) {
   if (!game.sideBetAmount || !game.sideBetType) return null;
   const label = game.sideBetType === "perfect_pairs" ? "Perfect Pairs" : "21+3";
   const result = game.sideBetWon ? formatAmount(game.sideBetPayout) : game.sideBetType === "perfect_pairs" ? "No pair" : "No match";
-  return `Side bet (${label} ${formatAmount(game.sideBetAmount)}): ${result}`;
+  return {
+    label,
+    amount: formatAmount(game.sideBetAmount),
+    result
+  };
+}
+function getSideBetText(game, status) {
+  const details = getSideBetDetails(game);
+  return details ? `Side bet (${details.label}) ${details.amount}: ${details.result}` : null;
+}
+function getSideBetPanelLine(game) {
+  const details = getSideBetDetails(game);
+  return details ? `\n\u{1F3B2} **Side bet (${details.label}) ${details.amount}:** \`${details.result}\`` : "";
 }
 var sleep2 = (ms) => new Promise(
   (resolve) => setTimeout(resolve, ms)
@@ -725,8 +737,7 @@ function buildBlackjackContainer(game, status, showGameplayButtons, playAgainDis
     )
   );
   if (status === "player_win" || status === "dealer_bust" || status === "push" || status === "blackjack") {
-    const sideBetText = getSideBetText(game, status);
-    const sideBetLine = sideBetText ? `\n\u{1F3B2} **${sideBetText}**` : "";
+    const sideBetLine = getSideBetPanelLine(game);
     container.addTextDisplayComponents(
       createText(
         `\u{1F48E} **Bet:** \`${formatAmount(
@@ -740,8 +751,7 @@ function buildBlackjackContainer(game, status, showGameplayButtons, playAgainDis
       )
     );
   } else {
-    const sideBetText = getSideBetText(game, status);
-    const sideBetLine = sideBetText ? `\n\u{1F3B2} **${sideBetText}**` : "";
+    const sideBetLine = getSideBetPanelLine(game);
     container.addTextDisplayComponents(
       createText(
         `\u{1F48E} **Bet:** \`${formatAmount(
@@ -1003,6 +1013,10 @@ var data8 = new import_discord9.SlashCommandBuilder().setName("blackjack").setDe
     "Bet amount (e.g. 1m, 2.5b)"
   ).setRequired(true)
 ).addStringOption(
+  (opt) => opt.setName("side_bet_amount").setDescription(
+    "Optional side bet amount (e.g. 1m, 2.5b)"
+  )
+).addStringOption(
   (opt) => opt.setName("side_bet_type").setDescription(
     "Optional side bet type"
   ).addChoices(
@@ -1014,10 +1028,6 @@ var data8 = new import_discord9.SlashCommandBuilder().setName("blackjack").setDe
       name: "21+3",
       value: "21+3"
     }
-  )
-).addStringOption(
-  (opt) => opt.setName("side_bet_amount").setDescription(
-    "Optional side bet amount (e.g. 1m, 2.5b)"
   )
 );
 async function execute8(interaction) {
