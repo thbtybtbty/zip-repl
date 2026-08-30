@@ -981,3 +981,17 @@ mtime_ms = 1788124933236
 storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:d2bf4979-8beb-46cb-a704-8ea4a08204aa/ce3eba72-f08f-484e-b20e-623f0fe41266/4c46cf06-9ca6-4566-89cc-b3cfe0fd2f39"
 storage_version_token = "1788124941211811"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "WMVknp9XdYuhHTfPfowP6"
+uri = "file://updated_assets/wispbyte-pvpblackjack-updated.zip"
+type = "unspecified"
+title = "Updated WispByte PvP Blackjack"
+description = "Zip containing only the updated index.mjs with the requested PvP Blackjack changes."
+logical_id = "e5fb6528-b66c-4e93-837c-f6e5f6445ade"
+content_hash = "sha256:328dd39706947ae6146119944f6d97d49517e7e4d1014d2ffbc816fede155576"
+size = 1083987
+mtime_ms = 1788129127607
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:92764364-a2af-46bc-a1ec-2fedbb5adbca/e5fb6528-b66c-4e93-837c-f6e5f6445ade/5f930738-acf2-4ccf-b537-4b02a0098697"
+storage_version_token = "1788129132490484"
+content_type = "application/octet-stream"
