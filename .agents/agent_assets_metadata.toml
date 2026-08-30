@@ -939,3 +939,17 @@ mtime_ms = 1788102167066
 storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:372fe4b0-b482-4f6f-874c-e9c5f6ebe69e/b754e8c7-5975-49ac-a6a7-6ccf2c810455/7f0e5875-4c5e-4b7e-8fa6-08d412499b1d"
 storage_version_token = "1788102172442027"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "NbtSPLeONDPjsrhtNUTY_"
+uri = "file://exports/discord-bot-runtime.tar.gz"
+type = "unspecified"
+title = "Discord bot runtime package"
+description = "Runnable bot package with installed dependency metadata and rebuilt artifacts/api-server/dist output. Secrets and database files are excluded."
+logical_id = "1bdd7163-b013-4f0d-89f5-e879d2d559d6"
+content_hash = "sha256:9c77604ee55c9941a567ef7f4730d56fc882f8de6e5795f8de098647923669c1"
+size = 3175672
+mtime_ms = 1788109670762
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:5cc3bb55-414b-403a-8f09-077649c9a8da/1bdd7163-b013-4f0d-89f5-e879d2d559d6/1a895aa5-0aec-4c13-adb9-628ee1a7b0dc"
+storage_version_token = "1788109676681247"
+content_type = "application/octet-stream"

@@ -49,9 +49,19 @@ const hasClient = !!process.env.DISCORD_CLIENT_ID;
 console.log("[boot] DISCORD_BOT_TOKEN set:", hasToken, "| DISCORD_CLIENT_ID set:", hasClient);
 console.log("[boot] Starting bot (Node " + process.version + ")...");
 // Replit's Node wrapper can report an underlying Nix store path that is not
-// executable after the runtime is refreshed. Resolve Node through PATH so the
-// active wrapper selects the current runtime.
-const nodeExecutable = "node";
+// executable after the runtime is refreshed. Resolve the active wrapper from
+// PATH explicitly before spawning the compiled bot.
+const nodeExecutable = (process.env.PATH || "")
+  .split(path.delimiter)
+  .map((directory) => path.join(directory, "node"))
+  .find((candidate) => {
+    try {
+      return fs.statSync(candidate).isFile();
+    } catch {
+      return false;
+    }
+  }) || "node";
+console.log("[boot] Node executable:", nodeExecutable);
 const child = spawn(nodeExecutable, [botEntry], {
   stdio: "inherit",
   cwd: distDir,

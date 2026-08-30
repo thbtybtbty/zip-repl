@@ -7,4 +7,6 @@ The imported pnpm lockfile can be older than the workspace package manifests, so
 
 **Why:** The Replit workspace needed the current monorepo dependency graph to build the Discord bot, while the WispByte runtime only needs its intentionally minimal npm metadata. npm can select a just-published version that pnpm correctly rejects under the repository's supply-chain safeguard.
 
+Imported bot repositories may also ship only source code while their launcher expects a compiled bundle, so workspace linking and the package build are part of setup—not optional post-install steps.
+
 **How to apply:** When setting up this repo, install the workspace with pnpm, build `@workspace/api-server`, and keep WispByte archives limited to the launcher, npm metadata, and compiled `dist/` output. Rewrite archive lockfile URLs from Replit's internal package mirror to `registry.npmjs.org`; if an unrelated workspace dev package is blocked by the package firewall, use a production-only filtered install for the bot graph rather than bypassing the firewall.
