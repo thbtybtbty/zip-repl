@@ -138252,7 +138252,6 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
     const creatorScore = game.wins[game.creator.id] ?? 0;
     const opponentScore = game.wins[game.opponent.id] ?? 0;
     const winnerName = game.winnerId ? getNameById(game, game.winnerId) : "MATCH TIED";
-    const scoreText = creatorName + "  " + creatorScore + "   \u2014   " + opponentScore + "  " + opponentName;
     const gradient = ctx.createLinearGradient(0, 0, 0, IMAGE_HEIGHT);
     gradient.addColorStop(0, "#0f5138");
     gradient.addColorStop(0.55, "#071a12");
@@ -138268,7 +138267,7 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#f7d774";
     ctx.font = "900 34px Arial";
-    ctx.fillText("\u{1F0CF}  PVP BLACKJACK", IMAGE_WIDTH / 2, 72);
+    ctx.fillText("PVP BLACKJACK", IMAGE_WIDTH / 2, 72);
     ctx.fillStyle = game.winnerId ? "#4ade80" : "#facc15";
     ctx.font = "900 52px Arial";
     ctx.fillText(winnerName + (game.winnerId ? " WINS" : ""), IMAGE_WIDTH / 2, 155);
@@ -138303,12 +138302,8 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
     ctx.font = "900 30px Arial";
     ctx.fillText("\u2014", IMAGE_WIDTH / 2, 375);
     ctx.fillStyle = "#dce7e1";
-    ctx.font = "700 19px Arial";
-    if (ctx.measureText(scoreText).width > IMAGE_WIDTH - 120) ctx.font = "700 15px Arial";
-    ctx.fillText(scoreText, IMAGE_WIDTH / 2, 515);
-    ctx.fillStyle = "#aebbd0";
-    ctx.font = "italic 18px Arial";
-    ctx.fillText(game.winnerId ? "Match complete  \u2022  Winner payout: " + formatAmount(game.payout) : "Match complete  \u2022  Stakes refunded", IMAGE_WIDTH / 2, 565);
+    ctx.font = "italic 24px Arial";
+    ctx.fillText(game.winnerId ? winnerName + " won " + formatAmount(game.payout) : "Stakes refunded", IMAGE_WIDTH / 2, 535);
     return canvas.toBuffer("image/png");
   }
 
@@ -138345,10 +138340,43 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
     };
     game.round = round, game.phase = "playing", game.roundResult = "", isBlackjack(round.playerHand) && (dealerPlay(round), resolveRound(game, isBlackjack(round.dealerHand) ? "push" : "blackjack"));
   }
-  function dealerPlay(round) {
-    for (; handValue(round.dealerHand) < 17; )
-      round.dealerHand.push(deal(round.deck));
+  async function publishDealerReveal(game) {
+    if (!game.message || !game.round) return;
+    const revealGame = {
+      ...game,
+      round: {
+        ...game.round,
+        dealerHand: [...game.round.dealerHand],
+        phase: "active"
+      }
+    };
+    await game.message.edit({
+      flags: MessageFlags.IsComponentsV2,
+      files: [imageFile(revealGame, true)],
+      components: [activeContainer(revealGame)]
+    });
   }
+  async function dealerPlayAnimated(game) {
+    const round = game.round;
+    if (!round) return;
+    game.dealerRevealing = true;
+    await publishDealerReveal(game);
+    while (handValue(round.dealerHand) < 17) {
+      await sleep(700);
+      round.dealerHand.push(deal(round.deck));
+      await publishDealerReveal(game);
+    }
+    await sleep(700);
+    game.dealerRevealing = false;
+    resolveRound(game, determineRoundStatus(round));
+    await publish(game);
+  }
+  function dealerPlay(round) {
+    while (handValue(round.dealerHand) < 17) {
+      round.dealerHand.push(deal(round.deck));
+    }
+  }
+
   function determineRoundStatus(round) {
     if (isBust(round.playerHand)) return "player_bust";
     if (isBlackjack(round.playerHand) && !isBlackjack(round.dealerHand)) return "blackjack";
@@ -138444,7 +138472,7 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
         new MediaGalleryItemBuilder().setURL("attachment://pvpblackjack.png")
       )
     );
-    const buttonsDisabled = player.isBot || round.phase !== "active";
+    const buttonsDisabled = player.isBot || round.phase !== "active" || game.dealerRevealing;
     return container.addActionRowComponents(
       new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId("pvpbj_hit").setLabel("\u2795  Hit").setStyle(ButtonStyle.Primary).setDisabled(buttonsDisabled),
@@ -138510,26 +138538,42 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
   function runBotTurnIfNeeded(game) {
     const round = game.round;
     if (!round || round.phase !== "active") {
-      round?.phase === "resolved" && setTimeout(() => {
-        advanceRound(game);
-      }, 1700);
+      if (round?.phase === "resolved") {
+        setTimeout(() => {
+          advanceRound(game);
+        }, 3000);
+      }
       return;
     }
-    getParticipant(game, round.playerId).isBot && (async () => {
-      for (await sleep(900); game.phase === "playing" && game.round === round && round.phase === "active"; ) {
+    if (!getParticipant(game, round.playerId).isBot) return;
+    (async () => {
+      await sleep(1200);
+      while (game.phase === "playing" && game.round === round && round.phase === "active") {
         if (handValue(round.playerHand) >= 17) {
-          dealerPlay(round), resolveRound(game, determineRoundStatus(round)), await publish(game), setTimeout(() => {
+          await dealerPlayAnimated(game);
+          setTimeout(() => {
             advanceRound(game);
-          }, 1700);
+          }, 3000);
           return;
         }
-        if (round.playerHand.push(deal(round.deck)), isBust(round.playerHand) || handValue(round.playerHand) === 21) {
-          isBust(round.playerHand) || dealerPlay(round), resolveRound(game, determineRoundStatus(round)), await publish(game), setTimeout(() => {
+        round.playerHand.push(deal(round.deck));
+        if (isBust(round.playerHand)) {
+          resolveRound(game, "player_bust");
+          await publish(game);
+          setTimeout(() => {
             advanceRound(game);
-          }, 1700);
+          }, 3000);
           return;
         }
-        await publish(game), await sleep(900);
+        if (handValue(round.playerHand) === 21) {
+          await dealerPlayAnimated(game);
+          setTimeout(() => {
+            advanceRound(game);
+          }, 3000);
+          return;
+        }
+        await publish(game);
+        await sleep(1200);
       }
     })();
   }
@@ -138635,15 +138679,32 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
     if (!game) return;
     await interaction.deferUpdate();
     const round = game.round;
-    round.playerHand.push(deal(round.deck)), isBust(round.playerHand) ? resolveRound(game, "player_bust") : handValue(round.playerHand) === 21 && (dealerPlay(round), resolveRound(game, determineRoundStatus(round))), round.phase === "resolved" ? (await publish(game, interaction), setTimeout(() => {
-      advanceRound(game);
-    }, 1700)) : await publish(game, interaction);
+    round.playerHand.push(deal(round.deck));
+    if (isBust(round.playerHand)) {
+      resolveRound(game, "player_bust");
+      await publish(game, interaction);
+      setTimeout(() => {
+        advanceRound(game);
+      }, 3000);
+      return;
+    }
+    if (handValue(round.playerHand) === 21) {
+      await dealerPlayAnimated(game);
+      setTimeout(() => {
+        advanceRound(game);
+      }, 3000);
+      return;
+    }
+    await publish(game, interaction);
   }
   async function handleStand(interaction) {
     const game = await validatePlayerTurn(interaction);
-    game && (await interaction.deferUpdate(), dealerPlay(game.round), resolveRound(game, determineRoundStatus(game.round)), await publish(game, interaction), setTimeout(() => {
+    if (!game) return;
+    await interaction.deferUpdate();
+    await dealerPlayAnimated(game);
+    setTimeout(() => {
       advanceRound(game);
-    }, 1700));
+    }, 3000);
   }
   globalThis.__pvpblackjack = { data, execute, handleJoin, handleCallBot, handleCancel, handleHit, handleStand };
 })();
