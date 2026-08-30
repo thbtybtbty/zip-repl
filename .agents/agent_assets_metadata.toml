@@ -897,3 +897,17 @@ mtime_ms = 1788094363785
 storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:372fe4b0-b482-4f6f-874c-e9c5f6ebe69e/e5f1d79e-0cbc-4849-940d-523e6895fd09/bc50e932-a270-4c00-8a3e-84867b2d62df"
 storage_version_token = "1788094387359788"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "BGLnh3W7PTZdw8iozNTEP"
+uri = "file://blackjack-side-bets-section-fixed.zip"
+type = "unspecified"
+title = "Fixed blackjack section only"
+description = "Section-only package with the malformed source-marker boundary removed. It keeps the requested side-bet option order and display formatting, and avoids the blackjack.tsimport syntax error when inserted into the full Wispbyte bundle."
+logical_id = "7db034c1-14dc-4269-bfc1-5286fb7f68dc"
+content_hash = "sha256:d33c11d323ec7f24eab139a45d3b26c44c3a242594bfc90e1212604b487d72cb"
+size = 7454
+mtime_ms = 1788094744060
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:372fe4b0-b482-4f6f-874c-e9c5f6ebe69e/7db034c1-14dc-4269-bfc1-5286fb7f68dc/eaeb345f-1cbd-43e1-ad3f-7972fa609da4"
+storage_version_token = "1788094750416281"
+content_type = "application/octet-stream"
