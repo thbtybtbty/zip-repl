@@ -138244,43 +138244,81 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
       hideSecond && index === 1 ? drawHiddenCard(ctx, x, y, width, height) : drawCard(ctx, card, x, y, width, height);
     });
   }
-  function drawPvpFinalResult(ctx, game) {
+  function pvpFinalImage(game) {
+    const canvas = createCanvas(IMAGE_WIDTH, IMAGE_HEIGHT);
+    const ctx = canvas.getContext("2d");
     const creatorName = getNameById(game, game.creator.id);
     const opponentName = getNameById(game, game.opponent.id);
     const creatorScore = game.wins[game.creator.id] ?? 0;
     const opponentScore = game.wins[game.opponent.id] ?? 0;
-    const winnerName = game.winnerId ? getNameById(game, game.winnerId) + " WINS" : "PUSH";
+    const winnerName = game.winnerId ? getNameById(game, game.winnerId) : "MATCH TIED";
     const scoreText = creatorName + "  " + creatorScore + "   \u2014   " + opponentScore + "  " + opponentName;
-    ctx.save();
-    ctx.fillStyle = "rgba(3, 12, 9, 0.94)";
-    roundedRect(ctx, 65, 495, IMAGE_WIDTH - 130, 125, 20);
-    ctx.strokeStyle = game.winnerId ? "#4ade80" : "#facc15";
-    ctx.lineWidth = 3;
+    const gradient = ctx.createLinearGradient(0, 0, 0, IMAGE_HEIGHT);
+    gradient.addColorStop(0, "#0f5138");
+    gradient.addColorStop(0.55, "#071a12");
+    gradient.addColorStop(1, "#020807");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, IMAGE_WIDTH, IMAGE_HEIGHT);
+    ctx.strokeStyle = "#c9a227";
+    ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.roundRect(65, 495, IMAGE_WIDTH - 130, 125, 20);
+    ctx.roundRect(24, 24, IMAGE_WIDTH - 48, IMAGE_HEIGHT - 48, 30);
     ctx.stroke();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
+    ctx.fillStyle = "#f7d774";
+    ctx.font = "900 34px Arial";
+    ctx.fillText("\u{1F0CF}  PVP BLACKJACK", IMAGE_WIDTH / 2, 72);
     ctx.fillStyle = game.winnerId ? "#4ade80" : "#facc15";
-    ctx.font = "900 30px Arial";
-    ctx.fillText(winnerName, IMAGE_WIDTH / 2, 528);
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "700 22px Arial";
-    if (ctx.measureText(scoreText).width > IMAGE_WIDTH - 180) ctx.font = "700 17px Arial";
-    ctx.fillText(scoreText, IMAGE_WIDTH / 2, 570);
+    ctx.font = "900 52px Arial";
+    ctx.fillText(winnerName + (game.winnerId ? " WINS" : ""), IMAGE_WIDTH / 2, 155);
     ctx.fillStyle = "#aebbd0";
-    ctx.font = "italic 17px Arial";
-    ctx.fillText("FINAL SCORE", IMAGE_WIDTH / 2, 602);
-    ctx.restore();
+    ctx.font = "italic 20px Arial";
+    ctx.fillText("FINAL SCORE", IMAGE_WIDTH / 2, 202);
+    ctx.fillStyle = "rgba(3, 12, 9, 0.88)";
+    roundedRect(ctx, 70, 235, IMAGE_WIDTH - 140, 230, 24);
+    ctx.strokeStyle = game.winnerId ? "rgba(74,222,128,0.7)" : "rgba(250,204,21,0.7)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(70, 235, IMAGE_WIDTH - 140, 230, 24);
+    ctx.stroke();
+    const leftColor = game.winnerId === game.creator.id ? "#4ade80" : "#ffffff";
+    const rightColor = game.winnerId === game.opponent.id ? "#4ade80" : "#ffffff";
+    ctx.font = "800 28px Arial";
+    if (ctx.measureText(creatorName).width > 390) ctx.font = "800 20px Arial";
+    ctx.fillStyle = leftColor;
+    ctx.fillText(creatorName, 315, 290);
+    ctx.fillStyle = rightColor;
+    ctx.font = "800 28px Arial";
+    if (ctx.measureText(opponentName).width > 390) ctx.font = "800 20px Arial";
+    ctx.fillText(opponentName, 885, 290);
+    ctx.fillStyle = "#4b635a";
+    ctx.fillRect(598, 272, 4, 135);
+    ctx.fillStyle = leftColor;
+    ctx.font = "900 82px Arial";
+    ctx.fillText(String(creatorScore), 315, 375);
+    ctx.fillStyle = rightColor;
+    ctx.fillText(String(opponentScore), 885, 375);
+    ctx.fillStyle = "#f7d774";
+    ctx.font = "900 30px Arial";
+    ctx.fillText("\u2014", IMAGE_WIDTH / 2, 375);
+    ctx.fillStyle = "#dce7e1";
+    ctx.font = "700 19px Arial";
+    if (ctx.measureText(scoreText).width > IMAGE_WIDTH - 120) ctx.font = "700 15px Arial";
+    ctx.fillText(scoreText, IMAGE_WIDTH / 2, 515);
+    ctx.fillStyle = "#aebbd0";
+    ctx.font = "italic 18px Arial";
+    ctx.fillText(game.winnerId ? "Match complete  \u2022  Winner payout: " + formatAmount(game.payout) : "Match complete  \u2022  Stakes refunded", IMAGE_WIDTH / 2, 565);
+    return canvas.toBuffer("image/png");
   }
 
   function pvpImage(game, showDealerFull, overlay = "") {
-    const round = game.round, canvas = createCanvas(IMAGE_WIDTH, IMAGE_HEIGHT), ctx = canvas.getContext("2d");
+    const round = game.round, canvas = createCanvas(IMAGE_WIDTH, IMAGE_HEIGHT), ctx = canvas.getContext("2d"); if (game.phase === "finished") return pvpFinalImage(game);
     ctx.fillStyle = "#071a12", ctx.fillRect(0, 0, IMAGE_WIDTH, IMAGE_HEIGHT), ctx.fillStyle = "#0b3d2e", ctx.beginPath(), ctx.roundRect(25, 25, IMAGE_WIDTH - 50, IMAGE_HEIGHT - 50, 30), ctx.fill(), ctx.strokeStyle = "#c9a227", ctx.lineWidth = 4, ctx.stroke(), ctx.fillStyle = "#ffffff", ctx.textAlign = "center", ctx.textBaseline = "top", ctx.font = "bold 34px Arial", ctx.fillText("BLACKJACK", IMAGE_WIDTH / 2, 43);
     const betText = "Bet: " + formatAmount(game.amount) + " each";
     ctx.font = "bold 21px Arial";
     const betBoxWidth = ctx.measureText(betText).width + 36, betBoxHeight = 37, betBoxX = (IMAGE_WIDTH - betBoxWidth) / 2;
-    return ctx.fillStyle = "rgba(0, 0, 0, 0.28)", drawRoundedRect(ctx, betBoxX, 78, betBoxWidth, betBoxHeight, 10), ctx.fillStyle = "#ffffff", ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillText(betText, IMAGE_WIDTH / 2, 78 + betBoxHeight / 2), ctx.textAlign = "left", ctx.textBaseline = "top", ctx.font = "bold 25px Arial", ctx.fillStyle = "#ffffff", ctx.fillText("DEALER", 70, 124), ctx.font = "bold 22px Arial", ctx.fillText("Value: " + (showDealerFull ? handValue(round.dealerHand) : "?"), 70, 159), showDealerFull && isBust(round.dealerHand) && (ctx.fillStyle = "#ff5c5c", ctx.fillText("BUST", 205, 159)), globalThis.__pvpBlackjackRenderer.drawCards(ctx, round.dealerHand, DEALER_Y, !showDealerFull), ctx.strokeStyle = "rgba(255,255,255,0.18)", ctx.lineWidth = 2, ctx.beginPath(), ctx.moveTo(70, 335), ctx.lineTo(IMAGE_WIDTH - 70, 335), ctx.stroke(), ctx.fillStyle = "#ffffff", ctx.font = "bold 25px Arial", ctx.fillText("PLAYER HAND", 70, 350), ctx.font = "bold 22px Arial", ctx.fillText("Value: " + handValue(round.playerHand), 70, 378), isBust(round.playerHand) && (ctx.fillStyle = "#ff5c5c", ctx.fillText("BUST", 205, 378)), globalThis.__pvpBlackjackRenderer.drawCards(ctx, round.playerHand, PLAYER_Y, !1), overlay && (game.phase === "finished" ? drawPvpFinalResult(ctx, game) : globalThis.__pvpBlackjackRenderer.drawResultOverlay(ctx, overlay)), canvas.toBuffer("image/png");
+    return ctx.fillStyle = "rgba(0, 0, 0, 0.28)", drawRoundedRect(ctx, betBoxX, 78, betBoxWidth, betBoxHeight, 10), ctx.fillStyle = "#ffffff", ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillText(betText, IMAGE_WIDTH / 2, 78 + betBoxHeight / 2), ctx.textAlign = "left", ctx.textBaseline = "top", ctx.font = "bold 25px Arial", ctx.fillStyle = "#ffffff", ctx.fillText("DEALER", 70, 124), ctx.font = "bold 22px Arial", ctx.fillText("Value: " + (showDealerFull ? handValue(round.dealerHand) : "?"), 70, 159), showDealerFull && isBust(round.dealerHand) && (ctx.fillStyle = "#ff5c5c", ctx.fillText("BUST", 205, 159)), globalThis.__pvpBlackjackRenderer.drawCards(ctx, round.dealerHand, DEALER_Y, !showDealerFull), ctx.strokeStyle = "rgba(255,255,255,0.18)", ctx.lineWidth = 2, ctx.beginPath(), ctx.moveTo(70, 335), ctx.lineTo(IMAGE_WIDTH - 70, 335), ctx.stroke(), ctx.fillStyle = "#ffffff", ctx.font = "bold 25px Arial", ctx.fillText("PLAYER HAND", 70, 350), ctx.font = "bold 22px Arial", ctx.fillText("Value: " + handValue(round.playerHand), 70, 378), isBust(round.playerHand) && (ctx.fillStyle = "#ff5c5c", ctx.fillText("BUST", 205, 378)), globalThis.__pvpBlackjackRenderer.drawCards(ctx, round.playerHand, PLAYER_Y, !1), overlay && globalThis.__pvpBlackjackRenderer.drawResultOverlay(ctx, overlay), canvas.toBuffer("image/png");
   }
   function imageFile(game, showDealerFull, overlay = "") {
     return new AttachmentBuilder(pvpImage(game, showDealerFull, overlay), { name: "pvpblackjack.png" });
@@ -138406,10 +138444,11 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
         new MediaGalleryItemBuilder().setURL("attachment://pvpblackjack.png")
       )
     );
-    return player.isBot || container.addActionRowComponents(
+    const buttonsDisabled = player.isBot || round.phase !== "active";
+    return container.addActionRowComponents(
       new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId("pvpbj_hit").setLabel("\u2795  Hit").setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId("pvpbj_stand").setLabel("\u270B  Stand").setStyle(ButtonStyle.Secondary)
+        new ButtonBuilder().setCustomId("pvpbj_hit").setLabel("\u2795  Hit").setStyle(ButtonStyle.Primary).setDisabled(buttonsDisabled),
+        new ButtonBuilder().setCustomId("pvpbj_stand").setLabel("\u270B  Stand").setStyle(ButtonStyle.Secondary).setDisabled(buttonsDisabled)
       )
     ), container;
   }
