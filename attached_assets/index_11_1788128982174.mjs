@@ -138231,10 +138231,135 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
     ctx.beginPath(), ctx.roundRect(x, y, width, height, radius), ctx.fill();
   }
   function drawCard(ctx, card, x, y, width, height) {
-    ctx.save(), ctx.fillStyle = "rgba(0, 0, 0, 0.3)", roundedRect(ctx, x + 6, y + 8, width, height, 16), ctx.fillStyle = "#fffdf7", roundedRect(ctx, x, y, width, height, 16), ctx.strokeStyle = "#d9d3c3", ctx.lineWidth = 2, ctx.stroke(), ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillStyle = suitColor(card.suit), ctx.font = `bold ${Math.max(24, Math.floor(width * 0.25))}px Arial`, ctx.fillText(`${card.rank}${card.suit}`, x + width / 2, y + height / 2), ctx.restore();
+    ctx.save();
+    const color = suitColor(card.suit);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.32)";
+    roundedRect(
+      ctx,
+      x + 6,
+      y + 8,
+      width,
+      height,
+      16
+    );
+    ctx.fillStyle = "#ffffff";
+    roundedRect(
+      ctx,
+      x,
+      y,
+      width,
+      height,
+      16
+    );
+    ctx.strokeStyle = "#d1d5db";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(
+      x,
+      y,
+      width,
+      height,
+      16
+    );
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    const topRankFont = card.rank === "10" ? "bold 31px Arial" : "bold 35px Arial";
+    ctx.font = topRankFont;
+    ctx.fillText(
+      card.rank,
+      x + 15,
+      y + 13
+    );
+    const rankWidth = ctx.measureText(card.rank).width;
+    ctx.font = "27px Arial";
+    ctx.fillText(
+      card.suit,
+      x + 18 + rankWidth,
+      y + 16
+    );
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "82px Arial";
+    ctx.fillText(
+      card.suit,
+      x + width / 2,
+      y + height / 2 + 2
+    );
+    ctx.textAlign = "right";
+    ctx.textBaseline = "bottom";
+    const bottomRankFont = card.rank === "10" ? "bold 31px Arial" : "bold 35px Arial";
+    ctx.font = bottomRankFont;
+    ctx.fillText(
+      card.rank,
+      x + width - 15,
+      y + height - 13
+    );
+    const bottomRankWidth = ctx.measureText(card.rank).width;
+    ctx.font = "27px Arial";
+    ctx.fillText(
+      card.suit,
+      x + width - 18 - bottomRankWidth,
+      y + height - 16
+    );
+    ctx.restore();
   }
   function drawHiddenCard(ctx, x, y, width, height) {
-    ctx.save(), ctx.fillStyle = "rgba(0, 0, 0, 0.3)", roundedRect(ctx, x + 6, y + 8, width, height, 16), ctx.fillStyle = "#172554", roundedRect(ctx, x, y, width, height, 16), ctx.strokeStyle = "#60a5fa", ctx.lineWidth = 4, ctx.beginPath(), ctx.roundRect(x + 9, y + 9, width - 18, height - 18, 11), ctx.stroke(), ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillStyle = "#ffffff", ctx.font = "bold 58px Arial", ctx.fillText("\u2660", x + width / 2, y + height / 2), ctx.restore();
+    ctx.save();
+    ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+    roundedRect(
+      ctx,
+      x + 6,
+      y + 8,
+      width,
+      height,
+      16
+    );
+    ctx.fillStyle = "#172554";
+    roundedRect(
+      ctx,
+      x,
+      y,
+      width,
+      height,
+      16
+    );
+    ctx.strokeStyle = "#60a5fa";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.roundRect(
+      x + 9,
+      y + 9,
+      width - 18,
+      height - 18,
+      11
+    );
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.lineWidth = 1.5;
+    for (let i = -height; i < width; i += 22) {
+      ctx.beginPath();
+      ctx.moveTo(
+        x + i,
+        y
+      );
+      ctx.lineTo(
+        x + i + height,
+        y + height
+      );
+      ctx.stroke();
+    }
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 58px Arial";
+    ctx.fillText(
+      "\u2660",
+      x + width / 2,
+      y + height / 2
+    );
+    ctx.restore();
   }
   function drawCards(ctx, hand, y, hideSecond) {
     if (hand.length === 0) return;
@@ -138298,9 +138423,6 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
     ctx.fillText(String(creatorScore), 315, 375);
     ctx.fillStyle = rightColor;
     ctx.fillText(String(opponentScore), 885, 375);
-    ctx.fillStyle = "#f7d774";
-    ctx.font = "900 30px Arial";
-    ctx.fillText("\u2014", IMAGE_WIDTH / 2, 375);
     ctx.fillStyle = "#dce7e1";
     ctx.font = "italic 24px Arial";
     ctx.fillText(game.winnerId ? winnerName + " won " + formatAmount(game.payout) : "Stakes refunded", IMAGE_WIDTH / 2, 535);
