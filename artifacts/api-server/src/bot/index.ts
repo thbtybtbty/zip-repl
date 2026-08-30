@@ -221,7 +221,6 @@ async function handleInteraction(interaction: Interaction) {
       if (id === "pvpbj_cancel") return await pvpblackjack.handleCancel(bi);
       if (id === "pvpbj_hit")    return await pvpblackjack.handleHit(bi);
       if (id === "pvpbj_stand")  return await pvpblackjack.handleStand(bi);
-      if (id === "pvpbj_double") return await pvpblackjack.handleDouble(bi);
 
       // Deposit (player side)
       if (id.startsWith("dep_sent_"))   return await deposit.handleSent(bi, id.slice("dep_sent_".length));

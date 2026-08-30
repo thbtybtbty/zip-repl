@@ -127942,22 +127942,24 @@ function drawCards(ctx, hand, y, hiddenSecondCard) {
     }
   }
   if (startX < CARD_TEXT_SAFE_RIGHT) {
-    const stackAvailableWidth = rightEdge - CARD_TEXT_SAFE_RIGHT;
+    const stackWidth = Math.min(600, rightEdge - CARD_TEXT_SAFE_RIGHT);
     const stackOverlap =
       hand.length > 1
         ? Math.max(
-            28,
+            18,
             Math.min(
-              50,
-              (stackAvailableWidth - CARD_WIDTH) /
+              110,
+              (stackWidth - CARD_WIDTH) /
                 (hand.length - 1)
             )
           )
         : 0;
+    const centeredStackWidth = CARD_WIDTH + Math.max(0, hand.length - 1) * stackOverlap;
+    const centeredStackX = (IMAGE_WIDTH2 - centeredStackWidth) / 2;
     drawStackedCards(
       ctx,
       hand,
-      CARD_TEXT_SAFE_RIGHT,
+      centeredStackX,
       y,
       stackOverlap,
       hiddenSecondCard
@@ -138319,7 +138321,8 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
     return new AttachmentBuilder(pvpImage(game, showDealerFull, overlay), { name: "pvpblackjack.png" });
   }
   function roleForRound(game, roundNumber) {
-    const firstDealer = roundNumber % 2 === 1 ? game.creator.id : game.opponent.id;
+    if (!game.startingDealerId) game.startingDealerId = Math.random() < 0.5 ? game.creator.id : game.opponent.id;
+    const firstDealer = roundNumber % 2 === 1 ? game.startingDealerId : game.startingDealerId === game.creator.id ? game.opponent.id : game.creator.id;
     return {
       dealerId: firstDealer,
       playerId: firstDealer === game.creator.id ? game.opponent.id : game.creator.id
@@ -138338,7 +138341,7 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
       status: "active",
       resultText: ""
     };
-    game.round = round, game.phase = "playing", game.roundResult = "", isBlackjack(round.playerHand) && (dealerPlay(round), resolveRound(game, isBlackjack(round.dealerHand) ? "push" : "blackjack"));
+    game.round = round, game.phase = "playing", game.roundResult = "", game.dealerRevealing = false, isBlackjack(round.playerHand) && (dealerPlay(round), resolveRound(game, isBlackjack(round.dealerHand) ? "push" : "blackjack"));
   }
   async function publishDealerReveal(game) {
     if (!game.message || !game.round) return;
@@ -138428,7 +138431,7 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
       text(
         [
           `\u{1F464} **Host**  ${participantMention(game.creator)}`,
-          `\u{1F48E} **Stake per player**  \`${formatAmount(game.amount)}\``,
+          `\u{1F48E} **Bet per player**  \`${formatAmount(game.amount)}\``,
           `\u{1F501} **Rounds**  \`${game.rounds}\``,
           "\u{1F3E6} **Tax**  `5% of the final pot`",
           "",
@@ -138592,7 +138595,7 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
   const data = new SlashCommandBuilder().setName("pvpblackjack").setDescription("Play Blackjack against another player over multiple rounds.").addStringOption(
     (option) => option.setName("amount").setDescription("Equal stake for each player (e.g. 1m, 2.5b)").setRequired(!0)
   ).addIntegerOption(
-    (option) => option.setName("rounds").setDescription("Number of rounds (2\u201310)").setMinValue(2).setMaxValue(10).setRequired(!0)
+    (option) => option.setName("rounds").setDescription("Number of rounds (1\u201310)").setMinValue(1).setMaxValue(10).setRequired(!0)
   );
   async function execute(interaction) {
     const amount = parseAmount(interaction.options.getString("amount", !0)), rounds = interaction.options.getInteger("rounds", !0);
@@ -138601,9 +138604,9 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
         embeds: [errorEmbed("Minimum PvP Blackjack stake is **1m gems**.")],
         flags: MessageFlags.Ephemeral
       });
-    if (rounds < 2 || rounds > 10)
+    if (rounds < 1 || rounds > 10)
       return interaction.reply({
-        embeds: [errorEmbed("Rounds must be between **2 and 10**.")],
+        embeds: [errorEmbed("Rounds must be between **1 and 10**.")],
         flags: MessageFlags.Ephemeral
       });
     if (await interaction.deferReply(), gameByUser.has(interaction.user.id))

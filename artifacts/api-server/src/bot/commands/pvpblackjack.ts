@@ -63,11 +63,13 @@ interface PvpRound {
 interface PvpGame {
   creator: Participant;
   opponent?: Participant;
+  startingDealerId?: string;
   amount: number;
   rounds: number;
   messageId: string;
   message?: Message;
   phase: "lobby" | "playing" | "finished" | "cancelled";
+  dealerRevealing?: boolean;
   currentRound: number;
   round?: PvpRound;
   wins: Record<string, number>;
@@ -235,20 +237,37 @@ function drawCards(
   if (hand.length === 0) return;
   const maxWidth = 780;
   const gap = 12;
-  const width = Math.min(CARD_WIDTH, Math.floor((maxWidth - Math.max(0, hand.length - 1) * gap) / hand.length));
-  const height = Math.floor(width * 1.4);
-  const step = hand.length > 1
-    ? Math.min(width + gap, (maxWidth - width) / (hand.length - 1))
-    : 0;
-  const totalWidth = width + Math.max(0, hand.length - 1) * step;
+  const normalWidth = Math.min(
+    CARD_WIDTH,
+    Math.floor((maxWidth - Math.max(0, hand.length - 1) * gap) / hand.length),
+  );
+  const normalTotalWidth =
+    hand.length * normalWidth +
+    Math.max(0, hand.length - 1) * gap;
+  const stacked = normalTotalWidth > maxWidth;
+  const step = stacked
+    ? hand.length > 1
+      ? Math.max(
+          18,
+          Math.min(
+            110,
+            (maxWidth - CARD_WIDTH) / (hand.length - 1),
+          ),
+        )
+      : 0
+    : normalWidth + gap;
+  const cardWidth = stacked ? CARD_WIDTH : normalWidth;
+  const cardHeight = stacked ? CARD_HEIGHT : Math.floor(normalWidth * 1.4);
+  const totalWidth =
+    cardWidth + Math.max(0, hand.length - 1) * step;
   const startX = (IMAGE_WIDTH - totalWidth) / 2;
 
   hand.forEach((card, index) => {
     const x = startX + index * step;
     if (hideSecond && index === 1) {
-      drawHiddenCard(ctx, x, y, width, height);
+      drawHiddenCard(ctx, x, y, cardWidth, cardHeight);
     } else {
-      drawCard(ctx, card, x, y, width, height);
+      drawCard(ctx, card, x, y, cardWidth, cardHeight);
     }
   });
 }
@@ -335,7 +354,14 @@ function imageFile(game: PvpGame, showDealerFull: boolean, overlay = ""): Attach
 }
 
 function roleForRound(game: PvpGame, roundNumber: number): { dealerId: string; playerId: string } {
-  const firstDealer = roundNumber % 2 === 1 ? game.creator.id : game.opponent!.id;
+  if (!game.startingDealerId) {
+    game.startingDealerId = Math.random() < 0.5 ? game.creator.id : game.opponent!.id;
+  }
+  const firstDealer = roundNumber % 2 === 1
+    ? game.startingDealerId
+    : game.startingDealerId === game.creator.id
+      ? game.opponent!.id
+      : game.creator.id;
   return {
     dealerId: firstDealer,
     playerId: firstDealer === game.creator.id ? game.opponent!.id : game.creator.id,
@@ -360,6 +386,7 @@ function startRound(game: PvpGame) {
   game.round = round;
   game.phase = "playing";
   game.roundResult = "";
+  game.dealerRevealing = false;
 
   if (isBlackjack(round.playerHand)) {
     dealerPlay(round);
@@ -468,7 +495,7 @@ function lobbyContainer(game: PvpGame): ContainerBuilder {
       text(
         [
           `👤 **Host**  ${participantName(game.creator)}`,
-          `💎 **Stake per player**  \`${formatAmount(game.amount)}\``,
+          `💎 **Bet per player**  \`${formatAmount(game.amount)}\``,
           `🔁 **Rounds**  \`${game.rounds}\``,
           "🏦 **Tax**  `5% of the final pot`",
           "",
@@ -500,7 +527,6 @@ function activeContainer(game: PvpGame): ContainerBuilder {
   const round = game.round!;
   const player = getParticipant(game, round.playerId);
   const dealer = getParticipant(game, round.dealerId);
-  const canDouble = !player.isBot && round.playerHand.length === 2;
   const container = new ContainerBuilder()
     .setAccentColor(COLORS.primary)
     .addTextDisplayComponents(
@@ -533,21 +559,21 @@ function activeContainer(game: PvpGame): ContainerBuilder {
     );
 
   if (!player.isBot) {
+    const buttonsDisabled =
+      round.phase !== "active" ||
+      game.dealerRevealing === true;
     container.addActionRowComponents(
       new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId("pvpbj_hit")
           .setLabel("➕  Hit")
-          .setStyle(ButtonStyle.Primary),
+          .setStyle(ButtonStyle.Primary)
+          .setDisabled(buttonsDisabled),
         new ButtonBuilder()
           .setCustomId("pvpbj_stand")
           .setLabel("✋  Stand")
-          .setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder()
-          .setCustomId("pvpbj_double")
-          .setLabel("⬆️  Double")
-          .setStyle(ButtonStyle.Success)
-          .setDisabled(!canDouble),
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(buttonsDisabled),
       ),
     );
   }
@@ -723,8 +749,8 @@ export const data = new SlashCommandBuilder()
   .addIntegerOption((option) =>
     option
       .setName("rounds")
-      .setDescription("Number of rounds (2–10)")
-      .setMinValue(2)
+      .setDescription("Number of rounds (1–10)")
+      .setMinValue(1)
       .setMaxValue(10)
       .setRequired(true),
   );
@@ -739,9 +765,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       flags: MessageFlags.Ephemeral,
     });
   }
-  if (rounds < 2 || rounds > 10) {
+  if (rounds < 1 || rounds > 10) {
     return interaction.reply({
-      embeds: [errorEmbed("Rounds must be between **2 and 10**.")],
+      embeds: [errorEmbed("Rounds must be between **1 and 10**.")],
       flags: MessageFlags.Ephemeral,
     });
   }
