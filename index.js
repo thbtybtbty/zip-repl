@@ -48,9 +48,17 @@ const hasToken = !!process.env.DISCORD_BOT_TOKEN;
 const hasClient = !!process.env.DISCORD_CLIENT_ID;
 console.log("[boot] DISCORD_BOT_TOKEN set:", hasToken, "| DISCORD_CLIENT_ID set:", hasClient);
 console.log("[boot] Starting bot (Node " + process.version + ")...");
-const child = spawn(process.execPath, [botEntry], {
+// Replit's Node wrapper can report an underlying Nix store path that is not
+// executable after the runtime is refreshed. Resolve Node through PATH so the
+// active wrapper selects the current runtime.
+const nodeExecutable = "node";
+const child = spawn(nodeExecutable, [botEntry], {
   stdio: "inherit",
   cwd: distDir,
   env: process.env,
+});
+child.on("error", (error) => {
+  console.error("[boot] Failed to start bot:", error.message);
+  process.exit(1);
 });
 child.on("exit", (code) => process.exit(code ?? 0));
