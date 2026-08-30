@@ -537,7 +537,7 @@ function blackjackImage(game, status, showDealerFull) {
   const betPaddingX = 18;
   const betPaddingY = 8;
   const betTextWidth = ctx.measureText(betText).width;
-  const sideBetTextWidth = sideBetText ? (ctx.font = "bold 17px Arial", ctx.measureText(sideBetText).width) : 0;
+  const sideBetTextWidth = sideBetText ? (ctx.font = "bold 21px Arial", ctx.measureText(sideBetText).width) : 0;
   const betBoxWidth = Math.max(betTextWidth, sideBetTextWidth) + betPaddingX * 2;
   const betBoxHeight = sideBetText ? 45 : 21 + betPaddingY * 2;
   const betBoxX = (IMAGE_WIDTH2 - betBoxWidth) / 2;
@@ -561,7 +561,7 @@ function blackjackImage(game, status, showDealerFull) {
     sideBetText ? betBoxY + 14 : betBoxY + betBoxHeight / 2
   );
   if (sideBetText) {
-    ctx.font = "bold 17px Arial";
+    ctx.font = "bold 21px Arial";
     ctx.fillStyle = "#ffffff";
     ctx.fillText(
       sideBetText,
@@ -1354,6 +1354,9 @@ async function handlePlayAgain3(interaction, userId, betStr) {
       flags: import_discord9.MessageFlags.Ephemeral
     });
   }
+  const sideBetType = finished.game.sideBetType;
+  const sideBetAmount = finished.game.sideBetAmount || 0;
+  const totalInitialStake = bet + sideBetAmount;
   await interaction.update({
     flags: import_discord9.MessageFlags.IsComponentsV2,
     components: [
@@ -1381,13 +1384,15 @@ async function handlePlayAgain3(interaction, userId, betStr) {
     userId,
     interaction.user.username
   );
-  if (user.balance < bet) {
+  if (user.balance < totalInitialStake) {
     return void interaction.followUp({
       embeds: [
         errorEmbed(
           `Insufficient balance. You have **${formatAmount(
             user.balance
-          )} gems**.`
+          )} gems**. You need **${formatAmount(
+            totalInitialStake
+          )} gems** for the bet and side bet.`
         )
       ],
       flags: import_discord9.MessageFlags.Ephemeral
@@ -1395,7 +1400,7 @@ async function handlePlayAgain3(interaction, userId, betStr) {
   }
   await addBalance(
     userId,
-    -bet
+    -totalInitialStake
   );
   const deck = shuffle2(
     buildDeck()
@@ -1413,14 +1418,15 @@ async function handlePlayAgain3(interaction, userId, betStr) {
       deal(deck),
       deal(deck)
     ],
-    sideBetType: null,
-    sideBetAmount: 0,
+    sideBetType,
+    sideBetAmount,
     sideBetMultiplier: 0,
     sideBetWon: false,
     sideBetPayout: 0,
     doubled: false,
     messageId: ""
   };
+  prepareSideBet(game);
   const playerBJ = isBlackjack(
     game.playerHand
   );
