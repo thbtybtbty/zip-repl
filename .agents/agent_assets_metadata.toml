@@ -1037,3 +1037,17 @@ mtime_ms = 1788176233247
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:92764364-a2af-46bc-a1ec-2fedbb5adbca/697a619d-dc45-4ec1-a1a6-df96f29bf290/16191d5b-9c13-41bd-8033-4f492b17b631"
 storage_version_token = "1788176247010828"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "v1NprNRN60cswKuwxXo_r"
+uri = "file://updated-wispbyte-index.zip"
+type = "unspecified"
+title = "Updated WispByte index.mjs"
+description = "ZIP containing only the updated index.mjs file."
+logical_id = "9df2f111-bec8-468e-8b68-b6e6a2f6f6a0"
+content_hash = "sha256:85c5ab669e74807cc01678da638a698626360e66da9b2440b34f390f488744ce"
+size = 1094513
+mtime_ms = 1788179988969
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:7f5b68d2-0cc8-4960-922e-637e9e311538/9df2f111-bec8-468e-8b68-b6e6a2f6f6a0/4366aa81-12e7-4031-b779-a3e22f03fd56"
+storage_version_token = "1788179994623906"
+content_type = "application/octet-stream"

@@ -124761,6 +124761,7 @@ var usersTable = sqliteTable("users", {
   // accrued unclaimed rakeback
   lockedBalance: integer("locked_balance").notNull().default(0),
   // bonus gems (rain/codes/tips/welcome) that must be wagered ≥1.8× before withdrawal
+  starterLockedBalance: integer("starter_locked_balance").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => /* @__PURE__ */ new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => /* @__PURE__ */ new Date())
 });
@@ -124802,6 +124803,7 @@ var inviteLogTable = sqliteTable("invite_log", {
   // 1 when inviter was paid
   leftServer: integer("left_server").notNull().default(0),
   // 1 if invited user left
+  rejoin: integer("rejoin").notNull().default(0),
   joinedAt: integer("joined_at").notNull().$defaultFn(() => Math.floor(Date.now() / 1e3)),
   verifiedAt: integer("verified_at"),
   // unix seconds, nullable
@@ -125007,6 +125009,7 @@ async function initDb() {
       affiliate_earnings INTEGER NOT NULL DEFAULT 0,
       rakeback INTEGER NOT NULL DEFAULT 0,
       locked_balance INTEGER NOT NULL DEFAULT 0,
+      starter_locked_balance INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL DEFAULT (unixepoch()),
       updated_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
@@ -125039,6 +125042,7 @@ async function initDb() {
       verified INTEGER NOT NULL DEFAULT 0,
       rewarded INTEGER NOT NULL DEFAULT 0,
       left_server INTEGER NOT NULL DEFAULT 0,
+      rejoin INTEGER NOT NULL DEFAULT 0,
       joined_at INTEGER NOT NULL DEFAULT (unixepoch()),
       verified_at INTEGER,
       account_created_at INTEGER NOT NULL
@@ -125065,11 +125069,11 @@ async function initDb() {
 
   // Create the same complete schema remotely. These are idempotent.
   const remoteSchema = [
-    `CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT NOT NULL, roblox_username TEXT, balance INTEGER NOT NULL DEFAULT 0, deposited INTEGER NOT NULL DEFAULT 0, withdrawn INTEGER NOT NULL DEFAULT 0, wagered INTEGER NOT NULL DEFAULT 0, profit INTEGER NOT NULL DEFAULT 0, affiliate_id TEXT, affiliate_earnings INTEGER NOT NULL DEFAULT 0, rakeback INTEGER NOT NULL DEFAULT 0, locked_balance INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (unixepoch()), updated_at INTEGER NOT NULL DEFAULT (unixepoch()))`,
+    `CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT NOT NULL, roblox_username TEXT, balance INTEGER NOT NULL DEFAULT 0, deposited INTEGER NOT NULL DEFAULT 0, withdrawn INTEGER NOT NULL DEFAULT 0, wagered INTEGER NOT NULL DEFAULT 0, profit INTEGER NOT NULL DEFAULT 0, affiliate_id TEXT, affiliate_earnings INTEGER NOT NULL DEFAULT 0, rakeback INTEGER NOT NULL DEFAULT 0, locked_balance INTEGER NOT NULL DEFAULT 0, starter_locked_balance INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (unixepoch()), updated_at INTEGER NOT NULL DEFAULT (unixepoch()))`,
     `CREATE TABLE IF NOT EXISTS games (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), game_type TEXT NOT NULL, bet INTEGER NOT NULL, state TEXT NOT NULL DEFAULT '{}', status TEXT NOT NULL DEFAULT 'active', multiplier TEXT NOT NULL DEFAULT '1.00', created_at INTEGER NOT NULL DEFAULT (unixepoch()), updated_at INTEGER NOT NULL DEFAULT (unixepoch()))`,
     `CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS bet_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, command TEXT NOT NULL, bet INTEGER NOT NULL, net_delta INTEGER NOT NULL, admin_bet INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`,
-    `CREATE TABLE IF NOT EXISTS invite_log (id INTEGER PRIMARY KEY AUTOINCREMENT, inviter_id TEXT NOT NULL, invited_id TEXT NOT NULL, invite_code TEXT NOT NULL, verified INTEGER NOT NULL DEFAULT 0, rewarded INTEGER NOT NULL DEFAULT 0, left_server INTEGER NOT NULL DEFAULT 0, joined_at INTEGER NOT NULL DEFAULT (unixepoch()), verified_at INTEGER, account_created_at INTEGER NOT NULL)`,
+    `CREATE TABLE IF NOT EXISTS invite_log (id INTEGER PRIMARY KEY AUTOINCREMENT, inviter_id TEXT NOT NULL, invited_id TEXT NOT NULL, invite_code TEXT NOT NULL, verified INTEGER NOT NULL DEFAULT 0, rewarded INTEGER NOT NULL DEFAULT 0, left_server INTEGER NOT NULL DEFAULT 0, rejoin INTEGER NOT NULL DEFAULT 0, joined_at INTEGER NOT NULL DEFAULT (unixepoch()), verified_at INTEGER, account_created_at INTEGER NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS promocodes (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, reward INTEGER NOT NULL, max_uses INTEGER NOT NULL, uses INTEGER NOT NULL DEFAULT 0, wager_req INTEGER NOT NULL DEFAULT 0, deposit_req INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`,
     `CREATE TABLE IF NOT EXISTS promocode_redemptions (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, user_id TEXT NOT NULL, redeemed_at INTEGER NOT NULL DEFAULT (unixepoch()), UNIQUE(code, user_id))`,
     `CREATE UNIQUE INDEX IF NOT EXISTS users_roblox_username ON users(roblox_username) WHERE roblox_username IS NOT NULL`
@@ -125086,8 +125090,10 @@ async function initDb() {
     `ALTER TABLE users ADD COLUMN affiliate_earnings INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN rakeback INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN locked_balance INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN starter_locked_balance INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE bet_log ADD COLUMN admin_bet INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN roblox_username TEXT`,
+    `ALTER TABLE invite_log ADD COLUMN rejoin INTEGER NOT NULL DEFAULT 0`,
     `CREATE UNIQUE INDEX IF NOT EXISTS users_roblox_username ON users(roblox_username) WHERE roblox_username IS NOT NULL`
   ];
   for (const statement of migrations) {
@@ -125341,7 +125347,7 @@ router3.post("/deposit", async (req, res) => {
   const discordId = linked[0].id;
   try {
     const newBalance = await addBalance(discordId, amountNum);
-    await db.update(usersTable).set({ deposited: sql`${usersTable.deposited} + ${amountNum}` }).where(eq(usersTable.id, discordId));
+    await db.update(usersTable).set({ deposited: sql`${usersTable.deposited} + ${amountNum}`, starterLockedBalance: 0 }).where(eq(usersTable.id, discordId));
     logger.info(
       { robloxUser: robloxName, discordId, amount: amountNum, newBalance },
       "Mailbox deposit processed"
@@ -129547,6 +129553,8 @@ function configEmbed(cfg, title, color) {
     { name: "\u{1F3B0} Codes Channel", value: ch(cfg.codesChannelId), inline: true },
     { name: "\u{1F514} Rain Ping Role", value: ro(cfg.rainPingRoleId), inline: true },
     { name: "\u{1F514} Code Ping Role", value: ro(cfg.codePingRoleId), inline: true },
+    { name: "\u2705 Verified Role", value: ro(cfg.verifiedRoleId), inline: true },
+    { name: "\u23F3 Unverified Role", value: ro(cfg.unverifiedRoleId), inline: true },
     { name: "\u{1F3AE} Roblox User", value: `\`${cfg.robloxUser}\``, inline: true },
     { name: "\u{1F4E5} Minimum Deposit", value: minimumAmount(cfg.minDeposit), inline: true },
     { name: "\u{1F4E4} Minimum Withdraw", value: minimumAmount(cfg.minWithdraw), inline: true },
@@ -129577,6 +129585,8 @@ function cfgSummary(cfg) {
     `\u{1F3B0} Codes: ${ch(cfg.codesChannelId)}`,
     `\u{1F514} Rain Ping: ${ro(cfg.rainPingRoleId)}`,
     `\u{1F514} Code Ping: ${ro(cfg.codePingRoleId)}`,
+    `\u2705 Verified Role: ${ro(cfg.verifiedRoleId)}`,
+    `\u23F3 Unverified Role: ${ro(cfg.unverifiedRoleId)}`,
     `\u{1F3AE} Roblox: \`${cfg.robloxUser}\``,
     `\u{1F4E5} Min Deposit: ${minimumAmount(cfg.minDeposit)}`,
     `\u{1F4E4} Min Withdraw: ${minimumAmount(cfg.minWithdraw)}`,
@@ -129605,6 +129615,10 @@ var data9 = new import_discord10.SlashCommandBuilder().setName("setup").setDescr
   (opt) => opt.setName("roblox_user").setDescription("Roblox username players send gems to when depositing").setRequired(true)
 ).addChannelOption(
   (opt) => opt.setName("affiliate_channel").setDescription("Channel where new affiliations are announced").addChannelTypes(import_discord10.ChannelType.GuildText).setRequired(true)
+).addRoleOption(
+  (opt) => opt.setName("verified_role").setDescription("Role that marks an invited member as verified").setRequired(true)
+).addRoleOption(
+  (opt) => opt.setName("unverified_role").setDescription("Role that marks an invited member as unverified").setRequired(true)
 ).addStringOption(
   (opt) => opt.setName("minimum_deposit").setDescription("Optional minimum deposit, e.g. 1m (use 0 to disable)").setRequired(false)
 ).addStringOption(
@@ -129630,7 +129644,7 @@ var data9 = new import_discord10.SlashCommandBuilder().setName("setup").setDescr
 ).addBooleanOption(
   (opt) => opt.setName("lock_codes").setDescription("Lock promo code earnings \u2014 must wager \u22651.8\xD7 before withdrawal (default: on)").setRequired(false)
 ).addBooleanOption(
-  (opt) => opt.setName("lock_starter_balance").setDescription("Lock the 10M starter balance \u2014 must wager \u22651.8\xD7 before withdrawal (default: on)").setRequired(false)
+  (opt) => opt.setName("lock_starter_balance").setDescription("Lock the starter balance until the user makes a deposit (default: on)").setRequired(false)
 ).addBooleanOption(
   (opt) => opt.setName("lock_add_balance").setDescription("Lock gems added via /addbalance \u2014 must wager \u22651.8\xD7 before withdrawal (default: off)").setRequired(false)
 );
@@ -129656,6 +129670,8 @@ async function execute9(interaction) {
   const starterBalanceStr = interaction.options.getString("starter_balance", false);
   const tipLogCh = interaction.options.getChannel("tip_log_channel", false);
   const affiliateCh = interaction.options.getChannel("affiliate_channel", true);
+  const verifiedRole = interaction.options.getRole("verified_role", true);
+  const unverifiedRole = interaction.options.getRole("unverified_role", true);
   const excludedGamesStr = interaction.options.getString("rakeback_excluded_games", false);
   const parseMinimum = (value, existingValue) => {
     if (value === null) return existingValue;
@@ -129693,6 +129709,8 @@ async function execute9(interaction) {
     starterBalance,
     tipLogChannelId: tipLogCh?.id,
     affiliateChannelId: affiliateCh.id,
+    verifiedRoleId: verifiedRole.id,
+    unverifiedRoleId: unverifiedRole.id,
     rakebackExcludedGames,
     lockTips,
     lockRain,
@@ -130034,13 +130052,16 @@ async function execute11(interaction) {
     });
   }
   const lockedBalance = dbUser.lockedBalance ?? 0;
-  const withdrawable = Math.max(0, dbUser.balance - lockedBalance);
+  const starterLockedBalance = (cfg.lockStarterBalance ?? true) && (dbUser.deposited ?? 0) <= 0 ? dbUser.starterLockedBalance ?? 0 : 0;
+  const totalLockedBalance = lockedBalance + starterLockedBalance;
+  const withdrawable = Math.max(0, dbUser.balance - totalLockedBalance);
   if (amount > withdrawable) {
+    const lockReasons = [];
+    if (starterLockedBalance > 0) lockReasons.push(`**${formatAmount(starterLockedBalance)}** \u{1F48E}** of your starter balance is locked until you make a deposit.`);
+    if (lockedBalance > 0) lockReasons.push(`**${formatAmount(lockedBalance)}** \u{1F48E}** of your balance is locked and must be wagered at **1.8\xD7 or higher** before it can be withdrawn.`);
     return interaction.editReply({
       embeds: [errorEmbed(
-        `You can only withdraw **${formatAmount(withdrawable)} \u{1F48E}** right now.
-
-**${formatAmount(lockedBalance)} \u{1F48E}** of your balance is locked (welcome bonus, rain winnings, promo codes, or tips received) and must be wagered at **1.8\xD7 or higher** before it can be withdrawn.`
+        `You can only withdraw **${formatAmount(withdrawable)}** \u{1F48E}** right now.\n\n${lockReasons.join("\n\n") || "Some of your balance is currently locked."}`
       )]
     });
   }
@@ -138021,25 +138042,24 @@ async function execute39(interaction) {
   const displayName = targetUser?.displayName ?? interaction.user.displayName;
   const verified = sqlite.prepare(
     `SELECT * FROM invite_log
-       WHERE inviter_id = ? AND verified = 1
+       WHERE inviter_id = ? AND verified = 1 AND rejoin = 0
        ORDER BY verified_at DESC`
   ).all(userId);
   const unverified = sqlite.prepare(
     `SELECT * FROM invite_log
-       WHERE inviter_id = ? AND verified = 0 AND left_server = 0
+       WHERE inviter_id = ? AND verified = 0 AND left_server = 0 AND rejoin = 0
        ORDER BY joined_at DESC`
   ).all(userId);
   const left = sqlite.prepare(
     `SELECT * FROM invite_log
-       WHERE inviter_id = ? AND left_server = 1
+       WHERE inviter_id = ? AND left_server = 1 AND rejoin = 0
        ORDER BY joined_at DESC`
   ).all(userId);
-  function fmtList(rows) {
-    if (rows.length === 0) return "`None`";
-    const shown = rows.slice(0, 15).map((r) => `<@${r.invited_id}>`);
-    const extra = rows.length - shown.length;
-    return shown.join(", ") + (extra > 0 ? ` *(+${extra} more)*` : "");
-  }
+  const rejoins = sqlite.prepare(
+    `SELECT * FROM invite_log
+       WHERE inviter_id = ? AND rejoin = 1
+       ORDER BY joined_at DESC`
+  ).all(userId);
   const embed = new import_discord40.EmbedBuilder().setColor(COLORS.primary).setTitle(`\u{1F4E8}  Invites \u2014 ${displayName}`).addFields(
     {
       name: `\u2705  Verified Invites  \`${verified.length}\``,
@@ -138055,8 +138075,49 @@ async function execute39(interaction) {
       name: `\u{1F44B}  Left Invites  \`${left.length}\``,
       value: fmtList(left),
       inline: false
+    },
+    {
+      name: `\u{1F501}  Rejoins  \`${rejoins.length}\``,
+      value: fmtList(rejoins),
+      inline: false
     }
-  ).setFooter({ text: `Total tracked invites: ${verified.length + unverified.length + left.length}` }).setTimestamp();
+  ).setFooter({ text: `Total tracked invites: ${verified.length + unverified.length + left.length + rejoins.length}` }).setTimestamp();
+  await interaction.editReply({ embeds: [embed] });
+}
+
+// src/bot/commands/invited.ts
+var invited_exports = {};
+__export(invited_exports, {
+  data: () => dataInvited,
+  execute: () => executeInvited
+});
+var import_discord_invited = __toESM(require_src2(), 1);
+var dataInvited = new import_discord_invited.SlashCommandBuilder().setName("invited").setDescription("List the people invited by a user").addUserOption(
+  (opt) => opt.setName("user").setDescription("(Admin only) View another member's invite list").setRequired(false)
+);
+async function executeInvited(interaction) {
+  await interaction.deferReply();
+  const targetUser = interaction.options.getUser("user");
+  if (targetUser && targetUser.id !== interaction.user.id && !isAdmin(interaction.user.id)) {
+    return interaction.editReply({
+      embeds: [errorEmbed("Only admins can view another member's invite list.")]
+    });
+  }
+  const userId = targetUser?.id ?? interaction.user.id;
+  const displayName = targetUser?.displayName ?? interaction.user.displayName;
+  const rows = sqlite.prepare(
+    `SELECT invited_id, joined_at, account_created_at, verified, rejoin, left_server
+       FROM invite_log
+       WHERE inviter_id = ?
+       ORDER BY joined_at DESC`
+  ).all(userId);
+  const shown = rows.slice(0, 25);
+  const description = shown.length ? shown.map((row, index) => {
+    const status = row.rejoin ? "Rejoin" : row.verified ? "Verified" : row.left_server ? "Left" : "Unverified";
+    return `${index + 1}. <@${row.invited_id}> — **${status}**\n   Joined: <t:${row.joined_at}:F> (<t:${row.joined_at}:R>)\n   Account created: <t:${row.account_created_at}:F>`;
+  }).join("\n\n") : "`None`";
+  const extra = rows.length - shown.length;
+  const embed = new import_discord_invited.EmbedBuilder().setColor(COLORS.primary).setTitle(`📋  Invited by ${displayName}`).setDescription(description).setFooter({ text: `Total tracked invite entries: ${rows.length}${extra > 0 ? ` • Showing first 25` : ""}` }).setTimestamp();
   await interaction.editReply({ embeds: [embed] });
 }
 
@@ -138860,8 +138921,71 @@ var GAMBLING_COMMANDS = /* @__PURE__ */ new Set([
 function isExpiredInteractionError(error40) {
   return typeof error40 === "object" && error40 !== null && "code" in error40 && error40.code === 10062;
 }
-var commands = [balance_exports, tip_exports, rakeback_exports, affiliate_exports, afflist_exports, mines_exports, towers_exports, rps_exports, coinflip_exports, dice_exports, blackjack_exports, pvpblackjack_exports, setup_exports, deposit_exports, withdraw_exports, addbalance_exports, removebalance_exports, wheel_exports, slots_exports, hilo_exports, roulette_exports, crash_exports, scratchcard_exports, chickencrossing_exports, colordice_exports, upgrader_exports, keno_exports, flip_exports, createcode_exports, redeem_exports, viewcodes_exports, leaderboard_exports, history_exports, resetstats_exports, simulate_exports, freeze_exports, gamedisable_exports, stats_exports, economy_exports, addadminperms_exports, rain_exports, link_exports, invites_exports, cleardata_exports];
+var commands = [balance_exports, tip_exports, rakeback_exports, affiliate_exports, afflist_exports, mines_exports, towers_exports, rps_exports, coinflip_exports, dice_exports, blackjack_exports, pvpblackjack_exports, setup_exports, deposit_exports, withdraw_exports, addbalance_exports, removebalance_exports, wheel_exports, slots_exports, hilo_exports, roulette_exports, crash_exports, scratchcard_exports, chickencrossing_exports, colordice_exports, upgrader_exports, keno_exports, flip_exports, createcode_exports, redeem_exports, viewcodes_exports, leaderboard_exports, history_exports, resetstats_exports, simulate_exports, freeze_exports, gamedisable_exports, stats_exports, economy_exports, addadminperms_exports, rain_exports, link_exports, invites_exports, invited_exports, cleardata_exports];
 var commandData = commands.map((cmd) => cmd.data.toJSON());
+var inviteUsesByGuild = /* @__PURE__ */ new Map();
+async function cacheGuildInvites(guild) {
+  try {
+    const invites = await guild.invites.fetch();
+    inviteUsesByGuild.set(guild.id, new Map([...invites.values()].map((invite) => [invite.code, invite.uses ?? 0])));
+    return invites;
+  } catch (err) {
+    logger.warn({ err, guildId: guild.id }, "Could not read guild invites for invite tracking");
+    return null;
+  }
+}
+async function findUsedInvite(guild) {
+  const previous = inviteUsesByGuild.get(guild.id) ?? /* @__PURE__ */ new Map();
+  const invites = await cacheGuildInvites(guild);
+  if (!invites) return null;
+  return [...invites.values()].find((invite) => (invite.uses ?? 0) > (previous.get(invite.code) ?? 0)) ?? null;
+}
+async function handleInviteMemberAdd(member) {
+  const invite = await findUsedInvite(member.guild);
+  if (!invite?.inviter?.id) {
+    logger.warn({ guildId: member.guild.id, invitedId: member.id }, "Could not identify invite used by new member");
+    return;
+  }
+  const cfg = getServerConfig2();
+  const isVerified = Boolean(cfg?.verifiedRoleId && member.roles.cache.has(cfg.verifiedRoleId));
+  const priorLeave = sqlite.prepare(
+    `SELECT id FROM invite_log WHERE invited_id = ? AND left_server = 1 ORDER BY joined_at DESC LIMIT 1`
+  ).get(member.id);
+  const joinedAt = Math.floor(Date.now() / 1e3);
+  const accountCreatedAt = Math.floor((member.user.createdTimestamp ?? Date.now()) / 1e3);
+  sqlite.prepare(
+    `INSERT INTO invite_log (inviter_id, invited_id, invite_code, verified, rewarded, left_server, rejoin, joined_at, verified_at, account_created_at)
+     VALUES (?, ?, ?, ?, 0, 0, ?, ?, ?, ?)`
+  ).run(
+    invite.inviter.id,
+    member.id,
+    invite.code,
+    isVerified ? 1 : 0,
+    priorLeave ? 1 : 0,
+    joinedAt,
+    isVerified ? joinedAt : null,
+    accountCreatedAt
+  );
+}
+async function handleInviteMemberUpdate(oldMember, newMember) {
+  const cfg = getServerConfig2();
+  if (!cfg?.verifiedRoleId || oldMember.roles.cache.has(cfg.verifiedRoleId) || !newMember.roles.cache.has(cfg.verifiedRoleId)) return;
+  const verifiedAt = Math.floor(Date.now() / 1e3);
+  sqlite.prepare(
+    `UPDATE invite_log SET verified = 1, verified_at = ?
+     WHERE id = (
+       SELECT id FROM invite_log
+       WHERE invited_id = ? AND verified = 0 AND left_server = 0 AND rejoin = 0
+       ORDER BY joined_at DESC LIMIT 1
+     )`
+  ).run(verifiedAt, newMember.id);
+}
+async function handleInviteMemberRemove(member) {
+  sqlite.prepare(
+    `UPDATE invite_log SET left_server = 1 WHERE invited_id = ? AND left_server = 0`
+  ).run(member.id);
+}
+
 var client = new import_discord42.Client({
   intents: [
     import_discord42.GatewayIntentBits.Guilds,
@@ -138946,6 +139070,7 @@ async function handleInteraction(interaction) {
       if (name === "rain") return await execute37(interaction);
       if (name === "link") return await execute38(interaction);
       if (name === "invites") return await execute39(interaction);
+      if (name === "invited") return await executeInvited(interaction);
       if (name === "clear") return await execute40(interaction);
     } catch (err) {
       if (isExpiredInteractionError(err)) {
@@ -139251,11 +139376,9 @@ async function handleNewMember(member) {
   await db.insert(usersTable).values({
     id: userId,
     username,
-    balance: welcomeBonus
+    balance: welcomeBonus,
+    starterLockedBalance: (cfg?.lockStarterBalance ?? true) ? welcomeBonus : 0
   });
-  if (welcomeBonus > 0 && (cfg?.lockStarterBalance ?? true)) {
-    await addLocked(userId, welcomeBonus);
-  }
   logger.info({ userId, username, bonus: welcomeBonus }, "New member joined \u2014 welcome bonus awarded");
   try {
     if (welcomeBonus > 0) await member.send(
@@ -139280,7 +139403,8 @@ async function startBot() {
       logger.error({ err }, "Failed to clear global commands");
     }
     const guilds = [...c.guilds.cache.values()];
-    logger.info({ guildCount: guilds.length }, "Registering guild commands");
+    await Promise.all(guilds.map((guild) => cacheGuildInvites(guild)));
+     logger.info({ guildCount: guilds.length }, "Registering guild commands");
     if (guilds.length === 0) {
       logger.warn("Discord bot is ready but has no cached guilds; no guild commands were registered");
       return;
@@ -139297,11 +139421,21 @@ async function startBot() {
     );
     logger.info({ guildCount: guilds.length, commandCount: commandData.length }, "Guild command registration complete");
   });
-  client.on(import_discord42.Events.GuildMemberAdd, (member) => {
-    handleNewMember(member).catch((err) => {
-      logger.error({ err, userId: member.id }, "Error handling new member join");
-    });
-  });
+   client.on(import_discord42.Events.GuildMemberAdd, (member) => {
+     Promise.all([handleNewMember(member), handleInviteMemberAdd(member)]).catch((err) => {
+       logger.error({ err, userId: member.id }, "Error handling new member join");
+     });
+   });
+   client.on(import_discord42.Events.GuildMemberUpdate, (oldMember, newMember) => {
+     handleInviteMemberUpdate(oldMember, newMember).catch((err) => {
+       logger.error({ err, userId: newMember.id }, "Error handling invite verification update");
+     });
+   });
+   client.on(import_discord42.Events.GuildMemberRemove, (member) => {
+     handleInviteMemberRemove(member).catch((err) => {
+       logger.error({ err, userId: member.id }, "Error handling invited member leave");
+     });
+   });
   client.on(import_discord42.Events.InteractionCreate, (interaction) => {
     handleInteraction(interaction).catch((err) => {
       if (isExpiredInteractionError(err)) return;
