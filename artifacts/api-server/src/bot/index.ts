@@ -222,6 +222,7 @@ async function handleInteraction(interaction: Interaction) {
       if (id === "bj_hit")    return await blackjack.handleHit(bi);
       if (id === "bj_stand")  return await blackjack.handleStand(bi);
       if (id === "bj_double") return await blackjack.handleDouble(bi);
+      if (id === "bj_split")  return await blackjack.handleSplit(bi);
 
       // PvP Blackjack
       if (id === "pvpbj_join")   return await pvpblackjack.handleJoin(bi);

@@ -127441,6 +127441,7 @@ __export(blackjack_exports, {
   handleDouble: () => handleDouble,
   handleHit: () => handleHit,
   handlePlayAgain: () => handlePlayAgain3,
+  handleSplit: () => handleSplit,
   handleStand: () => handleStand
 });
 var import_discord12 = __toESM(require_src2(), 1);
@@ -127519,6 +127520,82 @@ function isBlackjack(hand) {
 }
 function isBust(hand) {
   return handValue(hand) > 21;
+}
+function isSplitGame(game) {
+  return Boolean(game.playerHands?.length);
+}
+function currentPlayerHand(game) {
+  return isSplitGame(game) ? game.playerHands[game.activeHandIndex ?? 0] : game.playerHand;
+}
+function syncCurrentHand(game) {
+  game.playerHand = currentPlayerHand(game);
+  game.doubled = Boolean(
+    isSplitGame(game) && game.handDoubled?.[game.activeHandIndex ?? 0]
+  );
+}
+function canSplitHand(game) {
+  const hand = currentPlayerHand(game);
+  return !isSplitGame(game) && hand.length === 2 && hand[0].rank === hand[1].rank;
+}
+function canDoubleHand(game) {
+  const hand = currentPlayerHand(game);
+  return hand.length === 2 && !Boolean(
+    isSplitGame(game) ? game.handDoubled?.[game.activeHandIndex ?? 0] : game.doubled
+  );
+}
+function rankNumber(rank) {
+  if (rank === "A") return 14;
+  if (rank === "J") return 11;
+  if (rank === "Q") return 12;
+  if (rank === "K") return 13;
+  return Number(rank);
+}
+function isThreeCardStraight(cards) {
+  const values = cards.map((card) => rankNumber(card.rank)).sort((a, b) => a - b);
+  if (new Set(values).size !== 3) return false;
+  return values[2] - values[0] === 2 || values[0] === 2 && values[1] === 3 && values[2] === 14;
+}
+function getPerfectPairsMultiplier(hand) {
+  const first = hand[0];
+  const second = hand[1];
+  if (!first || !second || first.rank !== second.rank) return 0;
+  if (first.suit === second.suit) return 25;
+  if (suitColor(first.suit) === suitColor(second.suit)) return 12;
+  return 6;
+}
+function get21Plus3Multiplier(game) {
+  const sideBetCards = game.sideBetCards || game.playerHand;
+  const cards = [
+    sideBetCards[0],
+    sideBetCards[1],
+    game.dealerHand[0]
+  ];
+  if (cards.some((card) => !card)) return 0;
+  const [first, second, third] = cards;
+  const sameRank = first.rank === second.rank && second.rank === third.rank;
+  const flush = cards.every((card) => card.suit === first.suit);
+  const straight = isThreeCardStraight(cards);
+  if (sameRank) return 100;
+  if (straight && flush) return 40;
+  if (straight) return 10;
+  if (flush) return 5;
+  return 0;
+}
+function getSideBetMultiplier(game) {
+  if (!game.sideBetAmount || !game.sideBetType) return 0;
+  return game.sideBetType === "perfect_pairs" ? getPerfectPairsMultiplier(game.sideBetCards || game.playerHand) : get21Plus3Multiplier(game);
+}
+function prepareSideBet(game) {
+  const multiplier = getSideBetMultiplier(game);
+  game.sideBetMultiplier = multiplier;
+  game.sideBetWon = multiplier > 0;
+  game.sideBetPayout = game.sideBetWon ? game.sideBetAmount + game.sideBetAmount * multiplier : 0;
+}
+function getSideBetText(game) {
+  if (!game.sideBetAmount || !game.sideBetType) return null;
+  const label = game.sideBetType === "perfect_pairs" ? "Perfect Pairs" : "21+3";
+  const result = game.sideBetWon ? formatAmount(game.sideBetPayout || 0) : game.sideBetType === "perfect_pairs" ? "No pair" : "No match";
+  return `\u{1F3B2} **Side bet (${label}) ${formatAmount(game.sideBetAmount)}:** \`${result}\``;
 }
 var sleep3 = (ms) => new Promise(
   (resolve) => setTimeout(resolve, ms)
@@ -127746,6 +127823,14 @@ function drawCards(ctx, hand, y, hiddenSecondCard) {
     }
   );
 }
+function drawSplitCards(ctx, hand, x, y) {
+  const width = 92;
+  const height = 129;
+  const gap = 8;
+  hand.forEach((card, index) => {
+    drawCard(ctx, card, x + index * (width + gap), y, width, height);
+  });
+}
 function getImageResult(status) {
   switch (status) {
     case "player_win":
@@ -127970,40 +128055,61 @@ function blackjackImage(game, status, showDealerFull) {
     335
   );
   ctx.stroke();
-  ctx.fillStyle = handColors.player;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  ctx.font = "bold 25px Arial";
-  ctx.fillText(
-    "YOUR HAND",
-    70,
-    350
-  );
-  const playerValue = handValue(
-    game.playerHand
-  );
-  ctx.font = "bold 22px Arial";
-  ctx.fillText(
-    `Value: ${playerValue}`,
-    70,
-    378
-  );
-  if (isBust(
-    game.playerHand
-  )) {
-    ctx.fillStyle = "#ff5c5c";
+  if (isSplitGame(game)) {
+    const hands = game.playerHands;
+    hands.forEach((hand, index) => {
+      const x = index === 0 ? 70 : 640;
+      const handStatus = game.handStatuses?.[index] || "active";
+      const active = handStatus === "active" && game.activeHandIndex === index;
+      ctx.fillStyle = active ? "#facc15" : handColors.player;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      ctx.font = "bold 22px Arial";
+      ctx.fillText(`YOUR HAND ${index + 1}`, x, 350);
+      ctx.font = "bold 20px Arial";
+      ctx.fillText(`Value: ${handValue(hand)}`, x, 378);
+      if (isBust(hand)) {
+        ctx.fillStyle = "#ff5c5c";
+        ctx.fillText("BUST", x + 135, 378);
+      }
+      drawSplitCards(ctx, hand, x, PLAYER_Y);
+    });
+  } else {
+    ctx.fillStyle = handColors.player;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.font = "bold 25px Arial";
     ctx.fillText(
-      "BUST",
-      205,
+      "YOUR HAND",
+      70,
+      350
+    );
+    const playerValue = handValue(
+      game.playerHand
+    );
+    ctx.font = "bold 22px Arial";
+    ctx.fillText(
+      `Value: ${playerValue}`,
+      70,
       378
     );
+    if (isBust(
+      game.playerHand
+    )) {
+      ctx.fillStyle = "#ff5c5c";
+      ctx.fillText(
+        "BUST",
+        205,
+        378
+      );
+    }
+    drawCards(
+      ctx,
+      game.playerHand,
+      PLAYER_Y,
+      false
+    );
   }
-  drawCards(
-    ctx,
-    game.playerHand,
-    PLAYER_Y,
-    false
-  );
   if (status !== "active") {
     drawResultOverlay(
       ctx,
@@ -128031,12 +128137,19 @@ function createDivider() {
   return new import_discord12.SeparatorBuilder();
 }
 function buildComponents(game, disabled) {
-  const canDouble = !disabled && !game.doubled && game.playerHand.length === 2;
-  return new import_discord12.ActionRowBuilder().addComponents(
+  const canDouble = !disabled && canDoubleHand(game);
+  const canSplit = !disabled && canSplitHand(game);
+  const row = new import_discord12.ActionRowBuilder().addComponents(
     new import_discord12.ButtonBuilder().setCustomId("bj_hit").setLabel("\u2795  Hit").setStyle(import_discord12.ButtonStyle.Primary).setDisabled(disabled),
     new import_discord12.ButtonBuilder().setCustomId("bj_stand").setLabel("\u270B  Stand").setStyle(import_discord12.ButtonStyle.Secondary).setDisabled(disabled),
     new import_discord12.ButtonBuilder().setCustomId("bj_double").setLabel("\u2B06\uFE0F  Double").setStyle(import_discord12.ButtonStyle.Success).setDisabled(!canDouble)
   );
+  if (canSplit) {
+    row.addComponents(
+      new import_discord12.ButtonBuilder().setCustomId("bj_split").setLabel("\u{1F500}  Split").setStyle(import_discord12.ButtonStyle.Success)
+    );
+  }
+  return row;
 }
 function playAgainRow(userId, bet, disabled = false) {
   return new import_discord12.ActionRowBuilder().addComponents(
@@ -128046,8 +128159,12 @@ function playAgainRow(userId, bet, disabled = false) {
   );
 }
 function buildBlackjackContainer(game, status, showGameplayButtons, playAgainDisabled = false) {
+  const splitGame = isSplitGame(game);
   const bet = game.bet * (game.doubled ? 2 : 1);
-  const payout = status === "blackjack" ? game.bet + Math.floor(
+  const payout = status === "split" ? (game.handResults || []).reduce((sum, handResult, index) => {
+    const handStake = game.bet + (game.handDoubled?.[index] ? game.bet : 0);
+    return sum + (handResult === "player_win" || handResult === "dealer_bust" ? handStake * 2 : handResult === "push" ? handStake : 0);
+  }, 0) : status === "blackjack" ? game.bet + Math.floor(
     game.bet * 1.5
   ) : status === "player_win" || status === "dealer_bust" ? bet * 2 : status === "push" ? bet : 0;
   const multiplier = bet > 0 ? payout / bet : 0;
@@ -128079,6 +128196,10 @@ function buildBlackjackContainer(game, status, showGameplayButtons, playAgainDis
     blackjack: {
       color: COLORS.gold,
       title: "\u{1F0CF} Blackjack - BLACKJACK WIN"
+    },
+    split: {
+      color: COLORS.primary,
+      title: "\u{1F0CF} Blackjack - SPLIT RESULTS"
     }
   };
   const meta = statusMeta[status];
@@ -128090,12 +128211,14 @@ function buildBlackjackContainer(game, status, showGameplayButtons, playAgainDis
       `## ${meta.title}`
     )
   );
-  if (status === "player_win" || status === "dealer_bust" || status === "push" || status === "blackjack") {
+  const sideBetText = getSideBetText(game);
+  if (status === "player_win" || status === "dealer_bust" || status === "push" || status === "blackjack" || status === "split") {
     container.addTextDisplayComponents(
       createText(
         `\u{1F48E} **Bet:** \`${formatAmount(
           bet
-        )}\`${game.doubled ? "  *(doubled)*" : ""}
+        )}\`${game.doubled ? "  *(doubled)*" : ""}${sideBetText ? `
+${sideBetText}` : ""}
 \u2728 **Multiplier:** \`${multiplier.toFixed(
           2
         )}x (${formatAmount(
@@ -128108,7 +128231,8 @@ function buildBlackjackContainer(game, status, showGameplayButtons, playAgainDis
       createText(
         `\u{1F48E} **Bet:** \`${formatAmount(
           bet
-        )}\`${game.doubled ? "  *(doubled)*" : ""}`
+        )}\`${game.doubled ? "  *(doubled)*" : ""}${sideBetText ? `
+${sideBetText}` : ""}`
       )
     );
   }
@@ -128190,38 +128314,73 @@ function dealerPlay(game) {
     );
   }
 }
-function determineOutcome(game) {
-  const playerBJ = isBlackjack(
-    game.playerHand
-  );
-  const dealerBJ = isBlackjack(
-    game.dealerHand
-  );
-  if (dealerBJ) {
-    return playerBJ ? "push" : "dealer_win";
-  }
-  if (isBust(
-    game.dealerHand
-  )) {
-    return "dealer_bust";
-  }
-  const pv = handValue(
-    game.playerHand
-  );
-  const dv = handValue(
-    game.dealerHand
-  );
+function determineSingleHandOutcome(game, hand, allowBlackjack) {
+  const playerBJ = allowBlackjack && isBlackjack(hand);
+  const dealerBJ = isBlackjack(game.dealerHand);
+  if (dealerBJ) return playerBJ ? "push" : "dealer_win";
+  if (isBust(hand)) return "player_bust";
+  if (isBust(game.dealerHand)) return "dealer_bust";
+  const pv = handValue(hand);
+  const dv = handValue(game.dealerHand);
   return pv > dv ? "player_win" : pv === dv ? "push" : "dealer_win";
+}
+function determineOutcome(game) {
+  if (isSplitGame(game)) {
+    game.handResults = game.playerHands.map(
+      (hand) => determineSingleHandOutcome(game, hand, false)
+    );
+    return "split";
+  }
+  return determineSingleHandOutcome(game, game.playerHand, true);
+}
+async function finishCurrentHand(game, interaction, handStatus) {
+  if (!isSplitGame(game)) {
+    dealerPlay(game);
+    return resolveGame(
+      game,
+      interaction,
+      handStatus === "player_bust" ? handStatus : determineOutcome(game)
+    );
+  }
+  game.handStatuses[game.activeHandIndex ?? 0] = handStatus;
+  if ((game.activeHandIndex ?? 0) < game.playerHands.length - 1) {
+    game.activeHandIndex = (game.activeHandIndex ?? 0) + 1;
+    syncCurrentHand(game);
+    await interaction.editReply({
+      flags: import_discord12.MessageFlags.IsComponentsV2,
+      files: [imageFile(game, "active", false)],
+      components: [buildBlackjackContainer(game, "active", true)]
+    });
+    return;
+  }
+  dealerPlay(game);
+  return resolveGame(game, interaction, determineOutcome(game));
 }
 async function resolveGame(game, interaction, status) {
   activeBlackjackGames.delete(
     game.userId
   );
   const multiplier = game.doubled ? 2 : 1;
-  const totalStake2 = game.bet * multiplier;
+  const totalStake2 = isSplitGame(game) ? game.playerHands.reduce(
+    (sum, _hand, index) => sum + game.bet + (game.handDoubled?.[index] ? game.bet : 0),
+    0
+  ) : game.bet * multiplier;
   let payout = 0;
   let netDelta = 0;
-  if (status === "blackjack") {
+  if (status === "split") {
+    game.handStatuses = game.handResults.map((result) => result);
+    for (const [index, handResult] of game.handResults.entries()) {
+      const handStake = game.bet + (game.handDoubled?.[index] ? game.bet : 0);
+      if (handResult === "player_win" || handResult === "dealer_bust") {
+        payout += handStake * 2;
+        netDelta += handStake;
+      } else if (handResult === "push") {
+        payout += handStake;
+      } else {
+        netDelta -= handStake;
+      }
+    }
+  } else if (status === "blackjack") {
     const bjProfit = Math.floor(
       game.bet * 1.5
     );
@@ -128237,13 +128396,17 @@ async function resolveGame(game, interaction, status) {
     payout = 0;
     netDelta = -totalStake2;
   }
+  const sideBetAmount = game.sideBetAmount || 0;
+  const sideBetPayout = game.sideBetPayout || 0;
+  payout += sideBetPayout;
+  netDelta += sideBetPayout - sideBetAmount;
   await addBalance(
     game.userId,
     payout
   );
   await recordBet(
     game.userId,
-    totalStake2,
+    totalStake2 + sideBetAmount,
     netDelta,
     "blackjack"
   );
@@ -128360,6 +128523,13 @@ var data11 = new import_discord12.SlashCommandBuilder().setName("blackjack").set
   (opt) => opt.setName("amount").setDescription(
     "Bet amount (e.g. 1m, 2.5b)"
   ).setRequired(true)
+).addStringOption(
+  (opt) => opt.setName("side_bet_amount").setDescription("Optional side bet amount (e.g. 1m, 2.5b)")
+).addStringOption(
+  (opt) => opt.setName("side_bet_type").setDescription("Optional side bet type").addChoices(
+    { name: "Perfect Pairs", value: "perfect_pairs" },
+    { name: "21+3", value: "21+3" }
+  )
 );
 async function execute11(interaction) {
   const amountStr = interaction.options.getString(
@@ -128372,6 +128542,29 @@ async function execute11(interaction) {
       embeds: [
         errorEmbed(
           "Minimum bet is **1m gems**. Try `1m`, `2.5b`, `500k`."
+        )
+      ],
+      flags: import_discord12.MessageFlags.Ephemeral
+    });
+  }
+  const sideBetType = interaction.options.getString("side_bet_type");
+  const sideBetAmountStr = interaction.options.getString("side_bet_amount");
+  if (Boolean(sideBetType) !== Boolean(sideBetAmountStr)) {
+    return interaction.reply({
+      embeds: [
+        errorEmbed(
+          "To place a side bet, provide both **side_bet_type** and **side_bet_amount**."
+        )
+      ],
+      flags: import_discord12.MessageFlags.Ephemeral
+    });
+  }
+  const sideBetAmount = sideBetAmountStr ? parseAmount(sideBetAmountStr) || 0 : 0;
+  if (sideBetAmountStr && (!sideBetAmount || sideBetAmount < 1e6)) {
+    return interaction.reply({
+      embeds: [
+        errorEmbed(
+          "Minimum side bet is **1m gems**. Try `1m`, `2.5b`, `500k`."
         )
       ],
       flags: import_discord12.MessageFlags.Ephemeral
@@ -128393,20 +128586,23 @@ async function execute11(interaction) {
     interaction.user.id,
     interaction.user.username
   );
-  if (user.balance < amount) {
+  const totalInitialStake = amount + sideBetAmount;
+  if (user.balance < totalInitialStake) {
     return interaction.editReply({
       embeds: [
         errorEmbed(
           `Insufficient balance. You have **${formatAmount(
             user.balance
-          )} gems**.`
+          )} gems**. You need **${formatAmount(
+            totalInitialStake
+          )} gems** for the bet and side bet.`
         )
       ]
     });
   }
   await addBalance(
     interaction.user.id,
-    -amount
+    -totalInitialStake
   );
   const deck = shuffle2(
     buildDeck()
@@ -128424,9 +128620,15 @@ async function execute11(interaction) {
       deal(deck),
       deal(deck)
     ],
+    sideBetType: sideBetType ?? void 0,
+    sideBetAmount,
+    sideBetMultiplier: 0,
+    sideBetWon: false,
+    sideBetPayout: 0,
     doubled: false,
     messageId: ""
   };
+  prepareSideBet(game);
   const playerBJ = isBlackjack(
     game.playerHand
   );
@@ -128520,21 +128722,19 @@ async function handleHit(interaction) {
     interaction.user.id
   );
   if (!game) return;
-  game.playerHand.push(
-    deal(game.deck)
-  );
-  if (isBust(
-    game.playerHand
-  )) {
-    return resolveGame(
-      game,
-      interaction,
-      "player_bust"
-    );
+  const hand = currentPlayerHand(game);
+  hand.push(deal(game.deck));
+  syncCurrentHand(game);
+  if (isBust(hand)) {
+    if (isSplitGame(game)) {
+      return finishCurrentHand(game, interaction, "player_bust");
+    }
+    return resolveGame(game, interaction, "player_bust");
   }
-  if (handValue(
-    game.playerHand
-  ) === 21) {
+  if (handValue(hand) === 21) {
+    if (isSplitGame(game)) {
+      return finishCurrentHand(game, interaction, "standing");
+    }
     dealerPlay(game);
     return resolveGame(
       game,
@@ -128568,6 +128768,9 @@ async function handleStand(interaction) {
     interaction.user.id
   );
   if (!game) return;
+  if (isSplitGame(game)) {
+    return finishCurrentHand(game, interaction, "standing");
+  }
   dealerPlay(game);
   return resolveGame(
     game,
@@ -128582,7 +128785,7 @@ async function handleDouble(interaction) {
   const game = activeBlackjackGames.get(
     interaction.user.id
   );
-  if (!game || game.playerHand.length !== 2) {
+  if (!game || !canDoubleHand(game)) {
     return;
   }
   const user = await getOrCreateUser(
@@ -128607,13 +128810,22 @@ async function handleDouble(interaction) {
     game.userId,
     -game.bet
   );
-  game.doubled = true;
-  game.playerHand.push(
-    deal(game.deck)
-  );
-  if (isBust(
-    game.playerHand
-  )) {
+  const hand = currentPlayerHand(game);
+  if (isSplitGame(game)) {
+    game.handDoubled[game.activeHandIndex ?? 0] = true;
+  } else {
+    game.doubled = true;
+  }
+  hand.push(deal(game.deck));
+  syncCurrentHand(game);
+  if (isSplitGame(game)) {
+    return finishCurrentHand(
+      game,
+      interaction,
+      isBust(hand) ? "player_bust" : "standing"
+    );
+  }
+  if (isBust(hand)) {
     return resolveGame(
       game,
       interaction,
@@ -128628,6 +128840,45 @@ async function handleDouble(interaction) {
       game
     )
   );
+}
+async function handleSplit(interaction) {
+  await interaction.deferUpdate();
+  const game = activeBlackjackGames.get(
+    interaction.user.id
+  );
+  if (!game || !canSplitHand(game)) return;
+  const user = await getOrCreateUser(game.userId, "");
+  if (user.balance < game.bet) {
+    await interaction.followUp({
+      embeds: [
+        errorEmbed(
+          `Not enough gems to split. You need **${formatAmount(
+            game.bet
+          )}** more.`
+        )
+      ],
+      ephemeral: true
+    });
+    return;
+  }
+  await addBalance(game.userId, -game.bet);
+  const firstCard = game.playerHand[0];
+  const secondCard = game.playerHand[1];
+  game.sideBetCards = game.sideBetCards || [firstCard, secondCard];
+  game.playerHands = [
+    [firstCard, deal(game.deck)],
+    [secondCard, deal(game.deck)]
+  ];
+  game.handDoubled = [false, false];
+  game.handStatuses = ["active", "active"];
+  game.handResults = [];
+  game.activeHandIndex = 0;
+  syncCurrentHand(game);
+  await interaction.editReply({
+    flags: import_discord12.MessageFlags.IsComponentsV2,
+    files: [imageFile(game, "active", false)],
+    components: [buildBlackjackContainer(game, "active", true)]
+  });
 }
 async function handlePlayAgain3(interaction, userId, betStr) {
   if (interaction.user.id !== userId) {
@@ -128653,6 +128904,9 @@ async function handlePlayAgain3(interaction, userId, betStr) {
       flags: import_discord12.MessageFlags.Ephemeral
     });
   }
+  const sideBetType = finished.game.sideBetType;
+  const sideBetAmount = finished.game.sideBetAmount || 0;
+  const totalInitialStake = bet + sideBetAmount;
   await interaction.update({
     flags: import_discord12.MessageFlags.IsComponentsV2,
     components: [
@@ -128680,13 +128934,15 @@ async function handlePlayAgain3(interaction, userId, betStr) {
     userId,
     interaction.user.username
   );
-  if (user.balance < bet) {
+  if (user.balance < totalInitialStake) {
     return void interaction.followUp({
       embeds: [
         errorEmbed(
           `Insufficient balance. You have **${formatAmount(
             user.balance
-          )} gems**.`
+          )} gems**. You need **${formatAmount(
+            totalInitialStake
+          )} gems** for the bet and side bet.`
         )
       ],
       flags: import_discord12.MessageFlags.Ephemeral
@@ -128694,7 +128950,7 @@ async function handlePlayAgain3(interaction, userId, betStr) {
   }
   await addBalance(
     userId,
-    -bet
+    -totalInitialStake
   );
   const deck = shuffle2(
     buildDeck()
@@ -128712,9 +128968,15 @@ async function handlePlayAgain3(interaction, userId, betStr) {
       deal(deck),
       deal(deck)
     ],
+    sideBetType,
+    sideBetAmount,
+    sideBetMultiplier: 0,
+    sideBetWon: false,
+    sideBetPayout: 0,
     doubled: false,
     messageId: ""
   };
+  prepareSideBet(game);
   const playerBJ = isBlackjack(
     game.playerHand
   );
@@ -128970,10 +129232,75 @@ function drawOverlay(ctx, result) {
   ctx.fillText(result, IMAGE_WIDTH3 / 2, 616);
   ctx.restore();
 }
+function pvpFinalImage(game) {
+  const canvas = createCanvas3(IMAGE_WIDTH3, IMAGE_HEIGHT3);
+  const ctx = canvas.getContext("2d");
+  const creatorName = getNameById(game, game.creator.id);
+  const opponentName = getNameById(game, game.opponent.id);
+  const creatorScore = game.wins[game.creator.id] ?? 0;
+  const opponentScore = game.wins[game.opponent.id] ?? 0;
+  const winnerName = game.winnerId ? getNameById(game, game.winnerId) : "MATCH TIED";
+  const gradient = ctx.createLinearGradient(0, 0, 0, IMAGE_HEIGHT3);
+  gradient.addColorStop(0, "#0f5138");
+  gradient.addColorStop(0.55, "#071a12");
+  gradient.addColorStop(1, "#020807");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, IMAGE_WIDTH3, IMAGE_HEIGHT3);
+  ctx.strokeStyle = "#c9a227";
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.roundRect(24, 24, IMAGE_WIDTH3 - 48, IMAGE_HEIGHT3 - 48, 30);
+  ctx.stroke();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#f7d774";
+  ctx.font = "900 34px Arial";
+  ctx.fillText("PVP BLACKJACK", IMAGE_WIDTH3 / 2, 72);
+  ctx.fillStyle = game.winnerId ? "#4ade80" : "#facc15";
+  ctx.font = "900 52px Arial";
+  ctx.fillText(
+    winnerName + (game.winnerId ? " WINS" : ""),
+    IMAGE_WIDTH3 / 2,
+    155
+  );
+  ctx.fillStyle = "#aebbd0";
+  ctx.font = "italic 20px Arial";
+  ctx.fillText("FINAL SCORE", IMAGE_WIDTH3 / 2, 202);
+  ctx.fillStyle = "rgba(3, 12, 9, 0.88)";
+  roundedRect2(ctx, 70, 235, IMAGE_WIDTH3 - 140, 230, 24);
+  ctx.strokeStyle = game.winnerId ? "rgba(74,222,128,0.7)" : "rgba(250,204,21,0.7)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.roundRect(70, 235, IMAGE_WIDTH3 - 140, 230, 24);
+  ctx.stroke();
+  const leftColor = game.winnerId === game.creator.id ? "#4ade80" : "#ffffff";
+  const rightColor = game.winnerId === game.opponent.id ? "#4ade80" : "#ffffff";
+  ctx.font = "800 28px Arial";
+  ctx.fillStyle = leftColor;
+  ctx.fillText(creatorName, 315, 290);
+  ctx.fillStyle = rightColor;
+  ctx.fillText(opponentName, 885, 290);
+  ctx.fillStyle = "#4b635a";
+  ctx.fillRect(598, 272, 4, 135);
+  ctx.fillStyle = leftColor;
+  ctx.font = "900 82px Arial";
+  ctx.fillText(String(creatorScore), 315, 375);
+  ctx.fillStyle = rightColor;
+  ctx.fillText(String(opponentScore), 885, 375);
+  ctx.fillStyle = "#dce7e1";
+  ctx.font = "italic 24px Arial";
+  ctx.fillText(
+    game.winnerId ? `${winnerName} won ${formatAmount(game.payout)}` : "Stakes refunded",
+    IMAGE_WIDTH3 / 2,
+    535
+  );
+  return canvas.toBuffer("image/png");
+}
 function pvpImage(game, showDealerFull, overlay = "") {
   const round = game.round;
   const canvas = createCanvas3(IMAGE_WIDTH3, IMAGE_HEIGHT3);
   const ctx = canvas.getContext("2d");
+  if (game.phase === "finished") return pvpFinalImage(game);
   ctx.fillStyle = "#071a12";
   ctx.fillRect(0, 0, IMAGE_WIDTH3, IMAGE_HEIGHT3);
   ctx.fillStyle = "#0b3d2e";
@@ -128987,7 +129314,7 @@ function pvpImage(game, showDealerFull, overlay = "") {
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   ctx.font = "bold 34px Arial";
-  ctx.fillText("\u{1F0CF} PVP BLACKJACK", IMAGE_WIDTH3 / 2, 48);
+  ctx.fillText("BLACKJACK", IMAGE_WIDTH3 / 2, 48);
   ctx.font = "bold 22px Arial";
   ctx.fillText(
     `ROUND ${game.currentRound + 1} / ${game.rounds}   \u2022   ${game.roundResult || `Turn: ${round ? getNameById(game, round.playerId) : "Waiting"}`}`,
@@ -129067,6 +129394,37 @@ function dealerPlay2(round) {
   while (handValue2(round.dealerHand) < 17) {
     round.dealerHand.push(deal2(round.deck));
   }
+}
+async function publishDealerReveal(game) {
+  if (!game.message || !game.round) return;
+  const revealGame = {
+    ...game,
+    round: {
+      ...game.round,
+      dealerHand: [...game.round.dealerHand],
+      phase: "active"
+    }
+  };
+  await game.message.edit({
+    flags: import_discord13.MessageFlags.IsComponentsV2,
+    files: [imageFile2(revealGame, true)],
+    components: [activeContainer(revealGame)]
+  });
+}
+async function dealerPlayAnimated(game) {
+  const round = game.round;
+  if (!round) return;
+  game.dealerRevealing = true;
+  await publishDealerReveal(game);
+  while (handValue2(round.dealerHand) < 17) {
+    await sleep4(700);
+    round.dealerHand.push(deal2(round.deck));
+    await publishDealerReveal(game);
+  }
+  await sleep4(700);
+  game.dealerRevealing = false;
+  resolveRound(game, determineRoundStatus(round));
+  await publish(game);
 }
 function determineRoundStatus(round) {
   if (isBust2(round.playerHand)) return "player_bust";
@@ -129248,9 +129606,9 @@ function payload(game, mode) {
 async function publish(game, interaction) {
   if (interaction) {
     if (interaction.deferred || interaction.replied) {
-      await interaction.editReply(payload(game, game.phase === "finished" ? "final" : game.phase === "lobby" ? "lobby" : "active"));
+      await interaction.editReply(payload(game, game.phase === "finished" ? "final" : game.phase === "lobby" ? "lobby" : game.phase === "cancelled" ? "cancelled" : "active"));
     } else {
-      await interaction.update(payload(game, game.phase === "finished" ? "final" : game.phase === "lobby" ? "lobby" : "active"));
+      await interaction.update(payload(game, game.phase === "finished" ? "final" : game.phase === "lobby" ? "lobby" : game.phase === "cancelled" ? "cancelled" : "active"));
     }
     return;
   }
@@ -129274,32 +129632,34 @@ function runBotTurnIfNeeded(game) {
   const round = game.round;
   if (!round || round.phase !== "active") {
     if (round?.phase === "resolved") {
-      setTimeout(() => void advanceRound(game), 1400);
+      setTimeout(() => void advanceRound(game), 3e3);
     }
     return;
   }
   const player = getParticipant(game, round.playerId);
   if (!player.isBot) return;
   void (async () => {
-    await sleep4(650);
+    await sleep4(1200);
     while (game.phase === "playing" && game.round === round && round.phase === "active") {
       if (handValue2(round.playerHand) >= 17) {
-        dealerPlay2(round);
-        resolveRound(game, determineRoundStatus(round));
-        await publish(game);
-        setTimeout(() => void advanceRound(game), 1400);
+        await dealerPlayAnimated(game);
+        setTimeout(() => void advanceRound(game), 3e3);
         return;
       }
       round.playerHand.push(deal2(round.deck));
-      if (isBust2(round.playerHand) || handValue2(round.playerHand) === 21) {
-        if (!isBust2(round.playerHand)) dealerPlay2(round);
+      if (isBust2(round.playerHand)) {
         resolveRound(game, determineRoundStatus(round));
         await publish(game);
-        setTimeout(() => void advanceRound(game), 1400);
+        setTimeout(() => void advanceRound(game), 3e3);
+        return;
+      }
+      if (handValue2(round.playerHand) === 21) {
+        await dealerPlayAnimated(game);
+        setTimeout(() => void advanceRound(game), 3e3);
         return;
       }
       await publish(game);
-      await sleep4(650);
+      await sleep4(1200);
     }
   })();
 }
@@ -129440,25 +129800,23 @@ async function handleHit2(interaction) {
   round.playerHand.push(deal2(round.deck));
   if (isBust2(round.playerHand)) {
     resolveRound(game, "player_bust");
-  } else if (handValue2(round.playerHand) === 21) {
-    dealerPlay2(round);
-    resolveRound(game, determineRoundStatus(round));
-  }
-  if (round.phase === "resolved") {
     await publish(game, interaction);
-    setTimeout(() => void advanceRound(game), 1400);
-  } else {
-    await publish(game, interaction);
+    setTimeout(() => void advanceRound(game), 3e3);
+    return;
   }
+  if (handValue2(round.playerHand) === 21) {
+    await dealerPlayAnimated(game);
+    setTimeout(() => void advanceRound(game), 3e3);
+    return;
+  }
+  await publish(game, interaction);
 }
 async function handleStand2(interaction) {
   const game = await validatePlayerTurn(interaction);
   if (!game) return;
   await interaction.deferUpdate();
-  dealerPlay2(game.round);
-  resolveRound(game, determineRoundStatus(game.round));
-  await publish(game, interaction);
-  setTimeout(() => void advanceRound(game), 1400);
+  await dealerPlayAnimated(game);
+  setTimeout(() => void advanceRound(game), 3e3);
 }
 async function handleDouble2(interaction) {
   const game = await validatePlayerTurn(interaction);
@@ -137853,6 +138211,7 @@ async function handleInteraction(interaction) {
       if (id === "bj_hit") return await handleHit(bi);
       if (id === "bj_stand") return await handleStand(bi);
       if (id === "bj_double") return await handleDouble(bi);
+      if (id === "bj_split") return await handleSplit(bi);
       if (id === "pvpbj_join") return await handleJoin(bi);
       if (id === "pvpbj_bot") return await handleCallBot(bi);
       if (id === "pvpbj_cancel") return await handleCancel(bi);

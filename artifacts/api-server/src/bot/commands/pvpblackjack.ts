@@ -286,10 +286,84 @@ function drawOverlay(ctx: CanvasRenderingContext2D, result: string) {
   ctx.restore();
 }
 
+function pvpFinalImage(game: PvpGame): Buffer {
+  const canvas = createCanvas(IMAGE_WIDTH, IMAGE_HEIGHT);
+  const ctx = canvas.getContext("2d");
+  const creatorName = getNameById(game, game.creator.id);
+  const opponentName = getNameById(game, game.opponent!.id);
+  const creatorScore = game.wins[game.creator.id] ?? 0;
+  const opponentScore = game.wins[game.opponent!.id] ?? 0;
+  const winnerName = game.winnerId
+    ? getNameById(game, game.winnerId)
+    : "MATCH TIED";
+  const gradient = ctx.createLinearGradient(0, 0, 0, IMAGE_HEIGHT);
+  gradient.addColorStop(0, "#0f5138");
+  gradient.addColorStop(0.55, "#071a12");
+  gradient.addColorStop(1, "#020807");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, IMAGE_WIDTH, IMAGE_HEIGHT);
+  ctx.strokeStyle = "#c9a227";
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.roundRect(24, 24, IMAGE_WIDTH - 48, IMAGE_HEIGHT - 48, 30);
+  ctx.stroke();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#f7d774";
+  ctx.font = "900 34px Arial";
+  ctx.fillText("PVP BLACKJACK", IMAGE_WIDTH / 2, 72);
+  ctx.fillStyle = game.winnerId ? "#4ade80" : "#facc15";
+  ctx.font = "900 52px Arial";
+  ctx.fillText(
+    winnerName + (game.winnerId ? " WINS" : ""),
+    IMAGE_WIDTH / 2,
+    155,
+  );
+  ctx.fillStyle = "#aebbd0";
+  ctx.font = "italic 20px Arial";
+  ctx.fillText("FINAL SCORE", IMAGE_WIDTH / 2, 202);
+  ctx.fillStyle = "rgba(3, 12, 9, 0.88)";
+  roundedRect(ctx, 70, 235, IMAGE_WIDTH - 140, 230, 24);
+  ctx.strokeStyle = game.winnerId
+    ? "rgba(74,222,128,0.7)"
+    : "rgba(250,204,21,0.7)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.roundRect(70, 235, IMAGE_WIDTH - 140, 230, 24);
+  ctx.stroke();
+  const leftColor =
+    game.winnerId === game.creator.id ? "#4ade80" : "#ffffff";
+  const rightColor =
+    game.winnerId === game.opponent!.id ? "#4ade80" : "#ffffff";
+  ctx.font = "800 28px Arial";
+  ctx.fillStyle = leftColor;
+  ctx.fillText(creatorName, 315, 290);
+  ctx.fillStyle = rightColor;
+  ctx.fillText(opponentName, 885, 290);
+  ctx.fillStyle = "#4b635a";
+  ctx.fillRect(598, 272, 4, 135);
+  ctx.fillStyle = leftColor;
+  ctx.font = "900 82px Arial";
+  ctx.fillText(String(creatorScore), 315, 375);
+  ctx.fillStyle = rightColor;
+  ctx.fillText(String(opponentScore), 885, 375);
+  ctx.fillStyle = "#dce7e1";
+  ctx.font = "italic 24px Arial";
+  ctx.fillText(
+    game.winnerId
+      ? `${winnerName} won ${formatAmount(game.payout)}`
+      : "Stakes refunded",
+    IMAGE_WIDTH / 2,
+    535,
+  );
+  return canvas.toBuffer("image/png");
+}
+
 function pvpImage(game: PvpGame, showDealerFull: boolean, overlay = ""): Buffer {
   const round = game.round;
   const canvas = createCanvas(IMAGE_WIDTH, IMAGE_HEIGHT);
   const ctx = canvas.getContext("2d");
+  if (game.phase === "finished") return pvpFinalImage(game);
 
   ctx.fillStyle = "#071a12";
   ctx.fillRect(0, 0, IMAGE_WIDTH, IMAGE_HEIGHT);
@@ -305,7 +379,7 @@ function pvpImage(game: PvpGame, showDealerFull: boolean, overlay = ""): Buffer 
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   ctx.font = "bold 34px Arial";
-  ctx.fillText("🃏 PVP BLACKJACK", IMAGE_WIDTH / 2, 48);
+  ctx.fillText("BLACKJACK", IMAGE_WIDTH / 2, 48);
   ctx.font = "bold 22px Arial";
   ctx.fillText(
     `ROUND ${game.currentRound + 1} / ${game.rounds}   •   ${game.roundResult || `Turn: ${round ? getNameById(game, round.playerId) : "Waiting"}`}`,
@@ -398,6 +472,39 @@ function dealerPlay(round: PvpRound) {
   while (handValue(round.dealerHand) < 17) {
     round.dealerHand.push(deal(round.deck));
   }
+}
+
+async function publishDealerReveal(game: PvpGame): Promise<void> {
+  if (!game.message || !game.round) return;
+  const revealGame: PvpGame = {
+    ...game,
+    round: {
+      ...game.round,
+      dealerHand: [...game.round.dealerHand],
+      phase: "active",
+    },
+  };
+  await game.message.edit({
+    flags: MessageFlags.IsComponentsV2,
+    files: [imageFile(revealGame, true)],
+    components: [activeContainer(revealGame)],
+  });
+}
+
+async function dealerPlayAnimated(game: PvpGame): Promise<void> {
+  const round = game.round;
+  if (!round) return;
+  game.dealerRevealing = true;
+  await publishDealerReveal(game);
+  while (handValue(round.dealerHand) < 17) {
+    await sleep(700);
+    round.dealerHand.push(deal(round.deck));
+    await publishDealerReveal(game);
+  }
+  await sleep(700);
+  game.dealerRevealing = false;
+  resolveRound(game, determineRoundStatus(round));
+  await publish(game);
 }
 
 function determineRoundStatus(round: PvpRound): RoundStatus {
@@ -660,9 +767,9 @@ async function publish(
 ) {
   if (interaction) {
     if (interaction.deferred || interaction.replied) {
-      await interaction.editReply(payload(game, game.phase === "finished" ? "final" : game.phase === "lobby" ? "lobby" : "active"));
+      await interaction.editReply(payload(game, game.phase === "finished" ? "final" : game.phase === "lobby" ? "lobby" : game.phase === "cancelled" ? "cancelled" : "active"));
     } else {
-      await interaction.update(payload(game, game.phase === "finished" ? "final" : game.phase === "lobby" ? "lobby" : "active"));
+      await interaction.update(payload(game, game.phase === "finished" ? "final" : game.phase === "lobby" ? "lobby" : game.phase === "cancelled" ? "cancelled" : "active"));
     }
     return;
   }
@@ -688,7 +795,7 @@ function runBotTurnIfNeeded(game: PvpGame) {
   const round = game.round;
   if (!round || round.phase !== "active") {
     if (round?.phase === "resolved") {
-      setTimeout(() => void advanceRound(game), 1_400);
+      setTimeout(() => void advanceRound(game), 3_000);
     }
     return;
   }
@@ -696,25 +803,27 @@ function runBotTurnIfNeeded(game: PvpGame) {
   if (!player.isBot) return;
 
   void (async () => {
-    await sleep(650);
+    await sleep(1200);
     while (game.phase === "playing" && game.round === round && round.phase === "active") {
       if (handValue(round.playerHand) >= 17) {
-        dealerPlay(round);
-        resolveRound(game, determineRoundStatus(round));
-        await publish(game);
-        setTimeout(() => void advanceRound(game), 1_400);
+        await dealerPlayAnimated(game);
+        setTimeout(() => void advanceRound(game), 3_000);
         return;
       }
       round.playerHand.push(deal(round.deck));
-      if (isBust(round.playerHand) || handValue(round.playerHand) === 21) {
-        if (!isBust(round.playerHand)) dealerPlay(round);
+      if (isBust(round.playerHand)) {
         resolveRound(game, determineRoundStatus(round));
         await publish(game);
-        setTimeout(() => void advanceRound(game), 1_400);
+        setTimeout(() => void advanceRound(game), 3_000);
+        return;
+      }
+      if (handValue(round.playerHand) === 21) {
+        await dealerPlayAnimated(game);
+        setTimeout(() => void advanceRound(game), 3_000);
         return;
       }
       await publish(game);
-      await sleep(650);
+      await sleep(1200);
     }
   })();
 }
@@ -884,26 +993,24 @@ export async function handleHit(interaction: ButtonInteraction) {
   round.playerHand.push(deal(round.deck));
   if (isBust(round.playerHand)) {
     resolveRound(game, "player_bust");
-  } else if (handValue(round.playerHand) === 21) {
-    dealerPlay(round);
-    resolveRound(game, determineRoundStatus(round));
-  }
-  if (round.phase === "resolved") {
     await publish(game, interaction);
-    setTimeout(() => void advanceRound(game), 1_400);
-  } else {
-    await publish(game, interaction);
+    setTimeout(() => void advanceRound(game), 3_000);
+    return;
   }
+  if (handValue(round.playerHand) === 21) {
+    await dealerPlayAnimated(game);
+    setTimeout(() => void advanceRound(game), 3_000);
+    return;
+  }
+  await publish(game, interaction);
 }
 
 export async function handleStand(interaction: ButtonInteraction) {
   const game = await validatePlayerTurn(interaction);
   if (!game) return;
   await interaction.deferUpdate();
-  dealerPlay(game.round!);
-  resolveRound(game, determineRoundStatus(game.round!));
-  await publish(game, interaction);
-  setTimeout(() => void advanceRound(game), 1_400);
+  await dealerPlayAnimated(game);
+  setTimeout(() => void advanceRound(game), 3_000);
 }
 
 export async function handleDouble(interaction: ButtonInteraction) {
