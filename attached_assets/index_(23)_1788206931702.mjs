@@ -127157,11 +127157,6 @@ function drawDie(ctx, x, y, value) {
   ctx.fill();
   ctx.stroke();
   ctx.shadowColor = "transparent";
-  ctx.globalAlpha = 0.72;
-  ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = 2;
-  roundedRect(ctx, -17, -24, 34, 48, 5);
-  ctx.stroke();
   ctx.globalAlpha = 1;
   ctx.fillStyle = "#172033";
   for (const [px, py] of pipPositions(value)) {
@@ -127180,6 +127175,10 @@ function drawDie(ctx, x, y, value) {
     ctx.fill();
     ctx.fillStyle = "#172033";
   }
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(0, 0, 5.5, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }
 function drawDiceImage(roll, target, direction) {
@@ -139188,10 +139187,8 @@ delete globalThis.__pvpDeps;
     ctx.fillText(String(leftScore), 300, 177);
     ctx.fillStyle = "#fbbf24";
     ctx.fillText(String(rightScore), 900, 177);
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.arc(PVP_CD_WIDTH / 2, 197, 11, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillStyle = "#4b635a";
+    ctx.fillRect(598, 140, 4, 114);
     ctx.strokeStyle = "rgba(255,255,255,0.18)";
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -139201,14 +139198,19 @@ delete globalThis.__pvpDeps;
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 24px Arial";
     ctx.textAlign = "left";
-    ctx.fillText("LAST ROLL", 70, 292);
-    if (game.lastTurn?.dice?.length) {
-      pvpCdDrawDice(ctx, game.lastTurn.dice, 332);
+    ctx.fillText(game.isRolling ? "ROLLING..." : `ROLL ${Math.max(1, game.rollNumber ?? 1)}`, 70, 292);
+    const displayDice = game.isRolling ? game.rollingDice : game.lastTurn?.dice;
+    if (displayDice?.length) {
+      pvpCdDrawDice(ctx, displayDice, 332);
       ctx.textAlign = "center";
       ctx.font = "bold 21px Arial";
       ctx.fillStyle = "#ffffff";
-      const playerName = pvpCdParticipantName(pvpCdGetParticipant(game, game.lastTurn.playerId));
-      ctx.fillText(`${playerName} picked ${pvpCdColorName(game.lastTurn.pick)} ${pvpCdColorEmoji(game.lastTurn.pick)} · ${game.lastTurn.matches} match${game.lastTurn.matches === 1 ? "" : "es"} (${game.lastTurn.mult}x)`, PVP_CD_WIDTH / 2, 458);
+      if (game.isRolling) {
+        ctx.fillText("Changing colors...", PVP_CD_WIDTH / 2, 458);
+      } else {
+        const playerName = pvpCdParticipantName(pvpCdGetParticipant(game, game.lastTurn.playerId));
+        ctx.fillText(`${playerName} picked ${pvpCdColorName(game.lastTurn.pick)} ${pvpCdColorEmoji(game.lastTurn.pick)} · ${game.lastTurn.matches} match${game.lastTurn.matches === 1 ? "" : "es"} (${game.lastTurn.mult}x)`, PVP_CD_WIDTH / 2, 458);
+      }
     } else {
       ctx.textAlign = "center";
       ctx.font = "bold 28px Arial";
@@ -139235,6 +139237,18 @@ delete globalThis.__pvpDeps;
   }
   function pvpCdImageFile(game, overlay = "") {
     return new AttachmentBuilder(pvpCdImage(game, overlay), { name: "pvpcolordice.png" });
+  }
+  async function pvpCdAnimateRoll(game, interaction) {
+    game.isRolling = true;
+    game.rollingDice = rollDice();
+    if (interaction) await pvpCdPublish(game, interaction).catch(() => {});
+    else await pvpCdPublish(game).catch(() => {});
+    for (let frame = 0; frame < 8; frame++) {
+      await pvpCdSleep(160);
+      if (game.phase !== "playing") break;
+      game.rollingDice = rollDice();
+      await pvpCdPublish(game).catch(() => {});
+    }
   }
   function pvpCdColorSelect(disabled = false) {
     const menu = new StringSelectMenuBuilder().setCustomId("pvpcd_pick").setPlaceholder("Choose your color…").setDisabled(disabled).addOptions(
@@ -139340,9 +139354,13 @@ delete globalThis.__pvpDeps;
   }
   async function pvpCdResolveTurn(game, playerId, pick, interaction) {
     if (game.phase !== "playing" || game.turnId !== playerId) return;
+    await pvpCdAnimateRoll(game, interaction);
     const dice = rollDice();
     const matches = countMatches(dice, pick);
     const mult = getPayout(matches);
+    game.isRolling = false;
+    game.rollingDice = null;
+    game.rollNumber = (game.rollNumber ?? 0) + 1;
     game.lastTurn = { playerId, pick, dice, matches, mult };
     game.scores[playerId] = (game.scores[playerId] ?? 0) + matches;
     if (game.scores[playerId] >= game.target) {
@@ -139404,6 +139422,9 @@ delete globalThis.__pvpDeps;
       scores: {},
       turnId: "",
       lastTurn: null,
+      rollNumber: 0,
+      isRolling: false,
+      rollingDice: null,
       tax: 0,
       payout: 0
     };
@@ -139451,6 +139472,7 @@ delete globalThis.__pvpDeps;
   async function pvpCdHandlePick(interaction) {
     const game = pvpCdGetGame(interaction);
     if (!game || game.phase !== "playing") return pvpCdReplyEphemeral(interaction, "This PvP Color Dice game is no longer active.");
+    if (game.isRolling) return pvpCdReplyEphemeral(interaction, "The dice are still rolling.");
     if (interaction.user.id !== game.turnId) return pvpCdReplyEphemeral(interaction, `It is ${pvpCdMention(pvpCdGetParticipant(game, game.turnId))}'s turn.`);
     const pick = interaction.values[0];
     if (!COLORS_LIST.includes(pick)) return pvpCdReplyEphemeral(interaction, "Invalid color.");
