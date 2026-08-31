@@ -1,6 +1,6 @@
-import { db, usersTable, betLogTable } from "@workspace/db";
+import { db, sqlite, usersTable, betLogTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
-import { isAdmin } from "./botConfig.js";
+import { getServerConfig, isAdmin } from "./botConfig.js";
 import {
   EmbedBuilder,
   ButtonBuilder,
@@ -177,6 +177,31 @@ export async function recordBet(
     .where(eq(usersTable.id, userId));
   const adminBet = isAdmin(userId) ? 1 : 0;
   await db.insert(betLogTable).values({ userId, command, bet: wagered, netDelta, adminBet });
+
+  const cfg = getServerConfig();
+  if (!adminBet && wagered > 0) {
+    const affiliate = sqlite.prepare("SELECT affiliate_id FROM users WHERE id = ?").get(userId) as
+      | { affiliate_id?: string }
+      | undefined;
+    const affiliateRate = cfg?.affiliateRate ?? 1;
+    const commission = Math.floor(wagered * affiliateRate / 100);
+    if (affiliate?.affiliate_id && affiliate.affiliate_id !== userId && commission > 0) {
+      sqlite
+        .prepare("UPDATE users SET affiliate_earnings = COALESCE(affiliate_earnings, 0) + ?, updated_at = ? WHERE id = ?")
+        .run(commission, Math.floor(Date.now() / 1000), affiliate.affiliate_id);
+    }
+  }
+  if (!adminBet && netDelta < 0) {
+    const gameName = command.split("-")[0];
+    const excluded = Array.isArray(cfg?.rakebackExcludedGames) ? cfg.rakebackExcludedGames : [];
+    const rakebackRate = cfg?.rakebackRate ?? 1;
+    const rakeback = Math.floor(Math.abs(netDelta) * rakebackRate / 100);
+    if (rakeback > 0 && !excluded.includes(gameName)) {
+      sqlite
+        .prepare("UPDATE users SET rakeback = COALESCE(rakeback, 0) + ?, updated_at = ? WHERE id = ?")
+        .run(rakeback, Math.floor(Date.now() / 1000), userId);
+    }
+  }
 
   // Unlock locked balance if the wager qualifies:
   //   • No multiplier passed  → fixed-odds game or a loss → always unlocks

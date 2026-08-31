@@ -11,6 +11,9 @@ export const usersTable = sqliteTable("users", {
   withdrawn:     integer("withdrawn").notNull().default(0),       // lifetime approved withdrawals
   wagered:       integer("wagered").notNull().default(0),         // lifetime amount bet
   profit:        integer("profit").notNull().default(0),           // lifetime net profit (can be negative)
+  affiliateId:   text("affiliate_id"),                            // user this member chose as affiliate
+  affiliateEarnings: integer("affiliate_earnings").notNull().default(0),
+  rakeback:      integer("rakeback").notNull().default(0),        // accrued unclaimed rakeback
   lockedBalance: integer("locked_balance").notNull().default(0),    // bonus gems (rain/codes/tips/welcome) that must be wagered ≥1.8× before withdrawal
   starterLockedBalance: integer("starter_locked_balance").notNull().default(0), // welcome bonus held until the first approved deposit
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),

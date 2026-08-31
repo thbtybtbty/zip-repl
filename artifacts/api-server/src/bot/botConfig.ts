@@ -18,6 +18,8 @@ export interface ServerConfig {
   rakebackRate?:     number; // rakeback percentage; undefined disables rakeback
   affiliateRate?:    number; // affiliate percentage; undefined disables affiliates
   affiliateChannelId?: string;
+  tipLogChannelId?:    string;
+  rakebackExcludedGames?: string[];
   // ── Withdrawal lock settings (default true for all except addBalance) ──
   lockTips?:            boolean; // lock tips received (default: true)
   lockRain?:            boolean; // lock rain winnings (default: true)

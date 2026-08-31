@@ -9,8 +9,6 @@ import {
   type ModalSubmitInteraction,
   type StringSelectMenuInteraction,
   type UserSelectMenuInteraction,
-  type ChannelSelectMenuInteraction,
-  type RoleSelectMenuInteraction,
   type Guild,
   type GuildMember,
   type PartialGuildMember,
@@ -24,6 +22,9 @@ import { getServerConfig } from "./botConfig.js";
 // ─── Commands ─────────────────────────────────────────────────────────────────
 import * as balance       from "./commands/balance.js";
 import * as tip           from "./commands/tip.js";
+import * as rakeback      from "./commands/rakeback.js";
+import * as affiliate     from "./commands/affiliate.js";
+import * as afflist       from "./commands/afflist.js";
 import * as mines         from "./commands/mines.js";
 import * as towers        from "./commands/towers.js";
 import * as rps           from "./commands/rps.js";
@@ -81,7 +82,7 @@ function isExpiredInteractionError(error: unknown): boolean {
   );
 }
 
-const commands    = [balance, tip, mines, towers, rps, coinflip, dice, blackjack, pvpblackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, createcode, redeem, viewcodes, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms, rain, link, invites, cleardata];
+const commands    = [balance, tip, rakeback, affiliate, afflist, mines, towers, rps, coinflip, dice, blackjack, pvpblackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, createcode, redeem, viewcodes, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms, rain, link, invites, cleardata];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -114,6 +115,9 @@ async function handleInteraction(interaction: Interaction) {
     try {
       if (name === "balance")       return await balance.execute(interaction);
       if (name === "tip")           return await tip.execute(interaction);
+      if (name === "rakeback")      return await rakeback.execute(interaction);
+      if (name === "affiliate")     return await affiliate.execute(interaction);
+      if (name === "afflist")       return await afflist.execute(interaction);
       // ── Freeze / disabled guard for gambling commands ──
       if (GAMBLING_COMMANDS.has(name)) {
         if (isFrozen(interaction.user.id)) {
@@ -330,10 +334,6 @@ async function handleInteraction(interaction: Interaction) {
       }
 
       // Setup confirmation
-      if (id.startsWith("setup_all_")) return await setup.handleButton(bi, id.slice("setup_all_".length), "all");
-      if (id.startsWith("setup_specific_")) return await setup.handleButton(bi, id.slice("setup_specific_".length), "specific");
-      if (id.startsWith("setup_optional_")) return await setup.handleButton(bi, id.slice("setup_optional_".length), "optional");
-      if (id.startsWith("setup_skip_")) return await setup.handleButton(bi, id.slice("setup_skip_".length), "skip");
       if (id.startsWith("setup_confirm_")) return await setup.handleConfirm(bi, id.slice("setup_confirm_".length));
       if (id.startsWith("setup_cancel_"))  return await setup.handleCancelSetup(bi, id.slice("setup_cancel_".length));
 
@@ -423,6 +423,7 @@ async function handleInteraction(interaction: Interaction) {
 
       // Rain
       if (id === "rain_join") return await rain.handleJoin(bi);
+      if (id === "rakeback_claim") return await rakeback.handleClaim(bi);
 
     } catch (err) {
       if (isExpiredInteractionError(err)) {
@@ -481,8 +482,6 @@ async function handleInteraction(interaction: Interaction) {
       if (id === "freeze_unfreeze_select")     return await freeze.handleUnfreezeSelect(si);
       if (id === "game_enable_select")         return await gamedisable.handleEnableSelect(si);
       if (id === "aap_remove_select")          return await addadminperms.handleRemoveSelect(si);
-      if (id.startsWith("setup_pick_")) return await setup.handlePick(si, id.slice("setup_pick_".length));
-      if (id.startsWith("setup_starter_lock_")) return await setup.handleStarterLock(si, id.slice("setup_starter_lock_".length));
     } catch (err) {
       if (isExpiredInteractionError(err)) {
         logger.warn({ selectId: id }, "Select interaction expired before Discord acknowledged it");
@@ -527,11 +526,6 @@ async function handleInteraction(interaction: Interaction) {
 
       if (id.startsWith("rs_modal_"))
         return await resetstats.handleModal(mi, id.slice("rs_modal_".length));
-      if (id.startsWith("setup_core_modal_"))
-        return await setup.handleCoreModal(mi, id.slice("setup_core_modal_".length));
-      if (id.startsWith("setup_optional_modal_"))
-        return await setup.handleOptionalModal(mi, id.slice("setup_optional_modal_".length));
-
     } catch (err) {
       if (isExpiredInteractionError(err)) {
         logger.warn({ modalId: id }, "Modal interaction expired before Discord acknowledged it");
@@ -550,18 +544,6 @@ async function handleInteraction(interaction: Interaction) {
         }
       }
     }
-  }
-  if (interaction.isChannelSelectMenu()) {
-    const si = interaction as ChannelSelectMenuInteraction;
-    const id = si.customId;
-    if (id.startsWith("setup_deposit_")) return await setup.handleChannel(si, id.slice("setup_deposit_".length), "deposit");
-    if (id.startsWith("setup_withdraw_")) return await setup.handleChannel(si, id.slice("setup_withdraw_".length), "withdraw");
-  }
-  if (interaction.isRoleSelectMenu()) {
-    const ri = interaction as RoleSelectMenuInteraction;
-    const id = ri.customId;
-    if (id.startsWith("setup_verified_role_")) return await setup.handleRole(ri, id.slice("setup_verified_role_".length), "verified");
-    if (id.startsWith("setup_unverified_role_")) return await setup.handleRole(ri, id.slice("setup_unverified_role_".length), "unverified");
   }
 }
 
