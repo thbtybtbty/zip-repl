@@ -127157,6 +127157,11 @@ function drawDie(ctx, x, y, value) {
   ctx.fill();
   ctx.stroke();
   ctx.shadowColor = "transparent";
+  ctx.globalAlpha = 0.72;
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 2;
+  roundedRect(ctx, -17, -24, 34, 48, 5);
+  ctx.stroke();
   ctx.globalAlpha = 1;
   ctx.fillStyle = "#172033";
   for (const [px, py] of pipPositions(value)) {
@@ -127175,10 +127180,6 @@ function drawDie(ctx, x, y, value) {
     ctx.fill();
     ctx.fillStyle = "#172033";
   }
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.arc(0, 0, 5.5, 0, Math.PI * 2);
-  ctx.fill();
   ctx.restore();
 }
 function drawDiceImage(roll, target, direction) {
@@ -139130,11 +139131,14 @@ delete globalThis.__pvpDeps;
       ctx.beginPath();
       ctx.roundRect(x, y, size, size, 18);
       ctx.stroke();
-      ctx.fillStyle = color === "white" || color === "yellow" ? "#111827" : "#ffffff";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.font = "bold 38px Arial";
-      ctx.fillText(pvpCdColorEmoji(color), x + size / 2, y + size / 2);
+      ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
+      ctx.beginPath();
+      ctx.arc(x + size / 2, y + size / 2, 17, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(x + size / 2, y + size / 2, 13, 0, Math.PI * 2);
+      ctx.fill();
     });
   }
   function pvpCdImage(game, overlay = "") {
@@ -139243,7 +139247,7 @@ delete globalThis.__pvpDeps;
     game.rollingDice = rollDice();
     if (interaction) await pvpCdPublish(game, interaction).catch(() => {});
     else await pvpCdPublish(game).catch(() => {});
-    for (let frame = 0; frame < 8; frame++) {
+    for (let frame = 0; frame < 6; frame++) {
       await pvpCdSleep(160);
       if (game.phase !== "playing") break;
       game.rollingDice = rollDice();
