@@ -139229,33 +139229,34 @@ delete globalThis.__pvpDeps;
       ctx.fillStyle = "#cbd5e1";
       ctx.fillText("Choose a color to roll six dice", PVP_CD_WIDTH / 2, 392);
     }
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.font = "bold 22px Arial";
-    ctx.fillStyle = "#dce7e1";
-    ctx.fillText("Round results", PVP_CD_WIDTH / 2, 458);
-    const roundResultY = 486;
-    const roundResultGap = 29;
-    const leftRoundLabel = leftColor ? `${pvpCdColorName(leftColor)}: ${leftRoundMatches} match${leftRoundMatches === 1 ? "" : "es"}` : "Color not chosen";
-    const rightRoundLabel = rightColor ? `${pvpCdColorName(rightColor)}: ${rightRoundMatches} match${rightRoundMatches === 1 ? "" : "es"}` : "Color not chosen";
-    const leftHighlight = leftRoundMatches > 0;
-    const rightHighlight = rightRoundMatches > 0;
-    ctx.font = leftHighlight ? "900 22px Arial" : "bold 22px Arial";
-    if (leftHighlight) {
-      const highlightWidth = ctx.measureText(leftRoundLabel).width + 28;
-      ctx.fillStyle = "rgba(250, 204, 21, 0.24)";
-      pvpCdDrawRoundedRect(ctx, 300 - highlightWidth / 2, roundResultY - 15, highlightWidth, 30, 10);
+    if (!game.isRolling && game.lastTurn) {
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "bold 22px Arial";
+      ctx.fillStyle = "#dce7e1";
+      ctx.fillText("Round results", PVP_CD_WIDTH / 2, 458);
+      const roundResultY = 490;
+      const leftRoundLabel = leftColor ? `${pvpCdColorName(leftColor)}: ${leftRoundMatches} match${leftRoundMatches === 1 ? "" : "es"}` : "Color not chosen";
+      const rightRoundLabel = rightColor ? `${pvpCdColorName(rightColor)}: ${rightRoundMatches} match${rightRoundMatches === 1 ? "" : "es"}` : "Color not chosen";
+      const leftHighlight = leftRoundMatches > 0;
+      const rightHighlight = rightRoundMatches > 0;
+      ctx.font = leftHighlight ? "900 22px Arial" : "bold 22px Arial";
+      if (leftHighlight) {
+        const highlightWidth = ctx.measureText(leftRoundLabel).width + 28;
+        ctx.fillStyle = "rgba(250, 204, 21, 0.24)";
+        pvpCdDrawRoundedRect(ctx, 300 - highlightWidth / 2, roundResultY - 15, highlightWidth, 30, 10);
+      }
+      ctx.fillStyle = leftRoundColor;
+      ctx.fillText(leftRoundLabel, 300, roundResultY);
+      ctx.font = rightHighlight ? "900 22px Arial" : "bold 22px Arial";
+      if (rightHighlight) {
+        const highlightWidth = ctx.measureText(rightRoundLabel).width + 28;
+        ctx.fillStyle = "rgba(250, 204, 21, 0.24)";
+        pvpCdDrawRoundedRect(ctx, 900 - highlightWidth / 2, roundResultY - 15, highlightWidth, 30, 10);
+      }
+      ctx.fillStyle = rightRoundColor;
+      ctx.fillText(rightRoundLabel, 900, roundResultY);
     }
-    ctx.fillStyle = leftRoundColor;
-    ctx.fillText(leftRoundLabel, 300, roundResultY);
-    ctx.font = rightHighlight ? "900 22px Arial" : "bold 22px Arial";
-    if (rightHighlight) {
-      const highlightWidth = ctx.measureText(rightRoundLabel).width + 28;
-      ctx.fillStyle = "rgba(250, 204, 21, 0.24)";
-      pvpCdDrawRoundedRect(ctx, 900 - highlightWidth / 2, roundResultY + roundResultGap - 15, highlightWidth, 30, 10);
-    }
-    ctx.fillStyle = rightRoundColor;
-    ctx.fillText(rightRoundLabel, 900, roundResultY + roundResultGap);
     if (overlay) {
       ctx.fillStyle = "rgba(0,0,0,0.74)";
       pvpCdDrawRoundedRect(ctx, 190, 245, PVP_CD_WIDTH - 380, 120, 18);
