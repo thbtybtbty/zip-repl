@@ -1009,3 +1009,17 @@ mtime_ms = 1788133708007
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:92764364-a2af-46bc-a1ec-2fedbb5adbca/3369667c-5006-4ef2-9a53-26ea6986f114/3da490d0-bf99-48f4-8a47-8a30ed1242be"
 storage_version_token = "1788133728429423"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "vtxJuf6VprvNfgkRIAe2a"
+uri = "file://updated_assets/wispbyte-index-starter-lock-invites-2026-08-31.zip"
+type = "unspecified"
+title = "Updated index.mjs only"
+description = "WispByte package containing exactly one file: the updated index.mjs."
+logical_id = "57fac9cf-fc90-48da-afc8-4770b041d741"
+content_hash = "sha256:7d74edf3bfcb028411a1f8825bf931454bedebd5626777076965d827bdd65c22"
+size = 1085370
+mtime_ms = 1788165981759
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:92764364-a2af-46bc-a1ec-2fedbb5adbca/57fac9cf-fc90-48da-afc8-4770b041d741/8c05eb19-7b7f-4227-ac3b-b6afb8c009dc"
+storage_version_token = "1788165985803363"
+content_type = "application/octet-stream"
