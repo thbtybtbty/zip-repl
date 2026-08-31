@@ -1079,3 +1079,17 @@ mtime_ms = 1788195743967
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:81335573-2e90-4f8d-a67e-40beebb3f932/43eaf4fc-3f84-431d-941d-03a53980d27e/3a0e5e57-fb5c-492e-b6ce-3352180325d7"
 storage_version_token = "1788195750326666"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "32x4MRtHYQQxODJN0zKXJ"
+uri = "file://attached_assets/index_(19)_1788194121780.pvpcolordice-locategame.final.zip"
+type = "unspecified"
+title = "Updated PvP Color Dice bundle"
+description = "ZIP containing shared /locategame support and the new /pvpcolordice command with selectable first-to targets, PvP lobby, Color Dice turns, bot support, scoring, payouts, and Blackjack-style result images."
+logical_id = "4a97add9-2c6f-494c-a05f-c03f4a26b8c3"
+content_hash = "sha256:fbee5ff293cf7edfad3d7dd87725366660169443e97b91787e42b70fdd1bf242"
+size = 1099891
+mtime_ms = 1788196784158
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:81335573-2e90-4f8d-a67e-40beebb3f932/4a97add9-2c6f-494c-a05f-c03f4a26b8c3/553bbf4e-ac8f-4a33-903b-c25088ac3e2f"
+storage_version_token = "1788196834610812"
+content_type = "application/octet-stream"
