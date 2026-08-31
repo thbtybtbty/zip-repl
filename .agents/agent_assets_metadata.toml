@@ -1023,3 +1023,17 @@ mtime_ms = 1788165981759
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:92764364-a2af-46bc-a1ec-2fedbb5adbca/57fac9cf-fc90-48da-afc8-4770b041d741/8c05eb19-7b7f-4227-ac3b-b6afb8c009dc"
 storage_version_token = "1788165985803363"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "fQWkTmXz27mnEENe8JfNJ"
+uri = "file://updated_assets/index.mjs"
+type = "unspecified"
+title = "Updated index.mjs"
+description = "Raw compiled index.mjs only. Replace the existing file at artifacts/api-server/dist/index.mjs; do not use it as a standalone project archive."
+logical_id = "697a619d-dc45-4ec1-a1a6-df96f29bf290"
+content_hash = "sha256:3caea7778a038ed371125811c3c4aee103427a8b1957b2f2197de99ad7cbb666"
+size = 5637087
+mtime_ms = 1788166584951
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:92764364-a2af-46bc-a1ec-2fedbb5adbca/697a619d-dc45-4ec1-a1a6-df96f29bf290/0eeee50b-697e-432c-88a9-0da0b1bef8ac"
+storage_version_token = "1788166588948646"
+content_type = "application/octet-stream"
