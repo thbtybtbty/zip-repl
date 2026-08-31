@@ -139183,24 +139183,30 @@ delete globalThis.__pvpDeps;
     const rightScore = right ? game.scores[right.id] ?? 0 : 0;
     const leftColor = left ? game.colors?.[left.id] : null;
     const rightColor = right ? game.colors?.[right.id] : null;
+    const leftRoundMatches = left ? game.roundResults?.[left.id]?.matches ?? 0 : 0;
+    const rightRoundMatches = right ? game.roundResults?.[right.id]?.matches ?? 0 : 0;
+    const leftScoreColor = PVP_CD_COLOR_HEX[leftColor] ?? "#7dd3fc";
+    const rightScoreColor = PVP_CD_COLOR_HEX[rightColor] ?? "#fbbf24";
+    const leftRoundColor = PVP_CD_COLOR_HEX[leftColor] ?? "#dce7e1";
+    const rightRoundColor = PVP_CD_COLOR_HEX[rightColor] ?? "#dce7e1";
     ctx.textBaseline = "top";
     ctx.font = "bold 24px Arial";
     ctx.fillStyle = "#dce7e1";
     ctx.fillText(left ? pvpCdParticipantName(left) : "Waiting for opponent", 300, 145);
     ctx.fillText(right ? pvpCdParticipantName(right) : "Open lobby", 900, 145);
     ctx.font = "900 70px Arial";
-    ctx.fillStyle = "#7dd3fc";
+    ctx.fillStyle = leftScoreColor;
     ctx.fillText(String(leftScore), 300, 172);
-    ctx.fillStyle = "#fbbf24";
+    ctx.fillStyle = rightScoreColor;
     ctx.fillText(String(rightScore), 900, 172);
     ctx.font = "bold 22px Arial";
     if (leftColor) {
-      ctx.fillStyle = PVP_CD_COLOR_HEX[leftColor] ?? "#dce7e1";
-      ctx.fillText(pvpCdColorName(leftColor), 300, 246);
+      ctx.fillStyle = leftScoreColor;
+      ctx.fillText(`${pvpCdColorName(leftColor)}: ${leftScore} match${leftScore === 1 ? "" : "es"}`, 300, 246);
     }
     if (rightColor) {
-      ctx.fillStyle = PVP_CD_COLOR_HEX[rightColor] ?? "#dce7e1";
-      ctx.fillText(pvpCdColorName(rightColor), 900, 246);
+      ctx.fillStyle = rightScoreColor;
+      ctx.fillText(`${pvpCdColorName(rightColor)}: ${rightScore} match${rightScore === 1 ? "" : "es"}`, 900, 246);
     }
     ctx.fillStyle = "#4b635a";
     ctx.fillRect(598, 140, 4, 138);
@@ -139224,14 +139230,32 @@ delete globalThis.__pvpDeps;
       ctx.fillText("Choose a color to roll six dice", PVP_CD_WIDTH / 2, 392);
     }
     ctx.textAlign = "center";
-    ctx.font = "italic 22px Arial";
+    ctx.textBaseline = "middle";
+    ctx.font = "bold 22px Arial";
     ctx.fillStyle = "#dce7e1";
-    if (game.phase === "playing") {
-      const turn = pvpCdGetParticipant(game, game.turnId);
-      ctx.fillText(`${pvpCdParticipantName(turn)}'s turn`, PVP_CD_WIDTH / 2, 532);
-    } else if (game.phase === "finished") {
-      ctx.fillText(game.winnerId ? `${pvpCdParticipantName(pvpCdGetParticipant(game, game.winnerId))} won the match` : "Match finished", PVP_CD_WIDTH / 2, 532);
+    ctx.fillText("Round results", PVP_CD_WIDTH / 2, 458);
+    const roundResultY = 486;
+    const roundResultGap = 29;
+    const leftRoundLabel = leftColor ? `${pvpCdColorName(leftColor)}: ${leftRoundMatches} match${leftRoundMatches === 1 ? "" : "es"}` : "Color not chosen";
+    const rightRoundLabel = rightColor ? `${pvpCdColorName(rightColor)}: ${rightRoundMatches} match${rightRoundMatches === 1 ? "" : "es"}` : "Color not chosen";
+    const leftHighlight = leftRoundMatches > 0;
+    const rightHighlight = rightRoundMatches > 0;
+    ctx.font = leftHighlight ? "900 22px Arial" : "bold 22px Arial";
+    if (leftHighlight) {
+      const highlightWidth = ctx.measureText(leftRoundLabel).width + 28;
+      ctx.fillStyle = "rgba(250, 204, 21, 0.24)";
+      pvpCdDrawRoundedRect(ctx, 300 - highlightWidth / 2, roundResultY - 15, highlightWidth, 30, 10);
     }
+    ctx.fillStyle = leftRoundColor;
+    ctx.fillText(leftRoundLabel, 300, roundResultY);
+    ctx.font = rightHighlight ? "900 22px Arial" : "bold 22px Arial";
+    if (rightHighlight) {
+      const highlightWidth = ctx.measureText(rightRoundLabel).width + 28;
+      ctx.fillStyle = "rgba(250, 204, 21, 0.24)";
+      pvpCdDrawRoundedRect(ctx, 900 - highlightWidth / 2, roundResultY + roundResultGap - 15, highlightWidth, 30, 10);
+    }
+    ctx.fillStyle = rightRoundColor;
+    ctx.fillText(rightRoundLabel, 900, roundResultY + roundResultGap);
     if (overlay) {
       ctx.fillStyle = "rgba(0,0,0,0.74)";
       pvpCdDrawRoundedRect(ctx, 190, 245, PVP_CD_WIDTH - 380, 120, 18);
@@ -139394,6 +139418,7 @@ delete globalThis.__pvpDeps;
     game.rollingDice = null;
     game.rollNumber = (game.rollNumber ?? 0) + 1;
     game.lastTurn = { playerId, pick, dice, matches, mult };
+    game.roundResults[playerId] = { pick, matches };
     game.scores[playerId] = (game.scores[playerId] ?? 0) + matches;
     if (game.scores[playerId] >= game.target) {
       await pvpCdSettle(game, playerId);
@@ -139477,6 +139502,7 @@ delete globalThis.__pvpDeps;
       scores: {},
       colors: {},
       firstColorPickerId: "",
+      roundResults: {},
       turnId: "",
       lastTurn: null,
       rollNumber: 0,
