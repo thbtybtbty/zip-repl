@@ -1093,3 +1093,17 @@ mtime_ms = 1788196784158
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:81335573-2e90-4f8d-a67e-40beebb3f932/4a97add9-2c6f-494c-a05f-c03f4a26b8c3/553bbf4e-ac8f-4a33-903b-c25088ac3e2f"
 storage_version_token = "1788196834610812"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "k12Bn4bRnmBpM7aTDOeIP"
+uri = "file://exports/wispbyte-index-updated.zip"
+type = "unspecified"
+title = "Updated WispByte index.mjs"
+description = "Zip containing the updated Discord bot index bundle with the centered white ace pip and the removed First to matches text."
+logical_id = "75f663f0-7a59-4972-b2fc-33648cd4adb6"
+content_hash = "sha256:645ee217a15562bce8bf0e7b2106dd3eb3552e86e029cfac1f6f593196fd7c02"
+size = 1090888
+mtime_ms = 1788206984608
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:d6014b69-1d68-4c07-bf11-2f304af1efd2/75f663f0-7a59-4972-b2fc-33648cd4adb6/91af2f90-4e09-40f8-ba20-6af684825130"
+storage_version_token = "1788206988973871"
+content_type = "application/octet-stream"
