@@ -1065,3 +1065,17 @@ mtime_ms = 1788194263353
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:81335573-2e90-4f8d-a67e-40beebb3f932/852ecc49-569e-460e-9234-f488c15d744f/cb28fe5e-94eb-494a-a481-ffba1e7ffc2c"
 storage_version_token = "1788194270264515"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "JYRCYWwmIIJz5HWKszT-p"
+uri = "file://attached_assets/index_(19)_1788194121780.pvp-locategame.zip"
+type = "unspecified"
+title = "Updated PvP Blackjack index.mjs"
+description = "ZIP containing the PvP Blackjack stale-game fix and the new /locategame command with jump buttons."
+logical_id = "43eaf4fc-3f84-431d-941d-03a53980d27e"
+content_hash = "sha256:183798ced8d41ec5734d1de810c93b34d9e0bffda3260deae3d054e372a8375f"
+size = 1096429
+mtime_ms = 1788195743967
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:81335573-2e90-4f8d-a67e-40beebb3f932/43eaf4fc-3f84-431d-941d-03a53980d27e/3a0e5e57-fb5c-492e-b6ce-3352180325d7"
+storage_version_token = "1788195750326666"
+content_type = "application/octet-stream"
