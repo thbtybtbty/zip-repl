@@ -1093,17 +1093,3 @@ mtime_ms = 1788196784158
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:81335573-2e90-4f8d-a67e-40beebb3f932/4a97add9-2c6f-494c-a05f-c03f4a26b8c3/553bbf4e-ac8f-4a33-903b-c25088ac3e2f"
 storage_version_token = "1788196834610812"
 content_type = "application/octet-stream"
-
-[[outputs]]
-id = "5euItSLPoE4ar9MehyjHF"
-uri = "file://attached_assets/index_(19)_1788194121780.pvpcolordice-colordice-style.final.zip"
-type = "unspecified"
-title = "Clean Color Dice-style PvP bundle"
-description = "Revised ZIP with a clean /colordice-style PvP image panel and matching rolling animation frames, progress bars, picks, dice, and results."
-logical_id = "5fcf92f3-adfd-4375-90c3-cf8f12ee3a00"
-content_hash = "sha256:5a1a0e516ff0994a564ce5146d756d991e9b5f486c22ccf14c57a4ba90e96007"
-size = 1099959
-mtime_ms = 1788204769629
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:81335573-2e90-4f8d-a67e-40beebb3f932/5fcf92f3-adfd-4375-90c3-cf8f12ee3a00/3fc3f877-69f4-4ac0-816e-c21ab91a5f13"
-storage_version_token = "1788204779968248"
-content_type = "application/octet-stream"
