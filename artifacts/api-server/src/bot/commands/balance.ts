@@ -226,6 +226,22 @@ export async function handleAdvancedStats(
       targetUserId,
     );
 
+  // ── Affiliates ──
+  const affiliateRow = q<{
+    affiliate_id?: string;
+    affiliate_earnings: number;
+  }>(
+    `SELECT affiliate_id, COALESCE(affiliate_earnings, 0) AS affiliate_earnings
+     FROM users WHERE id = ?`,
+    targetUserId,
+  );
+
+  const { affiliate_count } = q<{ affiliate_count: number }>(
+    `SELECT CAST(COUNT(*) AS INTEGER) AS affiliate_count
+     FROM users WHERE affiliate_id = ?`,
+    targetUserId,
+  );
+
   // ──────────────────────────────────────────────────────────────────────────
   // Clean Advanced Stats panel
   // ──────────────────────────────────────────────────────────────────────────
@@ -238,6 +254,29 @@ export async function handleAdvancedStats(
       .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
           "## 📊 Advanced Stats",
+        ),
+      )
+
+      // Divider
+      .addSeparatorComponents(
+        new SeparatorBuilder(),
+      )
+
+      // Affiliate heading
+      .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+          "### Affiliate",
+        ),
+      )
+
+      // Affiliate stats
+      .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+          [
+            `🎁 **Affiliated to**  ${affiliateRow.affiliate_id ? `<@${affiliateRow.affiliate_id}>` : "None"}`,
+            `🎁 **Affiliated to you**  \`${affiliate_count ?? 0}\``,
+            `💰 **Affiliate earnings**  \`${formatAmount(affiliateRow.affiliate_earnings ?? 0)}\``,
+          ].join("\n"),
         ),
       )
 

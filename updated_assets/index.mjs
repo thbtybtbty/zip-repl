@@ -125444,9 +125444,33 @@ async function handleAdvancedStats(bi, targetUserId, commandRunnerId) {
        WHERE r.user_id = ?`,
     targetUserId
   );
+  const affiliateRow = q(
+    `SELECT affiliate_id, COALESCE(affiliate_earnings, 0) AS affiliate_earnings
+     FROM users WHERE id = ?`,
+    targetUserId
+  );
+  const { affiliate_count } = q(
+    `SELECT CAST(COUNT(*) AS INTEGER) AS affiliate_count
+     FROM users WHERE affiliate_id = ?`,
+    targetUserId
+  );
   const advancedStatsContainer = new import_discord2.ContainerBuilder().setAccentColor(COLORS.primary).addTextDisplayComponents(
     new import_discord2.TextDisplayBuilder().setContent(
       "## \u{1F4CA} Advanced Stats"
+    )
+  ).addSeparatorComponents(
+    new import_discord2.SeparatorBuilder()
+  ).addTextDisplayComponents(
+    new import_discord2.TextDisplayBuilder().setContent(
+      "### Affiliate"
+    )
+  ).addTextDisplayComponents(
+    new import_discord2.TextDisplayBuilder().setContent(
+      [
+        `\u{1F381} **Affiliated to**  ${affiliateRow.affiliate_id ? `<@${affiliateRow.affiliate_id}>` : "None"}`,
+        `\u{1F381} **Affiliated to you**  \`${affiliate_count ?? 0}\``,
+        `\u{1F4B0} **Affiliate earnings**  \`${formatAmount(affiliateRow.affiliate_earnings ?? 0)}\``
+      ].join("\n")
     )
   ).addSeparatorComponents(
     new import_discord2.SeparatorBuilder()
