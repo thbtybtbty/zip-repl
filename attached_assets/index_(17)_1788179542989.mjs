@@ -138054,22 +138054,42 @@ async function execute39(interaction) {
   const displayName = targetUser?.displayName ?? interaction.user.displayName;
   const verified = sqlite.prepare(
     `SELECT * FROM invite_log
-       WHERE inviter_id = ? AND verified = 1 AND rejoin = 0
+       WHERE inviter_id = ? AND verified = 1 AND left_server = 0 AND rejoin = 0
+         AND invite_log.id = (
+           SELECT latest.id FROM invite_log latest
+           WHERE latest.invited_id = invite_log.invited_id
+           ORDER BY latest.joined_at DESC, latest.id DESC LIMIT 1
+         )
        ORDER BY verified_at DESC`
   ).all(userId);
   const unverified = sqlite.prepare(
     `SELECT * FROM invite_log
        WHERE inviter_id = ? AND verified = 0 AND left_server = 0 AND rejoin = 0
+         AND invite_log.id = (
+           SELECT latest.id FROM invite_log latest
+           WHERE latest.invited_id = invite_log.invited_id
+           ORDER BY latest.joined_at DESC, latest.id DESC LIMIT 1
+         )
        ORDER BY joined_at DESC`
   ).all(userId);
   const left = sqlite.prepare(
     `SELECT * FROM invite_log
        WHERE inviter_id = ? AND left_server = 1 AND rejoin = 0
+         AND invite_log.id = (
+           SELECT latest.id FROM invite_log latest
+           WHERE latest.invited_id = invite_log.invited_id
+           ORDER BY latest.joined_at DESC, latest.id DESC LIMIT 1
+         )
        ORDER BY joined_at DESC`
   ).all(userId);
   const rejoins = sqlite.prepare(
     `SELECT * FROM invite_log
        WHERE inviter_id = ? AND rejoin = 1
+         AND invite_log.id = (
+           SELECT latest.id FROM invite_log latest
+           WHERE latest.invited_id = invite_log.invited_id
+           ORDER BY latest.joined_at DESC, latest.id DESC LIMIT 1
+         )
        ORDER BY joined_at DESC`
   ).all(userId);
   const embed = new import_discord40.EmbedBuilder().setColor(COLORS.primary).setTitle(`\u{1F4E8}  Invites \u2014 ${displayName}`).addFields(
@@ -138120,7 +138140,12 @@ async function executeInvited(interaction) {
   const rows = sqlite.prepare(
     `SELECT invited_id, joined_at, account_created_at, verified, rejoin, left_server
        FROM invite_log
-       WHERE inviter_id = ?
+       WHERE inviter_id = ? AND left_server = 0 AND rejoin = 0
+         AND invite_log.id = (
+           SELECT latest.id FROM invite_log latest
+           WHERE latest.invited_id = invite_log.invited_id
+           ORDER BY latest.joined_at DESC, latest.id DESC LIMIT 1
+         )
        ORDER BY joined_at DESC`
   ).all(userId);
   const shown = rows.slice(0, 25);
@@ -138130,6 +138155,38 @@ async function executeInvited(interaction) {
   }).join("\n\n") : "`None`";
   const extra = rows.length - shown.length;
   const embed = new import_discord_invited.EmbedBuilder().setColor(COLORS.primary).setTitle(`📋  Invited by ${displayName}`).setDescription(description).setFooter({ text: `Total tracked invite entries: ${rows.length}${extra > 0 ? ` • Showing first 25` : ""}` }).setTimestamp();
+  await interaction.editReply({ embeds: [embed] });
+}
+
+// src/bot/commands/inviter.ts
+var inviter_exports = {};
+__export(inviter_exports, {
+  data: () => dataInviter,
+  execute: () => executeInviter
+});
+var import_discord_inviter = __toESM(require_src2(), 1);
+var dataInviter = new import_discord_inviter.SlashCommandBuilder().setName("inviter").setDescription("Find who invited a member").addUserOption(
+  (opt) => opt.setName("user").setDescription("Member whose inviter to find").setRequired(true)
+);
+async function executeInviter(interaction) {
+  await interaction.deferReply();
+  const targetUser = interaction.options.getUser("user", true);
+  const row = sqlite.prepare(
+    `SELECT inviter_id, joined_at, verified, rejoin, left_server
+       FROM invite_log
+       WHERE invited_id = ?
+       ORDER BY joined_at DESC, id DESC LIMIT 1`
+  ).get(targetUser.id);
+  if (!row) {
+    return interaction.editReply({
+      embeds: [errorEmbed(`I couldn't find an invite record for <@${targetUser.id}>.`)]
+    });
+  }
+  const status = row.rejoin ? "Rejoin" : row.left_server ? "Left" : row.verified ? "Verified" : "Unverified";
+  const embed = new import_discord_inviter.EmbedBuilder().setColor(COLORS.primary).setTitle(`🧭  Inviter for ${targetUser.displayName}`).setDescription(`<@${targetUser.id}> was invited by <@${row.inviter_id}>.`).addFields(
+    { name: "Status", value: status, inline: true },
+    { name: "Joined", value: `<t:${Number(row.joined_at)}:F> (<t:${Number(row.joined_at)}:R>)`, inline: true }
+  ).setTimestamp();
   await interaction.editReply({ embeds: [embed] });
 }
 
@@ -138933,7 +138990,7 @@ var GAMBLING_COMMANDS = /* @__PURE__ */ new Set([
 function isExpiredInteractionError(error40) {
   return typeof error40 === "object" && error40 !== null && "code" in error40 && error40.code === 10062;
 }
-var commands = [balance_exports, tip_exports, rakeback_exports, affiliate_exports, afflist_exports, mines_exports, towers_exports, rps_exports, coinflip_exports, dice_exports, blackjack_exports, pvpblackjack_exports, setup_exports, deposit_exports, withdraw_exports, addbalance_exports, removebalance_exports, wheel_exports, slots_exports, hilo_exports, roulette_exports, crash_exports, scratchcard_exports, chickencrossing_exports, colordice_exports, upgrader_exports, keno_exports, flip_exports, createcode_exports, redeem_exports, viewcodes_exports, leaderboard_exports, history_exports, resetstats_exports, simulate_exports, freeze_exports, gamedisable_exports, stats_exports, economy_exports, addadminperms_exports, rain_exports, link_exports, invites_exports, invited_exports, cleardata_exports];
+var commands = [balance_exports, tip_exports, rakeback_exports, affiliate_exports, afflist_exports, mines_exports, towers_exports, rps_exports, coinflip_exports, dice_exports, blackjack_exports, pvpblackjack_exports, setup_exports, deposit_exports, withdraw_exports, addbalance_exports, removebalance_exports, wheel_exports, slots_exports, hilo_exports, roulette_exports, crash_exports, scratchcard_exports, chickencrossing_exports, colordice_exports, upgrader_exports, keno_exports, flip_exports, createcode_exports, redeem_exports, viewcodes_exports, leaderboard_exports, history_exports, resetstats_exports, simulate_exports, freeze_exports, gamedisable_exports, stats_exports, economy_exports, addadminperms_exports, rain_exports, link_exports, invites_exports, invited_exports, inviter_exports, cleardata_exports];
 var commandData = commands.map((cmd) => cmd.data.toJSON());
 var inviteUsesByGuild = /* @__PURE__ */ new Map();
 async function cacheGuildInvites(guild) {
@@ -138953,27 +139010,40 @@ async function findUsedInvite(guild) {
   return [...invites.values()].find((invite) => (invite.uses ?? 0) > (previous.get(invite.code) ?? 0)) ?? null;
 }
 async function handleInviteMemberAdd(member) {
+  const priorLeave = sqlite.prepare(
+    `SELECT id, inviter_id, invite_code FROM invite_log WHERE invited_id = ? AND left_server = 1 ORDER BY joined_at DESC LIMIT 1`
+  ).get(member.id);
   const invite = await findUsedInvite(member.guild);
+  const joinedAt = Math.floor(Date.now() / 1e3);
+  const accountCreatedAt = Math.floor((member.user.createdTimestamp ?? Date.now()) / 1e3);
+  if (priorLeave) {
+    sqlite.prepare(
+      `UPDATE invite_log
+       SET inviter_id = ?, invite_code = ?, verified = 0, verified_at = NULL, left_server = 0, rejoin = 1, joined_at = ?, account_created_at = ?
+       WHERE id = ?`
+    ).run(
+      invite?.inviter?.id ?? priorLeave.inviter_id,
+      invite?.code ?? priorLeave.invite_code,
+      joinedAt,
+      accountCreatedAt,
+      priorLeave.id
+    );
+    return;
+  }
   if (!invite?.inviter?.id) {
     logger.warn({ guildId: member.guild.id, invitedId: member.id }, "Could not identify invite used by new member");
     return;
   }
   const cfg = getServerConfig2();
   const isVerified = Boolean(cfg?.verifiedRoleId && member.roles.cache.has(cfg.verifiedRoleId));
-  const priorLeave = sqlite.prepare(
-    `SELECT id FROM invite_log WHERE invited_id = ? AND left_server = 1 ORDER BY joined_at DESC LIMIT 1`
-  ).get(member.id);
-  const joinedAt = Math.floor(Date.now() / 1e3);
-  const accountCreatedAt = Math.floor((member.user.createdTimestamp ?? Date.now()) / 1e3);
   sqlite.prepare(
     `INSERT INTO invite_log (inviter_id, invited_id, invite_code, verified, rewarded, left_server, rejoin, joined_at, verified_at, account_created_at)
-     VALUES (?, ?, ?, ?, 0, 0, ?, ?, ?, ?)`
+     VALUES (?, ?, ?, ?, 0, 0, 0, ?, ?, ?)`
   ).run(
     invite.inviter.id,
     member.id,
     invite.code,
     isVerified ? 1 : 0,
-    priorLeave ? 1 : 0,
     joinedAt,
     isVerified ? joinedAt : null,
     accountCreatedAt
@@ -138988,6 +139058,11 @@ async function handleInviteMemberUpdate(oldMember, newMember) {
      WHERE id = (
        SELECT id FROM invite_log
        WHERE invited_id = ? AND verified = 0 AND left_server = 0 AND rejoin = 0
+         AND invite_log.id = (
+           SELECT latest.id FROM invite_log latest
+           WHERE latest.invited_id = invite_log.invited_id
+           ORDER BY latest.joined_at DESC, latest.id DESC LIMIT 1
+         )
        ORDER BY joined_at DESC LIMIT 1
      )`
   ).run(verifiedAt, newMember.id);
@@ -139083,6 +139158,7 @@ async function handleInteraction(interaction) {
       if (name === "link") return await execute38(interaction);
       if (name === "invites") return await execute39(interaction);
       if (name === "invited") return await executeInvited(interaction);
+      if (name === "inviter") return await executeInviter(interaction);
       if (name === "clear") return await execute40(interaction);
     } catch (err) {
       if (isExpiredInteractionError(err)) {
