@@ -138028,6 +138028,18 @@ var import_discord40 = __toESM(require_src2(), 1);
 var data39 = new import_discord40.SlashCommandBuilder().setName("invites").setDescription("View your invite stats").addUserOption(
   (opt) => opt.setName("user").setDescription("(Admin only) View another member's invite stats").setRequired(false)
 );
+function fmtList(rows) {
+  if (!rows.length) return "`None`";
+  const shown = rows.slice(0, 25);
+  const lines = shown.map((row) => {
+    const joinedAt = Number(row.joined_at ?? 0);
+    const verifiedAt = Number(row.verified_at ?? 0);
+    const timestamp = verifiedAt || joinedAt;
+    return `<@${row.invited_id}> — joined <t:${joinedAt}:R>${row.verified ? ` • verified <t:${timestamp}:R>` : ""}`;
+  });
+  if (rows.length > shown.length) lines.push(`…and ${rows.length - shown.length} more`);
+  return lines.join("\n");
+}
 async function execute39(interaction) {
   await interaction.deferReply();
   const targetUser = interaction.options.getUser("user");
