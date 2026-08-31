@@ -139183,8 +139183,10 @@ delete globalThis.__pvpDeps;
     const rightScore = right ? game.scores[right.id] ?? 0 : 0;
     const leftColor = left ? game.colors?.[left.id] : null;
     const rightColor = right ? game.colors?.[right.id] : null;
-    const leftRoundMatches = left ? game.roundResults?.[left.id]?.matches ?? 0 : 0;
-    const rightRoundMatches = right ? game.roundResults?.[right.id]?.matches ?? 0 : 0;
+    const leftRoundResult = left ? game.roundResults?.[left.id] : null;
+    const rightRoundResult = right ? game.roundResults?.[right.id] : null;
+    const leftRoundMatches = leftRoundResult?.matches ?? 0;
+    const rightRoundMatches = rightRoundResult?.matches ?? 0;
     const leftScoreColor = PVP_CD_COLOR_HEX[leftColor] ?? "#7dd3fc";
     const rightScoreColor = PVP_CD_COLOR_HEX[rightColor] ?? "#fbbf24";
     const leftRoundColor = PVP_CD_COLOR_HEX[leftColor] ?? "#dce7e1";
@@ -139232,27 +139234,27 @@ delete globalThis.__pvpDeps;
     if (!game.isRolling && game.lastTurn) {
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.font = "bold 22px Arial";
+      ctx.font = "bold 24px Arial";
       ctx.fillStyle = "#dce7e1";
-      ctx.fillText("Round results", PVP_CD_WIDTH / 2, 458);
-      const roundResultY = 490;
-      const leftRoundLabel = leftColor ? `${pvpCdColorName(leftColor)}: ${leftRoundMatches} match${leftRoundMatches === 1 ? "" : "es"}` : "Color not chosen";
-      const rightRoundLabel = rightColor ? `${pvpCdColorName(rightColor)}: ${rightRoundMatches} match${rightRoundMatches === 1 ? "" : "es"}` : "Color not chosen";
-      const leftHighlight = leftRoundMatches > 0;
-      const rightHighlight = rightRoundMatches > 0;
-      ctx.font = leftHighlight ? "900 22px Arial" : "bold 22px Arial";
+      ctx.fillText("Round results", PVP_CD_WIDTH / 2, 470);
+      const roundResultY = 508;
+      const leftRoundLabel = leftColor ? `${pvpCdColorName(leftColor)}: ${leftRoundResult ? `${leftRoundMatches} match${leftRoundMatches === 1 ? "" : "es"}` : "—"}` : "Color not chosen";
+      const rightRoundLabel = rightColor ? `${pvpCdColorName(rightColor)}: ${rightRoundResult ? `${rightRoundMatches} match${rightRoundMatches === 1 ? "" : "es"}` : "—"}` : "Color not chosen";
+      const leftHighlight = Boolean(leftRoundResult && leftRoundMatches > 0);
+      const rightHighlight = Boolean(rightRoundResult && rightRoundMatches > 0);
+      ctx.font = leftHighlight ? "900 24px Arial" : "bold 24px Arial";
       if (leftHighlight) {
-        const highlightWidth = ctx.measureText(leftRoundLabel).width + 28;
+        const highlightWidth = ctx.measureText(leftRoundLabel).width + 30;
         ctx.fillStyle = "rgba(250, 204, 21, 0.24)";
-        pvpCdDrawRoundedRect(ctx, 300 - highlightWidth / 2, roundResultY - 15, highlightWidth, 30, 10);
+        pvpCdDrawRoundedRect(ctx, 300 - highlightWidth / 2, roundResultY - 17, highlightWidth, 34, 10);
       }
       ctx.fillStyle = leftRoundColor;
       ctx.fillText(leftRoundLabel, 300, roundResultY);
-      ctx.font = rightHighlight ? "900 22px Arial" : "bold 22px Arial";
+      ctx.font = rightHighlight ? "900 24px Arial" : "bold 24px Arial";
       if (rightHighlight) {
-        const highlightWidth = ctx.measureText(rightRoundLabel).width + 28;
+        const highlightWidth = ctx.measureText(rightRoundLabel).width + 30;
         ctx.fillStyle = "rgba(250, 204, 21, 0.24)";
-        pvpCdDrawRoundedRect(ctx, 900 - highlightWidth / 2, roundResultY - 15, highlightWidth, 30, 10);
+        pvpCdDrawRoundedRect(ctx, 900 - highlightWidth / 2, roundResultY - 17, highlightWidth, 34, 10);
       }
       ctx.fillStyle = rightRoundColor;
       ctx.fillText(rightRoundLabel, 900, roundResultY);
@@ -139411,6 +139413,7 @@ delete globalThis.__pvpDeps;
   }
   async function pvpCdResolveTurn(game, playerId, pick, interaction) {
     if (game.phase !== "playing" || game.turnId !== playerId) return;
+    if ((game.rollNumber ?? 0) % 2 === 0) game.roundResults = {};
     await pvpCdAnimateRoll(game, interaction);
     const dice = rollDice();
     const matches = countMatches(dice, pick);
