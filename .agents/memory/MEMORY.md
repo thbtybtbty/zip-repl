@@ -6,3 +6,4 @@
 - [WispByte animation assets](wispbyte-animation-assets.md) — WispByte runtime packages must carry external canvas dependencies and Coinflip GIF assets alongside dist.
 - [Discord workflow port](discord-workflow-port.md) — The bot wrapper and API artifact both bind port 8080; stop the API artifact before running the wrapper workflow.
 - [Invite state compatibility](invite-state-compatibility.md) — Display only each member's latest invite record so legacy duplicate rejoin rows cannot double-count.
+- [Oversized bundle editing](oversized-bundle-editing.md) — Large generated bundles may require asserted copy-transform editing when patch recursion limits are exceeded.

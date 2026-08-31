@@ -1051,3 +1051,17 @@ mtime_ms = 1788181927375
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:7f5b68d2-0cc8-4960-922e-637e9e311538/9df2f111-bec8-468e-8b68-b6e6a2f6f6a0/82a931ea-fb67-49f1-b63d-791c00571c35"
 storage_version_token = "1788181937732321"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "rdDecJP1ErnxuTAg9zbE8"
+uri = "file://attached_assets/index_(19)_1788194121780.updated.zip"
+type = "unspecified"
+title = "Updated WispByte index.mjs"
+description = "ZIP containing the updated index.mjs with optional automatic wager-threshold roles in /setup."
+logical_id = "852ecc49-569e-460e-9234-f488c15d744f"
+content_hash = "sha256:0fdc93bfc5acf92869d8082a4a26eb916cbfc49392d4a513a0971082d0059116"
+size = 1095845
+mtime_ms = 1788194263353
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:81335573-2e90-4f8d-a67e-40beebb3f932/852ecc49-569e-460e-9234-f488c15d744f/cb28fe5e-94eb-494a-a481-ffba1e7ffc2c"
+storage_version_token = "1788194270264515"
+content_type = "application/octet-stream"
