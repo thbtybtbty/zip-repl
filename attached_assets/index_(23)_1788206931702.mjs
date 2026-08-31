@@ -139194,10 +139194,14 @@ delete globalThis.__pvpDeps;
     ctx.fillStyle = "#fbbf24";
     ctx.fillText(String(rightScore), 900, 172);
     ctx.font = "bold 22px Arial";
-    ctx.fillStyle = PVP_CD_COLOR_HEX[leftColor] ?? "#dce7e1";
-    ctx.fillText(`${leftScore} match${leftScore === 1 ? "" : "es"}`, 300, 246);
-    ctx.fillStyle = PVP_CD_COLOR_HEX[rightColor] ?? "#dce7e1";
-    ctx.fillText(`${rightScore} match${rightScore === 1 ? "" : "es"}`, 900, 246);
+    if (leftColor) {
+      ctx.fillStyle = PVP_CD_COLOR_HEX[leftColor] ?? "#dce7e1";
+      ctx.fillText(pvpCdColorName(leftColor), 300, 246);
+    }
+    if (rightColor) {
+      ctx.fillStyle = PVP_CD_COLOR_HEX[rightColor] ?? "#dce7e1";
+      ctx.fillText(pvpCdColorName(rightColor), 900, 246);
+    }
     ctx.fillStyle = "#4b635a";
     ctx.fillRect(598, 140, 4, 138);
     ctx.strokeStyle = "rgba(255,255,255,0.18)";
