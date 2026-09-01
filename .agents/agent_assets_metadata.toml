@@ -1107,3 +1107,17 @@ mtime_ms = 1788252646470
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:d6014b69-1d68-4c07-bf11-2f304af1efd2/75f663f0-7a59-4972-b2fc-33648cd4adb6/e83041de-755a-4acd-a0ab-11bd836dd7c0"
 storage_version_token = "1788252669184920"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "2Mu1sp2cCyOIayO51T6RW"
+uri = "file://updated_wispbyte_index.zip"
+type = "unspecified"
+title = "Updated WispByte index.mjs"
+description = "Zip file containing the updated index.mjs with the visual /setup wizard, separate deposit and withdrawal request channels, and optional ping roles."
+logical_id = "19a00e3e-bd28-4b4a-8ee2-7b1fc32d30e9"
+content_hash = "sha256:df3df3251ecee26c95b3cf74aad75950bc7bff06279c644921acc22c83b2c195"
+size = 1102497
+mtime_ms = 1788257371132
+storage_uri = "gcs://replit-rams-assets-archer/rams/assets/repl:fc8e4b3b-d071-4072-9a31-b2bc3658d493/19a00e3e-bd28-4b4a-8ee2-7b1fc32d30e9/3a29dd23-ea54-4c78-bb1e-2122272553c6"
+storage_version_token = "1788257378680281"
+content_type = "application/octet-stream"
