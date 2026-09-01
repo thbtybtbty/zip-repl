@@ -125272,7 +125272,7 @@ async function applyWagerRoles(userId, totalWagered) {
 async function recordBet(userId, wagered, netDelta, command = "unknown", cashoutMultiplier, qualifiesOverride) {
   const impliedMultiplier = wagered > 0 ? (wagered + netDelta) / wagered : 0;
   const resolvedMultiplier = cashoutMultiplier ?? impliedMultiplier;
-  const qualifiesWager = qualifiesOverride ?? (wagered > 0 && resolvedMultiplier >= 1.8);
+  const qualifiesWager = qualifiesOverride ?? (wagered > 0 && (netDelta < 0 || resolvedMultiplier >= 1.8));
   const countedWager = qualifiesWager ? wagered : 0;
   await db.update(usersTable).set({
     wagered: sql`${usersTable.wagered} + ${countedWager}`,

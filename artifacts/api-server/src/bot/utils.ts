@@ -163,8 +163,8 @@ async function unlockWager(userId: string, amount: number): Promise<void> {
 
 /** Track a completed bet: adds to lifetime wagered + updates net profit + writes to history log.
  *  Pass `cashoutMultiplier` only for cashout-game WINS (mines/towers/hilo/crash/chickencrossing).
- *  If the multiplier is < 1.8× the wager won't unlock locked balance — losses and fixed-odds games
- *  always unlock (leave cashoutMultiplier undefined).
+ *  Losses count toward wagering. Winning outcomes need an effective multiplier of at least 1.8×;
+ *  ties and lower positive outcomes do not count.
  *  Admin bets are flagged admin_bet=1 so /stats and /economy exclude them, but /history still shows them. */
 export async function recordBet(
   userId: string,
@@ -176,7 +176,10 @@ export async function recordBet(
 ): Promise<void> {
   const impliedMultiplier = wagered > 0 ? (wagered + netDelta) / wagered : 0;
   const resolvedMultiplier = cashoutMultiplier ?? impliedMultiplier;
-  const qualifiesWager = qualifiesOverride ?? (wagered > 0 && resolvedMultiplier >= 1.8);
+  const qualifiesWager = qualifiesOverride ?? (
+    wagered > 0 &&
+    (netDelta < 0 || resolvedMultiplier >= 1.8)
+  );
   const countedWager = qualifiesWager ? wagered : 0;
 
   await db
@@ -215,8 +218,7 @@ export async function recordBet(
     }
   }
 
-  // Only a result returning at least 1.8× the stake counts toward the requirement.
-  // Ties, losses, and lower-multiplier results deliberately do not unlock anything.
+  // Losses count toward the requirement. Ties and positive results below 1.8× do not.
   if (qualifiesWager) await unlockWager(userId, wagered);
 }
 
