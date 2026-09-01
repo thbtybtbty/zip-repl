@@ -139299,14 +139299,6 @@ delete globalThis.__pvpDeps;
     );
     return new ActionRowBuilder().addComponents(menu);
   }
-  function pvpCdRollButton(game) {
-    const turn = pvpCdGetParticipant(game, game.turnId);
-    return new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId("pvpcd_roll").setLabel(game.isRolling ? "Rolling…" : "Roll Dice").setStyle(ButtonStyle.Success).setDisabled(
-        game.phase !== "playing" || game.isRolling || Boolean(turn?.isBot)
-      )
-    );
-  }
   function pvpCdLobbyContainer(game) {
     return new ContainerBuilder().setAccentColor(COLORS.primary).addTextDisplayComponents(pvpCdText("## 🎲 PvP Color Dice")).addTextDisplayComponents(
       pvpCdText([
@@ -139315,7 +139307,7 @@ delete globalThis.__pvpDeps;
         `🎯 **First to**  \`${game.target} matches\``,
         "🏦 **Tax**  `5% of the final pot`",
         "",
-        "Each turn rolls six dice using the Color Dice rules. The match count is added to your score; the first player to reach the target wins.",
+        "Each round rolls six dice for both locked colors. Each color's matches are added to its player's score; the first player to reach the target wins.",
         "Choose **Join Game** to play against the host, or **Call Bot** to play against the bot."
       ].join("\n"))
     ).addSeparatorComponents(pvpCdDivider()).addActionRowComponents(
@@ -139327,11 +139319,9 @@ delete globalThis.__pvpDeps;
     );
   }
   function pvpCdActiveContainer(game) {
-    const turn = pvpCdGetParticipant(game, game.turnId);
     const creatorColor = pvpCdColorStatus(game, game.creator);
     const opponentColor = pvpCdColorStatus(game, game.opponent);
-    const phaseText = game.phase === "choosing" ? `🎨 **Color pick**  ${pvpCdMention(turn)} chooses now` : `🕐 **Turn**  ${pvpCdMention(turn)}`;
-    const statusText = game.lastTurn ? `📣 **Last roll**  ${pvpCdMention(pvpCdGetParticipant(game, game.lastTurn.playerId))} matched ${game.lastTurn.matches} time${game.lastTurn.matches === 1 ? "" : "s"} with ${pvpCdColorEmoji(game.lastTurn.pick)} ${pvpCdColorName(game.lastTurn.pick)}` : game.phase === "choosing" ? "Each player chooses one color. Colors stay locked for the whole match." : "Choose your locked color to roll six dice.";
+    const statusText = game.lastTurn ? "📣 **Last round results are shown below.**" : "Rounds roll automatically every 3 seconds for both colors.";
     const container = new ContainerBuilder().setAccentColor(COLORS.primary).addTextDisplayComponents(
       pvpCdText(`## 🎲 PvP Color Dice — First to ${game.target}`)
     ).addTextDisplayComponents(
@@ -139344,7 +139334,6 @@ delete globalThis.__pvpDeps;
     ).addSeparatorComponents(pvpCdDivider()).addTextDisplayComponents(
       pvpCdText([
         `🎯 **Target**  ${game.target} matches`,
-        phaseText,
         statusText
       ].join("\n"))
     ).addMediaGalleryComponents(
@@ -139352,8 +139341,7 @@ delete globalThis.__pvpDeps;
     );
     return container.addActionRowComponents(
       pvpCdColorSelect(game, game.creator),
-      pvpCdColorSelect(game, game.opponent),
-      pvpCdRollButton(game)
+      pvpCdColorSelect(game, game.opponent)
     ), container;
   }
   function pvpCdFinalContainer(game) {
@@ -139397,6 +139385,10 @@ delete globalThis.__pvpDeps;
     const pot = game.amount * 2;
     game.tax = Math.floor(pot * 0.05);
     game.payout = pot - game.tax;
+    if (game.rollTimer) {
+      clearTimeout(game.rollTimer);
+      game.rollTimer = null;
+    }
     try {
       const humans = [game.creator, game.opponent].filter((participant) => !participant.isBot);
       for (const participant of humans) {
@@ -139411,27 +139403,42 @@ delete globalThis.__pvpDeps;
       if (game.opponent && !game.opponent.isBot) pvpCdGameByUser.delete(game.opponent.id);
     }
   }
-  async function pvpCdResolveTurn(game, playerId, pick, interaction) {
-    if (game.phase !== "playing" || game.turnId !== playerId) return;
-    if ((game.rollNumber ?? 0) % 2 === 0) game.roundResults = {};
-    await pvpCdAnimateRoll(game, interaction);
+  function pvpCdScheduleRound(game) {
+    if (game.phase !== "playing" || game.isRolling || game.rollTimer) return;
+    game.rollTimer = setTimeout(() => {
+      game.rollTimer = null;
+      pvpCdResolveRound(game).catch(() => {});
+    }, 3000);
+  }
+  async function pvpCdResolveRound(game) {
+    if (game.phase !== "playing" || game.isRolling) return;
+    await pvpCdAnimateRoll(game);
+    if (game.phase !== "playing") return;
     const dice = rollDice();
-    const matches = countMatches(dice, pick);
-    const mult = getPayout(matches);
+    const results = {};
+    for (const participant of [game.creator, game.opponent]) {
+      const pick = game.colors?.[participant.id];
+      const matches = pick ? countMatches(dice, pick) : 0;
+      results[participant.id] = { pick, matches };
+    }
     game.isRolling = false;
     game.rollingDice = null;
     game.rollNumber = (game.rollNumber ?? 0) + 1;
-    game.lastTurn = { playerId, pick, dice, matches, mult };
-    game.roundResults[playerId] = { pick, matches };
-    game.scores[playerId] = (game.scores[playerId] ?? 0) + matches;
-    if (game.scores[playerId] >= game.target) {
-      await pvpCdSettle(game, playerId);
-      await pvpCdPublish(game, interaction);
+    game.roundResults = results;
+    game.lastTurn = { dice };
+    for (const participant of [game.creator, game.opponent]) {
+      game.scores[participant.id] = (game.scores[participant.id] ?? 0) + results[participant.id].matches;
+    }
+    const creatorReached = game.scores[game.creator.id] >= game.target;
+    const opponentReached = game.scores[game.opponent.id] >= game.target;
+    if (creatorReached || opponentReached) {
+      const winnerId = game.scores[game.creator.id] >= game.scores[game.opponent.id] ? game.creator.id : game.opponent.id;
+      await pvpCdSettle(game, winnerId);
+      await pvpCdPublish(game);
       return;
     }
-    game.turnId = playerId === game.creator.id ? game.opponent.id : game.creator.id;
-    await pvpCdPublish(game, interaction);
-    pvpCdRunBotTurn(game);
+    await pvpCdPublish(game);
+    pvpCdScheduleRound(game);
   }
   async function pvpCdResolveColorChoice(game, playerId, pick, interaction) {
     if (game.phase !== "choosing" || game.turnId !== playerId || game.colors?.[playerId]) return;
@@ -139440,26 +139447,23 @@ delete globalThis.__pvpDeps;
     const chosenCount = Object.keys(game.colors).length;
     if (chosenCount >= 2) {
       game.phase = "playing";
-      game.turnId = game.firstColorPickerId;
+      game.turnId = "";
     } else {
       game.turnId = otherId;
     }
     await pvpCdPublish(game, interaction);
-    pvpCdRunBotTurn(game);
+    if (game.phase === "playing") pvpCdScheduleRound(game);
+    else pvpCdRunBotTurn(game);
   }
   function pvpCdRunBotTurn(game) {
     const botId = game.opponent?.id;
-    if (!game.opponent?.isBot || !botId) return;
-    if (game.phase !== "choosing" && game.phase !== "playing") return;
+    if (!game.opponent?.isBot || !botId || game.phase !== "choosing") return;
     pvpCdSleep(1200).then(async () => {
-      if (game.phase === "choosing" && game.turnId === botId && !game.colors?.[botId]) {
-        const usedColors = new Set(Object.values(game.colors ?? {}));
-        const availableColors = COLORS_LIST.filter((color) => !usedColors.has(color));
-        const pick = availableColors[Math.floor(Math.random() * availableColors.length)];
-        if (pick) await pvpCdResolveColorChoice(game, botId, pick);
-      } else if (game.phase === "playing" && game.turnId === botId && game.colors?.[botId]) {
-        await pvpCdResolveTurn(game, botId, game.colors[botId]);
-      }
+      if (game.phase !== "choosing" || game.turnId !== botId || game.colors?.[botId]) return;
+      const usedColors = new Set(Object.values(game.colors ?? {}));
+      const availableColors = COLORS_LIST.filter((color) => !usedColors.has(color));
+      const pick = availableColors[Math.floor(Math.random() * availableColors.length)];
+      if (pick) await pvpCdResolveColorChoice(game, botId, pick);
     }).catch(() => {});
   }
   function pvpCdGetGame(interaction) {
@@ -139512,6 +139516,7 @@ delete globalThis.__pvpDeps;
       rollNumber: 0,
       isRolling: false,
       rollingDice: null,
+      rollTimer: null,
       tax: 0,
       payout: 0
     };
@@ -139561,36 +139566,17 @@ delete globalThis.__pvpDeps;
     if (!game) return pvpCdReplyEphemeral(interaction, "This PvP Color Dice game is no longer active.");
     const playerId = interaction.customId.slice("pvpcd_pick_".length);
     if (playerId !== interaction.user.id) return pvpCdReplyEphemeral(interaction, "Use your own color selector.");
-    if (game.phase === "choosing") {
-      if (interaction.user.id !== game.turnId) return pvpCdReplyEphemeral(interaction, `It is ${pvpCdMention(pvpCdGetParticipant(game, game.turnId))}'s turn to choose a color.`);
-      if (game.colors?.[playerId]) return pvpCdReplyEphemeral(interaction, "Your color is already locked for this match.");
-      const pick = interaction.values[0];
-      if (!COLORS_LIST.includes(pick)) return pvpCdReplyEphemeral(interaction, "Invalid color.");
-      if (Object.values(game.colors ?? {}).includes(pick)) return pvpCdReplyEphemeral(interaction, "That color is already taken. Choose another color.");
-      await interaction.deferUpdate();
-      await pvpCdResolveColorChoice(game, playerId, pick, interaction);
-      return;
-    }
-    if (game.phase !== "playing") return pvpCdReplyEphemeral(interaction, "This PvP Color Dice game is no longer active.");
-    if (game.isRolling) return pvpCdReplyEphemeral(interaction, "The dice are still rolling.");
-    if (interaction.user.id !== game.turnId) return pvpCdReplyEphemeral(interaction, `It is ${pvpCdMention(pvpCdGetParticipant(game, game.turnId))}'s turn.`);
-    const pick = game.colors?.[playerId];
-    if (!pick) return pvpCdReplyEphemeral(interaction, "Choose your color first.");
+    if (game.phase !== "choosing") return pvpCdReplyEphemeral(interaction, "Colors are locked. Rounds roll automatically for both players.");
+    if (interaction.user.id !== game.turnId) return pvpCdReplyEphemeral(interaction, `It is ${pvpCdMention(pvpCdGetParticipant(game, game.turnId))}'s turn to choose a color.`);
+    if (game.colors?.[playerId]) return pvpCdReplyEphemeral(interaction, "Your color is already locked for this match.");
+    const pick = interaction.values[0];
+    if (!COLORS_LIST.includes(pick)) return pvpCdReplyEphemeral(interaction, "Invalid color.");
+    if (Object.values(game.colors ?? {}).includes(pick)) return pvpCdReplyEphemeral(interaction, "That color is already taken. Choose another color.");
     await interaction.deferUpdate();
-    await pvpCdResolveTurn(game, playerId, pick, interaction);
-  }
-  async function pvpCdHandleRoll(interaction) {
-    const game = pvpCdGetGame(interaction);
-    if (!game || game.phase !== "playing") return pvpCdReplyEphemeral(interaction, "This PvP Color Dice game is no longer active.");
-    if (game.isRolling) return pvpCdReplyEphemeral(interaction, "The dice are still rolling.");
-    if (interaction.user.id !== game.turnId) return pvpCdReplyEphemeral(interaction, `It is ${pvpCdMention(pvpCdGetParticipant(game, game.turnId))}'s turn.`);
-    const pick = game.colors?.[interaction.user.id];
-    if (!pick) return pvpCdReplyEphemeral(interaction, "Choose your color first.");
-    await interaction.deferUpdate();
-    await pvpCdResolveTurn(game, interaction.user.id, pick, interaction);
+    await pvpCdResolveColorChoice(game, playerId, pick, interaction);
   }
   globalThis.__pvpGameLocators?.push({ label: "PvP Color Dice", list: (userId) => [...pvpCdGamesByMessage.values()].filter((game) => (game.phase === "lobby" || game.phase === "choosing" || game.phase === "playing") && (game.creator.id === userId || game.opponent?.id === userId)) });
-  globalThis.__pvpcolordice = { data: pvpCdData, execute: pvpCdExecute, handleJoin: pvpCdHandleJoin, handleCallBot: pvpCdHandleCallBot, handleCancel: pvpCdHandleCancel, handlePick: pvpCdHandlePick, handleRoll: pvpCdHandleRoll };
+  globalThis.__pvpcolordice = { data: pvpCdData, execute: pvpCdExecute, handleJoin: pvpCdHandleJoin, handleCallBot: pvpCdHandleCallBot, handleCancel: pvpCdHandleCancel, handlePick: pvpCdHandlePick };
 })();
 var pvpcolordice_exports = globalThis.__pvpcolordice;
 
@@ -139833,7 +139819,6 @@ async function handleInteraction(interaction) {
       if (id === "pvpcd_join") return await pvpcolordice_exports.handleJoin(bi);
       if (id === "pvpcd_bot") return await pvpcolordice_exports.handleCallBot(bi);
       if (id === "pvpcd_cancel") return await pvpcolordice_exports.handleCancel(bi);
-      if (id === "pvpcd_roll") return await pvpcolordice_exports.handleRoll(bi);
       if (id.startsWith("dep_sent_")) return await handleSent(bi, id.slice("dep_sent_".length));
       if (id.startsWith("dep_cancel_")) return await handleCancel(bi, id.slice("dep_cancel_".length));
       if (id.startsWith("dep_approve_")) return await handleApprove(bi, id.slice("dep_approve_".length));
