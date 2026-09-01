@@ -1121,3 +1121,17 @@ mtime_ms = 1788260394671
 storage_uri = "gcs://replit-rams-assets-archer/rams/assets/repl:fc8e4b3b-d071-4072-9a31-b2bc3658d493/19a00e3e-bd28-4b4a-8ee2-7b1fc32d30e9/6470ebf1-38b3-474e-97e7-318458a37548"
 storage_version_token = "1788260403089510"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "Lb1R8r8UtH_sYvCM5xSry"
+uri = "file://exports/index_18_1788263285257-updated.zip"
+type = "unspecified"
+title = "Updated Wispbyte production bundle"
+description = "ZIP containing the updated index_18_1788263285257.mjs bundle with the requested starter-balance and qualifying-wager locking behavior."
+logical_id = "fe3528cc-4f96-4f18-aaa7-104d9435a5d4"
+content_hash = "sha256:f59a5acfc9b9db8a0bc756ccbb7d393df998b73d9a885d490ed95b79b384f8ad"
+size = 1104120
+mtime_ms = 1788263599883
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:efb105c9-1011-4fdd-935d-cc80c586ac6d/fe3528cc-4f96-4f18-aaa7-104d9435a5d4/91229c2c-11ce-4757-8b63-78ab6ea3f095"
+storage_version_token = "1788263627886366"
+content_type = "application/octet-stream"
