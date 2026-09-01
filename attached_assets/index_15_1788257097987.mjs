@@ -129548,106 +129548,43 @@ async function handlePlayAgain3(interaction, userId, betStr) {
 }
 
 // src/bot/commands/setup.ts
-var setup_exports = {};
-__export(setup_exports, {
-  data: () => data9,
-  execute: () => execute9,
-  handleCancelSetup: () => handleCancelSetup,
-  handleConfirm: () => handleConfirm
-});
-var import_discord10 = __toESM(require_src2(), 1);
 var pendingSetups = /* @__PURE__ */ new Map();
-function ch(id) {
-  return id ? `<#${id}>` : "`Not set`";
-}
-function ro(id) {
-  return id ? `<@&${id}>` : "`Not set`";
-}
-function lock(val) {
-  return val ? "\u2705 Locked" : "\u274C Not locked";
-}
-function minimumAmount(amount) {
-  return amount && amount > 0 ? `\`${amount.toLocaleString()} \u{1F48E}\`` : "`No minimum`";
-}
-function wagerRolesText(wagerRoles) {
-  return Array.isArray(wagerRoles) && wagerRoles.length ? wagerRoles.map((entry) => `${formatAmount(entry.amount)} \u2192 <@&${entry.roleId}>`).join("\n") : "`None`";
-}
-function parseWagerRoles(value, existingValue) {
-  if (value === null) return existingValue ?? [];
-  const input = value.trim();
-  if (!input) return [];
-  const entries = [];
-  for (const pair of input.split(",")) {
-    const separatorIndex = pair.indexOf("=");
-    if (separatorIndex < 0) return null;
-    const amount = parseAmount(pair.slice(0, separatorIndex).trim());
-    const roleToken = pair.slice(separatorIndex + 1).trim();
-    const roleMatch = roleToken.match(/^(?:<@&)?(\d{17,20})>?$/);
-    if (!amount || amount <= 0 || !roleMatch) return null;
-    entries.push({ amount, roleId: roleMatch[1] });
-  }
-  return entries.sort((a, b) => a.amount - b.amount);
-}
 function configEmbed(cfg, title, color) {
+  const ch = (id) => id ? `<#${id}>` : "Not set";
+  const ro = (id) => id ? `<@&${id}>` : "Not set";
+  const lock = (value) => value ? "Locked" : "Unlocked";
   return new import_discord10.EmbedBuilder().setColor(color).setTitle(title).addFields(
-    { name: "\u{1F4E5} Deposit Channel", value: ch(cfg.depositChannelId), inline: true },
-    { name: "\u{1F4E4} Withdraw Channel", value: ch(cfg.withdrawChannelId), inline: true },
-    { name: "\u{1F4CB} Deposit Request Channel", value: ch(cfg.depositRequestChannelId ?? cfg.requestChannelId), inline: true },
-    { name: "\u{1F4CB} Withdraw Request Channel", value: ch(cfg.withdrawRequestChannelId ?? cfg.requestChannelId), inline: true },
-    { name: "\u{1FA99} Flip Channel", value: ch(cfg.flipChannelId), inline: true },
-    { name: "\u{1F327}\uFE0F Rain Channel", value: ch(cfg.rainChannelId), inline: true },
-    { name: "\u{1F3B0} Codes Channel", value: ch(cfg.codesChannelId), inline: true },
-    { name: "\u{1F514} Deposit Ping Role", value: ro(cfg.depositPingRoleId), inline: true },
-    { name: "\u{1F514} Withdraw Ping Role", value: ro(cfg.withdrawPingRoleId), inline: true },
-    { name: "\u{1F514} Rain Ping Role", value: ro(cfg.rainPingRoleId), inline: true },
-    { name: "\u{1F514} Code Ping Role", value: ro(cfg.codePingRoleId), inline: true },
-    { name: "\u2705 Verified Role", value: ro(cfg.verifiedRoleId), inline: true },
-    { name: "\u23F3 Unverified Role", value: ro(cfg.unverifiedRoleId), inline: true },
-    { name: "\u{1F3AE} Roblox User", value: `\`${cfg.robloxUser}\``, inline: true },
-    { name: "\u{1F4E5} Minimum Deposit", value: minimumAmount(cfg.minDeposit), inline: true },
-    { name: "\u{1F4E4} Minimum Withdraw", value: minimumAmount(cfg.minWithdraw), inline: true },
-    { name: "\u{1F381} Starter Balance", value: minimumAmount(cfg.starterBalance), inline: true },
-    { name: "\u{1F4DD} Tip Log Channel", value: ch(cfg.tipLogChannelId), inline: true },
-    { name: "🎁 Affiliate Channel", value: ch(cfg.affiliateChannelId), inline: true },
-    { name: "\u{1F3C5} Wager Roles", value: wagerRolesText(cfg.wagerRoles), inline: false },
-    { name: "\u{1F4B8} Rakeback Excluded", value: cfg.rakebackExcludedGames?.length ? `\`${cfg.rakebackExcludedGames.join(", ")}\`` : "`None`", inline: false },
-    {
-      name: "\u{1F512} Lock Settings",
-      value: [
-        `\u{1F4B8} Tips received:    ${lock(cfg.lockTips ?? true)}`,
-        `\u{1F327}\uFE0F Rain winnings:    ${lock(cfg.lockRain ?? true)}`,
-        `\u{1F3B0} Promo codes:      ${lock(cfg.lockCodes ?? true)}`,
-        `\u{1F381} Starter balance:  ${lock(cfg.lockStarterBalance ?? true)}`,
-        `\u2795 /addbalance:      ${lock(cfg.lockAddBalance ?? false)}`
-      ].join("\n"),
-      inline: false
-    }
+    { name: "Deposit", value: `${ch(cfg.depositChannelId)}\nRoblox: ${cfg.robloxUser ? `\`${cfg.robloxUser}\`` : "Not set"}\nMin: ${minimumAmount(cfg.minDeposit)}`, inline: true },
+    { name: "Withdraw", value: `${ch(cfg.withdrawChannelId)}\nMin: ${minimumAmount(cfg.minWithdraw)}`, inline: true },
+    { name: "Request Channels", value: `${ch(cfg.depositRequestChannelId ?? cfg.requestChannelId)}\n${ch(cfg.withdrawRequestChannelId ?? cfg.requestChannelId)}`, inline: true },
+    { name: "Flip / Affiliate", value: `${ch(cfg.flipChannelId)}\n${ch(cfg.affiliateChannelId)}`, inline: true },
+    { name: "Roles", value: `Verified: ${ro(cfg.verifiedRoleId)}\nUnverified: ${ro(cfg.unverifiedRoleId)}`, inline: true },
+    { name: "Request Ping Roles", value: `Deposit: ${ro(cfg.depositPingRoleId)}\nWithdraw: ${ro(cfg.withdrawPingRoleId)}`, inline: true },
+    { name: "Other Channels", value: `Tips: ${ch(cfg.tipLogChannelId)}\nCodes: ${ch(cfg.codesChannelId)}\nRain: ${ch(cfg.rainChannelId)}`, inline: true },
+    { name: "Other Roles", value: `Rain: ${ro(cfg.rainPingRoleId)}\nCodes: ${ro(cfg.codePingRoleId)}`, inline: true },
+    { name: "Balances", value: `Starter: ${minimumAmount(cfg.starterBalance)}\nTip log: ${ch(cfg.tipLogChannelId)}`, inline: true },
+    { name: "Wager roles", value: wagerRolesText(cfg.wagerRoles), inline: true },
+    { name: "Rakeback exclusions", value: cfg.rakebackExcludedGames?.length ? cfg.rakebackExcludedGames.map((game) => `\`${game}\``).join(", ") : "None", inline: true },
+    { name: "Locks", value: `Tips ${lock(cfg.lockTips ?? true)} · Rain ${lock(cfg.lockRain ?? true)} · Codes ${lock(cfg.lockCodes ?? true)} · Starter ${lock(cfg.lockStarterBalance ?? true)} · AddBal ${lock(cfg.lockAddBalance ?? false)}`, inline: true }
   ).setTimestamp();
 }
 function cfgSummary(cfg) {
+  const ch = (id) => id ? `<#${id}>` : "Not set";
+  const ro = (id) => id ? `<@&${id}>` : "Not set";
+  const lock = (value) => value ? "On" : "Off";
   return [
-    `\u{1F4E5} Deposit: ${ch(cfg.depositChannelId)}`,
-    `\u{1F4E4} Withdraw: ${ch(cfg.withdrawChannelId)}`,
-    `\u{1F4CB} Deposit Requests: ${ch(cfg.depositRequestChannelId ?? cfg.requestChannelId)}`,
-    `\u{1F4CB} Withdraw Requests: ${ch(cfg.withdrawRequestChannelId ?? cfg.requestChannelId)}`,
-    `\u{1FA99} Flip: ${ch(cfg.flipChannelId)}`,
-    `\u{1F327}\uFE0F Rain: ${ch(cfg.rainChannelId)}`,
-    `\u{1F3B0} Codes: ${ch(cfg.codesChannelId)}`,
-    `\u{1F514} Deposit Ping: ${ro(cfg.depositPingRoleId)}`,
-    `\u{1F514} Withdraw Ping: ${ro(cfg.withdrawPingRoleId)}`,
-    `\u{1F514} Rain Ping: ${ro(cfg.rainPingRoleId)}`,
-    `\u{1F514} Code Ping: ${ro(cfg.codePingRoleId)}`,
-    `\u2705 Verified Role: ${ro(cfg.verifiedRoleId)}`,
-    `\u23F3 Unverified Role: ${ro(cfg.unverifiedRoleId)}`,
-    `\u{1F3AE} Roblox: \`${cfg.robloxUser}\``,
-    `\u{1F4E5} Min Deposit: ${minimumAmount(cfg.minDeposit)}`,
-    `\u{1F4E4} Min Withdraw: ${minimumAmount(cfg.minWithdraw)}`,
-    `\u{1F381} Starter: ${minimumAmount(cfg.starterBalance)}`,
-    `\u{1F4DD} Tip Log: ${ch(cfg.tipLogChannelId)}`,
-    `🎁 Affiliate: ${ch(cfg.affiliateChannelId)}`,
-    `\u{1F3C5} Wager Roles: ${wagerRolesText(cfg.wagerRoles)}`,
-    `\u{1F4B8} Rakeback Excluded: ${cfg.rakebackExcludedGames?.length ? `\`${cfg.rakebackExcludedGames.join(", ")}\`` : "`None`"}`,
-    `\u{1F512} Locks: Tips ${lock(cfg.lockTips ?? true)} · Rain ${lock(cfg.lockRain ?? true)} · Codes ${lock(cfg.lockCodes ?? true)} · Starter ${lock(cfg.lockStarterBalance ?? true)} · AddBal ${lock(cfg.lockAddBalance ?? false)}`
+    `**Deposit:** ${ch(cfg.depositChannelId)} · Roblox ${cfg.robloxUser ? `\`${cfg.robloxUser}\`` : "Not set"}`,
+    `**Withdraw:** ${ch(cfg.withdrawChannelId)}`,
+    `**Requests:** Deposit ${ch(cfg.depositRequestChannelId ?? cfg.requestChannelId)} · Withdraw ${ch(cfg.withdrawRequestChannelId ?? cfg.requestChannelId)}`,
+    `**Flip:** ${ch(cfg.flipChannelId)} · **Affiliate:** ${ch(cfg.affiliateChannelId)}`,
+    `**Roles:** Verified ${ro(cfg.verifiedRoleId)} · Unverified ${ro(cfg.unverifiedRoleId)}`,
+    `**Ping roles:** Deposit ${ro(cfg.depositPingRoleId)} · Withdraw ${ro(cfg.withdrawPingRoleId)}`,
+    `**Optional channels:** Tips ${ch(cfg.tipLogChannelId)} · Codes ${ch(cfg.codesChannelId)} · Rain ${ch(cfg.rainChannelId)}`,
+    `**Optional roles:** Rain ${ro(cfg.rainPingRoleId)} · Codes ${ro(cfg.codePingRoleId)}`,
+    `**Amounts:** Deposit ${minimumAmount(cfg.minDeposit)} · Withdraw ${minimumAmount(cfg.minWithdraw)} · Starter ${minimumAmount(cfg.starterBalance)}`,
+    `**Wager roles:** ${wagerRolesText(cfg.wagerRoles)}`,
+    `**Rakeback exclusions:** ${cfg.rakebackExcludedGames?.length ? cfg.rakebackExcludedGames.join(", ") : "None"}`,
+    `**Locks:** Tips ${lock(cfg.lockTips ?? true)} · Rain ${lock(cfg.lockRain ?? true)} · Codes ${lock(cfg.lockCodes ?? true)} · Starter ${lock(cfg.lockStarterBalance ?? true)} · AddBal ${lock(cfg.lockAddBalance ?? false)}`
   ].join("\n");
 }
 function confirmRow(interactionId) {
@@ -129656,7 +129593,7 @@ function confirmRow(interactionId) {
     new import_discord10.ButtonBuilder().setCustomId(`setup_cancel_${interactionId}`).setLabel("Cancel").setEmoji("\u2716\uFE0F").setStyle(import_discord10.ButtonStyle.Secondary)
   );
 }
-var data9 = new import_discord10.SlashCommandBuilder().setName("setup").setDescription("(Admin) Configure the bot visually \u2014 deposit/withdraw, invites, and roles");
+var data9 = new import_discord10.SlashCommandBuilder().setName("setup").setDescription("(Admin) Configure the bot visually — deposit/withdraw, invites, and roles");
 var SETUP_STEPS = [
   { key: "depositChannelId", label: "Deposit announcement channel", type: "channel", required: true },
   { key: "withdrawChannelId", label: "Withdraw announcement channel", type: "channel", required: true },
@@ -129685,33 +129622,28 @@ var SETUP_STEPS = [
   { key: "lockStarterBalance", label: "Lock starter balance", type: "boolean", optional: true },
   { key: "lockAddBalance", label: "Lock /addbalance gems", type: "boolean", optional: true }
 ];
+var SETUP_CORE_KEYS = SETUP_STEPS.slice(0, 13).map((step) => step.key);
+var SETUP_OPTIONAL_KEYS = SETUP_STEPS.slice(13).map((step) => step.key);
 function setupSeed(existing) {
-  return {
-    ...(existing ?? {}),
-    depositRequestChannelId: existing?.depositRequestChannelId ?? existing?.requestChannelId,
-    withdrawRequestChannelId: existing?.withdrawRequestChannelId ?? existing?.requestChannelId,
-    starterBalance: existing?.starterBalance ?? 1e7,
-    rakebackExcludedGames: existing?.rakebackExcludedGames ?? [],
-    wagerRoles: existing?.wagerRoles ?? [],
-    lockTips: existing?.lockTips ?? true,
-    lockRain: existing?.lockRain ?? true,
-    lockCodes: existing?.lockCodes ?? true,
-    lockStarterBalance: existing?.lockStarterBalance ?? true,
-    lockAddBalance: existing?.lockAddBalance ?? false
-  };
+  const cfg = { ...(existing ?? {}) };
+  if (existing) {
+    cfg.depositRequestChannelId = existing.depositRequestChannelId ?? existing.requestChannelId;
+    cfg.withdrawRequestChannelId = existing.withdrawRequestChannelId ?? existing.requestChannelId;
+  }
+  return cfg;
 }
 function setupValue(cfg, step) {
   const value = cfg?.[step.key];
   if (step.type === "channel") return ch(value);
   if (step.type === "role") return ro(value);
-  if (step.type === "boolean") return lock(value);
-  if (step.key === "minDeposit" || step.key === "minWithdraw" || step.key === "starterBalance") return minimumAmount(value);
+  if (step.type === "boolean") return value === void 0 ? "Not set" : value ? "Enabled" : "Disabled";
+  if (step.key === "minDeposit" || step.key === "minWithdraw" || step.key === "starterBalance") return value === void 0 ? "Not set" : minimumAmount(value);
   if (step.key === "rakebackExcludedGames") return value?.length ? `\`${value.join(", ")}\`` : "`None`";
-  if (step.key === "wagerRoles") return wagerRolesText(value);
+  if (step.key === "wagerRoles") return value?.length ? wagerRolesText(value) : "`None`";
   return value ? `\`${value}\`` : "`Not set`";
 }
 function setupProgress(session) {
-  const completed = SETUP_STEPS.slice(0, session.step).slice(-4).map((step) => `\u2705 ${step.label}: ${setupValue(session.config, step)}`);
+  const completed = SETUP_STEPS.filter((step, index) => index < session.step && (session.mode === "all" || session.selectedKeys?.includes(step.key))).slice(-4).map((step) => `\u2705 ${step.label}: ${setupValue(session.config, step)}`);
   return completed.length ? completed.join("\n") : "`Nothing selected yet`";
 }
 function setupSelectRow(session, step) {
@@ -129723,7 +129655,7 @@ function setupSelectRow(session, step) {
     menu = new import_discord10.RoleSelectMenuBuilder().setCustomId(customId).setPlaceholder(`Select ${step.label.toLowerCase()}...`).setMinValues(1).setMaxValues(1);
   } else {
     menu = new import_discord10.StringSelectMenuBuilder().setCustomId(`setup_boolean_${session.id}_${step.key}`).setPlaceholder(`Choose ${step.label.toLowerCase()}...`).setMinValues(1).setMaxValues(1).addOptions(
-      { label: "Enabled", value: "true", description: "Keep this setting enabled" },
+      { label: "Enabled", value: "true", description: "Turn this setting on" },
       { label: "Disabled", value: "false", description: "Turn this setting off" }
     );
   }
@@ -129735,28 +129667,68 @@ function setupButtonsRow(session, step) {
     buttons.push(new import_discord10.ButtonBuilder().setCustomId(`setup_enter_${session.id}_${step.key}`).setLabel(`Enter ${step.label}`).setEmoji("\u270F\uFE0F").setStyle(import_discord10.ButtonStyle.Primary));
   }
   if (step.optional) {
-    buttons.push(new import_discord10.ButtonBuilder().setCustomId(`setup_skip_${session.id}`).setLabel("Skip").setEmoji("\u23E9").setStyle(import_discord10.ButtonStyle.Secondary));
+    buttons.push(new import_discord10.ButtonBuilder().setCustomId(`setup_skip_${session.id}`).setLabel("Skip (clear)").setEmoji("\u23E9").setStyle(import_discord10.ButtonStyle.Secondary));
   }
   buttons.push(new import_discord10.ButtonBuilder().setCustomId(`setup_cancel_${session.id}`).setLabel("Cancel").setEmoji("\u2716\uFE0F").setStyle(import_discord10.ButtonStyle.Danger));
   return new import_discord10.ActionRowBuilder().addComponents(...buttons);
 }
 function setupPayload(session) {
   const step = SETUP_STEPS[session.step];
-  const progress = `Step ${session.step + 1} of ${SETUP_STEPS.length}\n\n**Completed recently**\n${setupProgress(session)}\n\n**Current value**\n${setupValue(session.config, step)}`;
-  const embed = new import_discord10.EmbedBuilder().setColor(COLORS.primary).setTitle(`\u2699\uFE0F Bot Setup \u2014 ${step.label}`).setDescription(
-    step.optional ? `Choose the setting below, or press **Skip** to keep the current value.\n\n${progress}` : `Choose the setting below to continue.\n\n${progress}`
-  ).setFooter({ text: "You will review the complete setup before it is saved." }).setTimestamp();
+  const progress = `Step ${session.selectedKeys?.indexOf(step.key) + 1 ?? session.step + 1} of ${session.selectedKeys?.length ?? SETUP_STEPS.length}\n\n**Completed recently**\n${setupProgress(session)}\n\n**Current value**\n${setupValue(session.config, step)}`;
+  const embed = new import_discord10.EmbedBuilder().setColor(COLORS.primary).setTitle(`\u2699\uFE0F Bot Setup — ${step.label}`).setDescription(
+    step.optional ? `Choose the setting below. **Skip (clear)** leaves this setting with no configured value.\n\n${progress}` : `Choose the setting below to continue.\n\n${progress}`
+  ).setFooter({ text: session.mode === "specific" ? "Only selected settings are being changed." : "Review the complete setup before saving." }).setTimestamp();
   const components = step.type === "modal" ? [] : [setupSelectRow(session, step)];
   components.push(setupButtonsRow(session, step));
   return { embeds: [embed], components };
 }
+function setupModePayload(session) {
+  const embed = new import_discord10.EmbedBuilder().setColor(COLORS.primary).setTitle("\u2699\uFE0F Setup already exists").setDescription("Choose how you want to configure the bot. **Setup all** starts every setting again. **Setup specific steps** changes only the steps you select; everything else remains unchanged.\n\n**Current configuration**\n" + cfgSummary(session.existing)).setFooter({ text: "Nothing changes until you complete the review and save." }).setTimestamp();
+  return {
+    embeds: [embed],
+    components: [new import_discord10.ActionRowBuilder().addComponents(
+      new import_discord10.ButtonBuilder().setCustomId(`setup_all_${session.id}`).setLabel("Setup all").setEmoji("\u2699\uFE0F").setStyle(import_discord10.ButtonStyle.Primary),
+      new import_discord10.ButtonBuilder().setCustomId(`setup_specific_${session.id}`).setLabel("Setup specific steps").setEmoji("\u{1F527}").setStyle(import_discord10.ButtonStyle.Secondary),
+      new import_discord10.ButtonBuilder().setCustomId(`setup_cancel_${session.id}`).setLabel("Cancel").setEmoji("\u2716\uFE0F").setStyle(import_discord10.ButtonStyle.Danger)
+    )]
+  };
+}
+function setupSpecificOptions(keys) {
+  return keys.map((key) => {
+    const step = SETUP_STEPS.find((candidate) => candidate.key === key);
+    return { label: step.label.slice(0, 100), value: step.key, description: step.optional ? "Optional setting" : "Required setting" };
+  });
+}
+function setupSpecificPayload(session) {
+  const selected = session.selectedKeys ?? [];
+  const selectedText = selected.length ? selected.map((key) => SETUP_STEPS.find((step) => step.key === key)?.label).filter(Boolean).join(", ") : "None selected yet";
+  const makeMenu = (customId, placeholder, keys) => new import_discord10.ActionRowBuilder().addComponents(new import_discord10.StringSelectMenuBuilder().setCustomId(`${customId}_${session.id}`).setPlaceholder(placeholder).setMinValues(1).setMaxValues(keys.length).addOptions(setupSpecificOptions(keys)));
+  const embed = new import_discord10.EmbedBuilder().setColor(COLORS.primary).setTitle("\u{1F527} Choose setup steps").setDescription("Select every setting you want to change, using either or both menus. Settings you do not select will remain unchanged.\n\n**Selected**\n" + selectedText).setFooter({ text: "Select at least one setting, then press Continue." }).setTimestamp();
+  return { embeds: [embed], components: [makeMenu("setup_specific_core", "Select core settings...", SETUP_CORE_KEYS), makeMenu("setup_specific_optional", "Select optional settings...", SETUP_OPTIONAL_KEYS), new import_discord10.ActionRowBuilder().addComponents(
+    new import_discord10.ButtonBuilder().setCustomId(`setup_specific_continue_${session.id}`).setLabel("Continue").setEmoji("\u25B6\uFE0F").setStyle(import_discord10.ButtonStyle.Success),
+    new import_discord10.ButtonBuilder().setCustomId(`setup_cancel_${session.id}`).setLabel("Cancel").setEmoji("\u2716\uFE0F").setStyle(import_discord10.ButtonStyle.Danger)
+  )] };
+}
+function setupStepSelected(session, step) {
+  return session.mode === "all" || session.selectedKeys?.includes(step.key);
+}
+function advanceSetup(session) {
+  let next = session.step + 1;
+  while (next < SETUP_STEPS.length && !setupStepSelected(session, SETUP_STEPS[next])) next++;
+  session.step = next;
+  return next >= SETUP_STEPS.length;
+}
+function setSetupValue(session, key, value) {
+  if (value === void 0 || value === null) delete session.config[key];
+  else session.config[key] = value;
+}
 function setupPreviewPayload(session) {
   const cfg = session.config;
   cfg.requestChannelId = cfg.depositRequestChannelId ?? cfg.withdrawRequestChannelId ?? session.existing?.requestChannelId;
-  const embed = session.existing ? new import_discord10.EmbedBuilder().setColor(COLORS.warning).setTitle("\u26A0\uFE0F Setup Review").setDescription("The bot is already configured. Save this new setup to overwrite the current configuration, or cancel to keep it unchanged.").addFields(
+  const embed = session.existing ? new import_discord10.EmbedBuilder().setColor(COLORS.warning).setTitle("\u26A0\uFE0F Setup Review").setDescription(session.mode === "specific" ? "Review the selected changes. Unselected settings remain unchanged. Save to apply them, or cancel to keep the existing configuration." : "Review the complete replacement configuration. Save to overwrite the current configuration, or cancel to keep it unchanged.").addFields(
     { name: "Current configuration", value: cfgSummary(session.existing), inline: true },
     { name: "New configuration", value: cfgSummary(cfg), inline: true }
-  ).setTimestamp() : configEmbed(cfg, "\u{1F4CB} Setup Review \u2014 Ready to Save", COLORS.primary);
+  ).setTimestamp() : configEmbed(cfg, "\u{1F4CB} Setup Review — Ready to Save", COLORS.primary);
   return { embeds: [embed], components: [confirmRow(session.id)] };
 }
 function finishSetup(interaction, session) {
@@ -129770,16 +129742,63 @@ function finishSetup(interaction, session) {
 }
 async function execute9(interaction) {
   await interaction.deferReply({ ephemeral: true });
-  if (!isAdmin(interaction.user.id)) {
-    return interaction.editReply({ embeds: [errorEmbed("You don't have permission to use this command.")] });
-  }
+  if (!isAdmin(interaction.user.id)) return interaction.editReply({ embeds: [errorEmbed("You don't have permission to use this command.")] });
   const existing = getServerConfig2();
-  const session = { id: interaction.id, adminId: interaction.user.id, existing, config: setupSeed(existing), step: 0 };
+  const session = { id: interaction.id, adminId: interaction.user.id, existing, mode: existing ? "choose" : "all", selectedKeys: existing ? [] : SETUP_STEPS.map((step) => step.key), config: existing ? setupSeed(existing) : {}, step: -1 };
   pendingSetups.set(session.id, session);
   setTimeout(() => {
     const current = pendingSetups.get(session.id);
     if (current?.config) pendingSetups.delete(session.id);
   }, 10 * 60 * 1e3);
+  if (existing) return interaction.editReply(setupModePayload(session));
+  advanceSetup(session);
+  return interaction.editReply(setupPayload(session));
+}
+async function handleSetupAll(interaction, sessionId) {
+  const session = pendingSetups.get(sessionId);
+  if (!session?.config) return interaction.reply({ content: "\u274C This setup session has expired. Please run `/setup` again.", flags: import_discord10.MessageFlags.Ephemeral });
+  if (interaction.user.id !== session.adminId) return interaction.reply({ content: "\u274C This is not your setup session.", flags: import_discord10.MessageFlags.Ephemeral });
+  session.mode = "all";
+  session.selectedKeys = SETUP_STEPS.map((step) => step.key);
+  session.config = {};
+  session.step = -1;
+  advanceSetup(session);
+  pendingSetups.set(sessionId, session);
+  await interaction.deferUpdate();
+  return interaction.editReply(setupPayload(session));
+}
+async function handleSetupSpecific(interaction, sessionId) {
+  const session = pendingSetups.get(sessionId);
+  if (!session?.config) return interaction.reply({ content: "\u274C This setup session has expired. Please run `/setup` again.", flags: import_discord10.MessageFlags.Ephemeral });
+  if (interaction.user.id !== session.adminId) return interaction.reply({ content: "\u274C This is not your setup session.", flags: import_discord10.MessageFlags.Ephemeral });
+  session.mode = "specific";
+  session.selectedKeys = [];
+  session.config = setupSeed(session.existing);
+  pendingSetups.set(sessionId, session);
+  await interaction.deferUpdate();
+  return interaction.editReply(setupSpecificPayload(session));
+}
+async function handleSetupSpecificSelect(interaction, sessionId, group) {
+  const session = pendingSetups.get(sessionId);
+  if (!session?.config || session.mode !== "specific") return interaction.reply({ content: "\u274C This setup session has expired. Please run `/setup` again.", flags: import_discord10.MessageFlags.Ephemeral });
+  if (interaction.user.id !== session.adminId) return interaction.reply({ content: "\u274C This is not your setup session.", flags: import_discord10.MessageFlags.Ephemeral });
+  const allowed = group === "core" ? SETUP_CORE_KEYS : SETUP_OPTIONAL_KEYS;
+  const selected = new Set(session.selectedKeys);
+  for (const key of interaction.values) if (allowed.includes(key)) selected.add(key);
+  session.selectedKeys = SETUP_STEPS.map((step) => step.key).filter((key) => selected.has(key));
+  pendingSetups.set(sessionId, session);
+  await interaction.deferUpdate();
+  return interaction.editReply(setupSpecificPayload(session));
+}
+async function handleSetupSpecificContinue(interaction, sessionId) {
+  const session = pendingSetups.get(sessionId);
+  if (!session?.config || session.mode !== "specific") return interaction.reply({ content: "\u274C This setup session has expired. Please run `/setup` again.", flags: import_discord10.MessageFlags.Ephemeral });
+  if (interaction.user.id !== session.adminId) return interaction.reply({ content: "\u274C This is not your setup session.", flags: import_discord10.MessageFlags.Ephemeral });
+  if (!session.selectedKeys.length) return interaction.reply({ content: "\u274C Select at least one setup step first.", flags: import_discord10.MessageFlags.Ephemeral });
+  session.step = -1;
+  advanceSetup(session);
+  pendingSetups.set(sessionId, session);
+  await interaction.deferUpdate();
   return interaction.editReply(setupPayload(session));
 }
 async function handleSetupSelect(interaction, sessionId, key) {
@@ -129788,11 +129807,11 @@ async function handleSetupSelect(interaction, sessionId, key) {
   if (interaction.user.id !== session.adminId) return interaction.reply({ content: "\u274C This is not your setup session.", flags: import_discord10.MessageFlags.Ephemeral });
   const step = SETUP_STEPS[session.step];
   if (!step || step.key !== key || (step.type !== "channel" && step.type !== "role")) return interaction.reply({ content: "\u274C This setup step is no longer active.", flags: import_discord10.MessageFlags.Ephemeral });
-  session.config[key] = interaction.values[0];
-  session.step++;
+  setSetupValue(session, key, interaction.values[0]);
+  const done = advanceSetup(session);
   pendingSetups.set(sessionId, session);
   await interaction.deferUpdate();
-  return session.step >= SETUP_STEPS.length ? finishSetup(interaction, session) : interaction.editReply(setupPayload(session));
+  return done ? finishSetup(interaction, session) : interaction.editReply(setupPayload(session));
 }
 async function handleSetupBooleanSelect(interaction, sessionId, key) {
   const session = pendingSetups.get(sessionId);
@@ -129800,11 +129819,11 @@ async function handleSetupBooleanSelect(interaction, sessionId, key) {
   if (interaction.user.id !== session.adminId) return interaction.reply({ content: "\u274C This is not your setup session.", flags: import_discord10.MessageFlags.Ephemeral });
   const step = SETUP_STEPS[session.step];
   if (!step || step.key !== key || step.type !== "boolean") return interaction.reply({ content: "\u274C This setup step is no longer active.", flags: import_discord10.MessageFlags.Ephemeral });
-  session.config[key] = interaction.values[0] === "true";
-  session.step++;
+  setSetupValue(session, key, interaction.values[0] === "true");
+  const done = advanceSetup(session);
   pendingSetups.set(sessionId, session);
   await interaction.deferUpdate();
-  return session.step >= SETUP_STEPS.length ? finishSetup(interaction, session) : interaction.editReply(setupPayload(session));
+  return done ? finishSetup(interaction, session) : interaction.editReply(setupPayload(session));
 }
 async function handleSetupSkip(interaction, sessionId) {
   const session = pendingSetups.get(sessionId);
@@ -129812,10 +129831,11 @@ async function handleSetupSkip(interaction, sessionId) {
   if (interaction.user.id !== session.adminId) return interaction.reply({ content: "\u274C This is not your setup session.", flags: import_discord10.MessageFlags.Ephemeral });
   const step = SETUP_STEPS[session.step];
   if (!step?.optional) return interaction.reply({ content: "\u274C This setting is required.", flags: import_discord10.MessageFlags.Ephemeral });
-  session.step++;
+  delete session.config[step.key];
+  const done = advanceSetup(session);
   pendingSetups.set(sessionId, session);
   await interaction.deferUpdate();
-  return session.step >= SETUP_STEPS.length ? finishSetup(interaction, session) : interaction.editReply(setupPayload(session));
+  return done ? finishSetup(interaction, session) : interaction.editReply(setupPayload(session));
 }
 async function handleSetupEnter(interaction, sessionId, key) {
   const session = pendingSetups.get(sessionId);
@@ -129824,7 +129844,7 @@ async function handleSetupEnter(interaction, sessionId, key) {
   const step = SETUP_STEPS[session.step];
   if (!step || step.key !== key || step.type !== "modal") return interaction.reply({ content: "\u274C This setup step is no longer active.", flags: import_discord10.MessageFlags.Ephemeral });
   const input = new import_discord10.TextInputBuilder().setCustomId("value").setLabel(step.label.slice(0, 45)).setStyle(key === "rakebackExcludedGames" || key === "wagerRoles" ? import_discord10.TextInputStyle.Paragraph : import_discord10.TextInputStyle.Short).setRequired(true).setPlaceholder(step.placeholder ?? "");
-  const modal = new import_discord10.ModalBuilder().setCustomId(`setup_modal_${sessionId}_${key}`).setTitle(`Setup \u2014 ${step.label}`.slice(0, 45)).addComponents(new import_discord10.ActionRowBuilder().addComponents(input));
+  const modal = new import_discord10.ModalBuilder().setCustomId(`setup_modal_${sessionId}_${key}`).setTitle(`Setup — ${step.label}`.slice(0, 45)).addComponents(new import_discord10.ActionRowBuilder().addComponents(input));
   return interaction.showModal(modal);
 }
 async function handleSetupModal(interaction, sessionId, key) {
@@ -129856,25 +129876,23 @@ async function handleSetupModal(interaction, sessionId, key) {
   } else if (!raw) {
     return interaction.followUp({ content: "\u274C This value cannot be blank.", flags: import_discord10.MessageFlags.Ephemeral });
   }
-  session.config[key] = value;
-  session.step++;
+  setSetupValue(session, key, value);
+  const done = advanceSetup(session);
   pendingSetups.set(sessionId, session);
-  return session.step >= SETUP_STEPS.length ? finishSetup(interaction, session) : interaction.editReply(setupPayload(session));
+  return done ? finishSetup(interaction, session) : interaction.editReply(setupPayload(session));
 }
 async function handleConfirm(interaction, interactionId) {
   await interaction.deferUpdate();
   const cfg = pendingSetups.get(interactionId);
-  if (!cfg || cfg.config) {
-    return interaction.editReply({ embeds: [errorEmbed("This confirmation has expired. Please run `/setup` again.")], components: [] });
-  }
+  if (!cfg || cfg.config) return interaction.editReply({ embeds: [errorEmbed("This confirmation has expired. Please run `/setup` again.")], components: [] });
   pendingSetups.delete(interactionId);
   saveServerConfig(cfg);
-  return interaction.editReply({ embeds: [configEmbed(cfg, "\u2705  Setup Saved", COLORS.success)], components: [] });
+  return interaction.editReply({ embeds: [configEmbed(cfg, "\u2705 Setup Saved", COLORS.success)], components: [] });
 }
 async function handleCancelSetup(interaction, interactionId) {
   await interaction.deferUpdate();
   pendingSetups.delete(interactionId);
-  return interaction.editReply({ embeds: [new import_discord10.EmbedBuilder().setColor(COLORS.dark).setDescription("\u2716\uFE0F  Setup cancelled. The existing configuration was kept.").setTimestamp()], components: [] });
+  return interaction.editReply({ embeds: [new import_discord10.EmbedBuilder().setColor(COLORS.dark).setDescription("\u2716\uFE0F Setup cancelled. The existing configuration was kept.").setTimestamp()], components: [] });
 }
 
 // src/bot/commands/deposit.ts
@@ -139980,6 +139998,9 @@ async function handleInteraction(interaction) {
         const bet = rest.slice(lastUs + 1);
         return await handlePlayAgain8(bi, userId, bet);
       }
+      if (id.startsWith("setup_all_")) return await handleSetupAll(bi, id.slice("setup_all_".length));
+      if (id.startsWith("setup_specific_continue_")) return await handleSetupSpecificContinue(bi, id.slice("setup_specific_continue_".length));
+      if (id.startsWith("setup_specific_")) return await handleSetupSpecific(bi, id.slice("setup_specific_".length));
       if (id.startsWith("setup_enter_")) {
          const rest = id.slice("setup_enter_".length);
          const lastUs = rest.lastIndexOf("_");
@@ -140126,6 +140147,8 @@ async function handleInteraction(interaction) {
       if (id === "freeze_unfreeze_select") return await handleUnfreezeSelect(si);
       if (id === "game_enable_select") return await handleEnableSelect(si);
       if (id === "aap_remove_select") return await handleRemoveSelect(si);
+       if (id.startsWith("setup_specific_core_")) return await handleSetupSpecificSelect(si, id.slice("setup_specific_core_".length), "core");
+       if (id.startsWith("setup_specific_optional_")) return await handleSetupSpecificSelect(si, id.slice("setup_specific_optional_".length), "optional");
        if (id.startsWith("setup_boolean_")) {
          const rest = id.slice("setup_boolean_".length);
          const lastUs = rest.lastIndexOf("_");
