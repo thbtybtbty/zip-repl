@@ -125227,7 +125227,8 @@ async function getBalance(userId) {
 async function addBalance(userId, delta) {
   const current = await getBalance(userId);
   const next = Math.max(0, current + delta);
-  await db.update(usersTable).set({ balance: next, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, userId));
+  const depletedLocks = next <= 0 ? { lockedBalance: 0, starterLockedBalance: 0 } : {};
+  await db.update(usersTable).set({ balance: next, ...depletedLocks, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, userId));
   return next;
 }
 async function addLocked(userId, amount) {

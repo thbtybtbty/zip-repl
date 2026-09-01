@@ -1634,6 +1634,8 @@ async function resolveGame(
     totalStake + sideBetAmount,
     netDelta,
     "blackjack",
+    undefined,
+    status === "push" ? false : undefined,
   );
 
   finishedBlackjackGames.set(

@@ -14,7 +14,16 @@ import {
   type MessageActionRowComponentBuilder,
   type TextChannel,
 } from "discord.js";
-import { COLORS, parseAmount, formatAmount, getOrCreateUser, addBalance, addWithdrawn, errorEmbed } from "../utils.js";
+import {
+  COLORS,
+  parseAmount,
+  formatAmount,
+  getOrCreateUser,
+  addBalance,
+  addWithdrawn,
+  errorEmbed,
+  STARTER_UNLOCK_MIN_DEPOSIT,
+} from "../utils.js";
 import { getServerConfig } from "../botConfig.js";
 
 // ─── Pending requests ─────────────────────────────────────────────────────────
@@ -85,16 +94,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
 
   const wagerLockedBalance = dbUser.lockedBalance ?? 0;
-  const starterLockedBalance = dbUser.starterLockedBalance ?? 0;
-  const lockedBalance = wagerLockedBalance + starterLockedBalance;
+  const starterLockedBalance = (cfg.lockStarterBalance ?? true)
+    ? dbUser.starterLockedBalance ?? 0
+    : 0;
+  const lockedBalance = wagerLockedBalance + (starterLockedBalance > 0 ? dbUser.balance : 0);
   const withdrawable  = Math.max(0, dbUser.balance - lockedBalance);
   if (amount > withdrawable) {
     const lockReasons = [
       starterLockedBalance > 0
-        ? `**${formatAmount(starterLockedBalance)} 💎** is starter balance locked until you make an approved deposit`
+        ? `Your entire **${formatAmount(dbUser.balance)} 💎** balance is starter balance locked until you make an approved deposit of at least **${formatAmount(Math.max(STARTER_UNLOCK_MIN_DEPOSIT, cfg.minDeposit ?? 0))}**`
         : "",
       wagerLockedBalance > 0
-        ? `**${formatAmount(wagerLockedBalance)} 💎** is bonus balance that must be wagered at **1.8× or higher**`
+        ? `**${formatAmount(wagerLockedBalance)} 💎** of wagering remains; qualifying results must return at least **1.8×**`
         : "",
     ].filter(Boolean).join("\n");
     return interaction.editReply({

@@ -1135,3 +1135,17 @@ mtime_ms = 1788263599883
 storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:efb105c9-1011-4fdd-935d-cc80c586ac6d/fe3528cc-4f96-4f18-aaa7-104d9435a5d4/91229c2c-11ce-4757-8b63-78ab6ea3f095"
 storage_version_token = "1788263627886366"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "iUHImiB1tL5uI6LX1UCQi"
+uri = "file://exports/index_18_1788263285257-locking-updated.zip"
+type = "unspecified"
+title = "Wispbyte locking system update"
+description = "Refreshed ZIP containing the updated production bundle. Locked balances now clear when an account reaches zero, alongside the 2x reward lock and 1.8x qualifying-result rules."
+logical_id = "40fc7597-8366-4690-9f8c-e9a8311ccc14"
+content_hash = "sha256:fea09e2d018b825d6c73d6b469bee5d8c6c665e2d72960e8e6772400a7f5f5a3"
+size = 1104155
+mtime_ms = 1788264969831
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:efb105c9-1011-4fdd-935d-cc80c586ac6d/40fc7597-8366-4690-9f8c-e9a8311ccc14/e5f060ae-13de-4d57-8f01-7a4ac2e437b4"
+storage_version_token = "1788264975362145"
+content_type = "application/octet-stream"

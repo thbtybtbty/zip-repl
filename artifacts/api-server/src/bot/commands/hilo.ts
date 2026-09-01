@@ -672,6 +672,8 @@ export async function handleGuess(
       game.bet,
       -game.bet,
       "hilo",
+      undefined,
+      isTie ? false : undefined,
     );
 
     await interaction.editReply({

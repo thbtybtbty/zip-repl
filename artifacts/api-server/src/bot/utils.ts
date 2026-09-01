@@ -23,6 +23,7 @@ export const COLORS = {
 export const GEM  = "💎";
 export const BOMB = "💣";
 export const QUESTION = "⬜";
+export const STARTER_UNLOCK_MIN_DEPOSIT = 10_000_000;
 
 // ─── Amount parsing ──────────────────────────────────────────────────────────
 export function parseAmount(input: string): number | null {
@@ -108,20 +109,25 @@ export async function getBalance(userId: string): Promise<number> {
 export async function addBalance(userId: string, delta: number): Promise<number> {
   const current = await getBalance(userId);
   const next = Math.max(0, current + delta);
+  const depletedLocks = next <= 0
+    ? { lockedBalance: 0, starterLockedBalance: 0 }
+    : {};
   await db
     .update(usersTable)
-    .set({ balance: next, updatedAt: new Date() })
+    .set({ balance: next, ...depletedLocks, updatedAt: new Date() })
     .where(eq(usersTable.id, userId));
   return next;
 }
 
-/** Add to a user's locked balance (bonus gems that must be wagered ≥1.8× before withdrawal). */
+/** Add a 2× wagering requirement for bonus gems before they can be withdrawn. */
 export async function addLocked(userId: string, amount: number): Promise<void> {
   if (amount <= 0) return;
+  const requiredWager = Math.floor(amount * 2);
+  if (requiredWager <= 0) return;
   await db
     .update(usersTable)
     .set({
-      lockedBalance: sql`${usersTable.lockedBalance} + ${amount}`,
+      lockedBalance: sql`${usersTable.lockedBalance} + ${requiredWager}`,
       updatedAt: new Date(),
     })
     .where(eq(usersTable.id, userId));
@@ -166,11 +172,17 @@ export async function recordBet(
   netDelta: number,
   command = "unknown",
   cashoutMultiplier?: number,
+  qualifiesOverride?: boolean,
 ): Promise<void> {
+  const impliedMultiplier = wagered > 0 ? (wagered + netDelta) / wagered : 0;
+  const resolvedMultiplier = cashoutMultiplier ?? impliedMultiplier;
+  const qualifiesWager = qualifiesOverride ?? (wagered > 0 && resolvedMultiplier >= 1.8);
+  const countedWager = qualifiesWager ? wagered : 0;
+
   await db
     .update(usersTable)
     .set({
-      wagered:   sql`${usersTable.wagered} + ${wagered}`,
+      wagered:   sql`${usersTable.wagered} + ${countedWager}`,
       profit:    sql`${usersTable.profit}  + ${netDelta}`,
       updatedAt: new Date(),
     })
@@ -203,12 +215,9 @@ export async function recordBet(
     }
   }
 
-  // Unlock locked balance if the wager qualifies:
-  //   • No multiplier passed  → fixed-odds game or a loss → always unlocks
-  //   • Cashout game win ≥1.8× → unlocks
-  //   • Cashout game win <1.8× → does NOT unlock (low-risk cashout abuse prevention)
-  const shouldUnlock = cashoutMultiplier === undefined || cashoutMultiplier >= 1.8;
-  if (shouldUnlock) await unlockWager(userId, wagered);
+  // Only a result returning at least 1.8× the stake counts toward the requirement.
+  // Ties, losses, and lower-multiplier results deliberately do not unlock anything.
+  if (qualifiesWager) await unlockWager(userId, wagered);
 }
 
 /** Log a tip transfer for both sender and receiver history.
@@ -219,16 +228,38 @@ export async function logTip(senderId: string, receiverId: string, amount: numbe
   if (lockReceived) await addLocked(receiverId, amount);
 }
 
-/** Increment lifetime deposited counter (call on approved deposit). */
+/** Increment lifetime deposited counter and process qualifying starter deposits. */
 export async function addDeposited(userId: string, amount: number): Promise<void> {
+  const current = sqlite
+    .prepare("SELECT balance, starter_locked_balance FROM users WHERE id = ?")
+    .get(userId) as { balance?: number; starter_locked_balance?: number } | undefined;
+  const cfg = getServerConfig();
+  const starterLocked = Number(current?.starter_locked_balance ?? 0);
+  const requiredDeposit = Math.max(STARTER_UNLOCK_MIN_DEPOSIT, cfg?.minDeposit ?? 0);
+  const qualifiesStarterDeposit =
+    (cfg?.lockStarterBalance ?? true) &&
+    starterLocked > 0 &&
+    amount >= requiredDeposit;
+  const starterBalanceBeforeDeposit = qualifiesStarterDeposit
+    ? Math.max(0, Number(current?.balance ?? 0) - amount)
+    : 0;
+  const starterWagerRequirement = Math.floor(starterBalanceBeforeDeposit * 2);
+
   await db
     .update(usersTable)
     .set({
       deposited: sql`${usersTable.deposited} + ${amount}`,
       updatedAt: new Date(),
+      ...(qualifiesStarterDeposit
+        ? {
+            starterLockedBalance: 0,
+            ...(starterWagerRequirement > 0
+              ? { lockedBalance: sql`${usersTable.lockedBalance} + ${starterWagerRequirement}` }
+              : {}),
+          }
+        : {}),
     })
     .where(eq(usersTable.id, userId));
-  if (amount > 0) await unlockStarterLocked(userId);
 }
 
 /** Increment lifetime withdrawn counter (call on approved withdrawal). */

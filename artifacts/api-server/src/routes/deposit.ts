@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, usersTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
-import { getOrCreateUser, addBalance } from "../bot/utils.js";
+import { eq } from "drizzle-orm";
+import { getOrCreateUser, addBalance, addDeposited } from "../bot/utils.js";
 import { logger } from "../lib/logger.js";
 
 const router: IRouter = Router();
@@ -69,11 +69,8 @@ router.post("/deposit", async (req: Request, res: Response) => {
     // Credit balance
     const newBalance = await addBalance(discordId, amountNum);
 
-    // Track lifetime deposited amount
-    await db
-      .update(usersTable)
-      .set({ deposited: sql`${usersTable.deposited} + ${amountNum}` })
-      .where(eq(usersTable.id, discordId));
+    // Track the deposit and apply any qualifying starter-lock transition.
+    await addDeposited(discordId, amountNum);
 
     logger.info(
       { robloxUser: robloxName, discordId, amount: amountNum, newBalance },
