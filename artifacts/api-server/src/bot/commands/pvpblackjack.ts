@@ -85,6 +85,7 @@ const gameByUser = new Map<string, string>();
 
 const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
 const SUITS = ["♠", "♥", "♦", "♣"];
+const DECK_COUNT = 8;
 
 const IMAGE_WIDTH = 1200;
 const IMAGE_HEIGHT = 650;
@@ -102,7 +103,9 @@ function divider(): SeparatorBuilder {
 }
 
 function buildDeck(): Card[] {
-  return SUITS.flatMap((suit) => RANKS.map((rank) => ({ rank, suit })));
+  return Array.from({ length: DECK_COUNT }, () =>
+    SUITS.flatMap((suit) => RANKS.map((rank) => ({ rank, suit }))),
+  ).flat();
 }
 
 function shuffle(deck: Card[]): Card[] {

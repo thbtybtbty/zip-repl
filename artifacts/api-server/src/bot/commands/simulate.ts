@@ -234,7 +234,7 @@ function simFlip(): number {
 function simBlackjack(): number {
   const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
   const deck: string[] = [];
-  for (let s = 0; s < 4; s++) for (const r of RANKS) deck.push(r);
+  for (let s = 0; s < 8; s++) for (const r of RANKS) deck.push(r);
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j]!, deck[i]!];
@@ -261,20 +261,119 @@ function simBlackjack(): number {
   const dBJ = hv(dealer) === 21 && dealer.length === 2;
 
   if (pBJ && dBJ) return 1;
-  if (pBJ) return Math.random() < 0.075 ? 0 : 2.5; // 3:2 minus house edge
+  if (pBJ) return 2.5; // 3:2 payout
   if (dBJ) return 0;
 
-  // Player strategy: stand at 17+
-  while (hv(player) < 17) player.push(deal());
-  if (hv(player) > 21) return 0;
+  function dealerValue(rank: string): number {
+    return rank === "A" ? 11 : val(rank);
+  }
+
+  function isSoft(hand: string[]): boolean {
+    const hardTotal = hand.reduce((sum, rank) => sum + (rank === "A" ? 1 : val(rank)), 0);
+    return hand.includes("A") && hardTotal + 10 <= 21;
+  }
+
+  function shouldSplit(hand: string[], dealerUp: number): boolean {
+    if (hand.length !== 2 || hand[0] !== hand[1]) return false;
+    const rank = hand[0]!;
+    if (rank === "A" || rank === "8") return true;
+    if (rank === "9") return [2, 3, 4, 5, 6, 8, 9].includes(dealerUp);
+    if (rank === "7") return dealerUp >= 2 && dealerUp <= 7;
+    if (rank === "6") return dealerUp >= 2 && dealerUp <= 6;
+    if (rank === "4") return dealerUp === 5 || dealerUp === 6;
+    if (rank === "2" || rank === "3") return dealerUp >= 2 && dealerUp <= 7;
+    return false;
+  }
+
+  function shouldDouble(hand: string[], dealerUp: number): boolean {
+    if (hand.length !== 2) return false;
+    const total = hv(hand);
+    if (isSoft(hand)) {
+      if (total === 13 || total === 14) return dealerUp === 5 || dealerUp === 6;
+      if (total === 15 || total === 16) return dealerUp >= 4 && dealerUp <= 6;
+      if (total === 17) return dealerUp >= 3 && dealerUp <= 6;
+      if (total === 18) return dealerUp >= 3 && dealerUp <= 6;
+      return false;
+    }
+    if (total === 9) return dealerUp >= 3 && dealerUp <= 6;
+    if (total === 10) return dealerUp >= 2 && dealerUp <= 9;
+    if (total === 11) return dealerUp >= 2 && dealerUp <= 11;
+    return false;
+  }
+
+  function shouldHit(hand: string[], dealerUp: number): boolean {
+    const total = hv(hand);
+    if (isSoft(hand)) {
+      if (total <= 17) return true;
+      if (total === 18) return dealerUp === 9 || dealerUp === 10 || dealerUp === 11;
+      return false;
+    }
+    if (total <= 11) return true;
+    if (total === 12) return dealerUp === 2 || dealerUp >= 7;
+    if (total <= 16) return dealerUp >= 7;
+    return false;
+  }
+
+  interface SimHand {
+    cards: string[];
+    stake: number;
+    wasSplit: boolean;
+  }
+
+  const dealerUp = dealerValue(dealer[0]!);
+  const hands: SimHand[] = [{ cards: player, stake: 1, wasSplit: false }];
+
+  for (let handIndex = 0; handIndex < hands.length; handIndex++) {
+    const hand = hands[handIndex]!;
+    while (hv(hand.cards) <= 21) {
+      if (
+        hand.wasSplit &&
+        hand.cards.length === 2 &&
+        hand.cards[0] === "A"
+      ) {
+        break;
+      }
+
+      if (!hand.wasSplit && shouldSplit(hand.cards, dealerUp)) {
+        const first = hand.cards[0]!;
+        const second = hand.cards[1]!;
+        hand.cards = [first, deal()];
+        hand.wasSplit = true;
+        hands.splice(handIndex + 1, 0, {
+          cards: [second, deal()],
+          stake: 1,
+          wasSplit: true,
+        });
+        continue;
+      }
+
+      if (shouldDouble(hand.cards, dealerUp)) {
+        hand.stake = 2;
+        hand.cards.push(deal());
+        break;
+      }
+
+      if (shouldHit(hand.cards, dealerUp)) {
+        hand.cards.push(deal());
+        continue;
+      }
+
+      break;
+    }
+  }
 
   while (hv(dealer) < 17) dealer.push(deal());
-  const dv = hv(dealer), pv = hv(player);
+  const dv = hv(dealer);
+  let payout = 0;
 
-  if (dv > 21) return Math.random() < 0.075 ? 0 : 2;
-  if (pv > dv)  return Math.random() < 0.075 ? 0 : 2;
-  if (pv === dv) return 1;
-  return 0;
+  for (const hand of hands) {
+    const pv = hv(hand.cards);
+    if (pv > 21) continue;
+    if (dv > 21 || pv > dv) payout += hand.stake * 2;
+    else if (pv === dv) payout += hand.stake;
+  }
+
+  return payout;
 }
 
 // mineCount = number of bombs, gemsTarget = how many safe tiles to reveal before cashing out

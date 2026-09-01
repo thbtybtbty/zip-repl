@@ -1,0 +1,17 @@
+Act as a senior software engineer specialized in iGaming architecture and mathematical simulations. I need a complete, modular implementation for an online Blackjack testing environment written in [Inserta aquí tu lenguaje, ej: JavaScript / Python / C#].
+
+I want to implement a hidden feature called "The Invisible Look-Ahead Rigging Algorithm" to artificially increase the house edge by a net 7.5% across a simulation of millions of hands. To avoid detection via data analysis (like fixed-card bias or predictable bust spikes on the first hit), the rigging must be completely invisible, smooth, and distributed dynamically.
+
+To ensure the extra house edge is EXACTLY 7.5%, the system must NOT waste rigged triggers on hands the dealer was already going to win naturally. Please implement the game loop following these exact architectural specifications:
+
+1. Hand Initialization & Look-Ahead Phase:
+- At the start of every hand, before the player sees anything, the engine must run a hidden "ghost simulation" of the hand based on the current order of the deck, assuming the player follows perfect basic strategy.
+- Scenario A: If the ghost simulation results in a DEALER WIN or a PUSH, do nothing. Let the hand play out 100% naturally using pure RNG.
+- Scenario B: If the ghost simulation results in a PLAYER WIN, roll a 1000-sided virtual die (1 to 1000). If the result is between 1 and 75 (7.5% probability), set the hidden state flag: `isHandSentenced = true`. Otherwise, let it play naturally.
+
+2. Dynamic Intervention (Only if isHandSentenced === true):
+The engine must smoothly intercept the deck to force a dealer win, but it must distribute the trampa randomly between the player's turn or the dealer's turn so it doesn't create a statistical anomaly on a specific card position:
+- If the player hits on a hard hand (14-16), randomly decide whether to intercept that hit. If intercepted, swap the next card for a 10-value card to force a "Bust", then set `isHandSentenced = false`.
+- If the player stands cleanly with a good hand, wait for the dealer's turn. When the dealer draws cards, if the dealer's next card would cause a "Bust", intercept it and swap it for the exact card value needed to beat the player's final score by 1 or 2 points (e.g., if player has 19 and dealer has 15, force a 5 to get 20).
+
+Please provide the full logic loop, including Deck/Shoe management functions, the basic strategy rules for the player bot, and a simulation wrapper function so I can run a console loop of 50,000 hands. The simulation must print the final Net House Edge to verify it hits exactly the targeted increase without pattern anomalies.

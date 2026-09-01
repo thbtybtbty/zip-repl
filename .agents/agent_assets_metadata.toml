@@ -1149,3 +1149,17 @@ mtime_ms = 1788265153291
 storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:efb105c9-1011-4fdd-935d-cc80c586ac6d/40fc7597-8366-4690-9f8c-e9a8311ccc14/1aba48ef-aac7-4d0d-93bb-83ab5e68a39c"
 storage_version_token = "1788265181985090"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "QsIhSO8cn9MZ3rfBKXBqU"
+uri = "file://exports/index_18_1788263285257-8-deck-fair-blackjack.zip"
+type = "unspecified"
+title = "8-deck Blackjack update"
+description = "Production bundle with a fresh shuffled 8-deck shoe for Blackjack and PvP Blackjack, fresh shoes for new rounds/replays, and fair basic-strategy Blackjack simulation without hidden rigging."
+logical_id = "40362e7f-ed8f-44c5-804b-1bfc640c27ff"
+content_hash = "sha256:874cd207e159a6c60300a736942283790a76636e6308beec5a04c512afb52fa7"
+size = 1092499
+mtime_ms = 1788297709124
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:efb105c9-1011-4fdd-935d-cc80c586ac6d/40362e7f-ed8f-44c5-804b-1bfc640c27ff/2ee33bc0-dc41-472a-bd65-0d7cfdfad83a"
+storage_version_token = "1788297736909279"
+content_type = "application/octet-stream"

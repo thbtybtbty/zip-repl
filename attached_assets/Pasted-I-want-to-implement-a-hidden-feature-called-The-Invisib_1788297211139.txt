@@ -1,0 +1,18 @@
+I want to implement a hidden feature called "The Invisible Look-Ahead Rigging Algorithm" to artificially increase the house edge by a net 7.5% across a simulation of millions of hands. To avoid detection via data analysis (like fixed-card bias or predictable bust spikes on the first hit), the rigging must be completely invisible, smooth, and distributed dynamically.
+
+To ensure the extra house edge is EXACTLY 7.5% over the course of the simulation, the system must NOT waste rigged triggers on hands the dealer was already going to win naturally, AND it must handle scenarios where the dealer wins naturally after a trigger is pulled. Please implement the game loop following these exact architectural specifications:
+
+1. Hand Initialization & Look-Ahead Phase:
+- At the start of every hand, before the player sees anything, the engine must run a hidden "ghost simulation" of the hand based on the current order of the deck, assuming the player follows perfect basic strategy.
+- Scenario A: If the ghost simulation results in a DEALER WIN or a PUSH, do nothing. Let the hand play out 100% naturally using pure RNG.
+- Scenario B: If the ghost simulation results in a PLAYER WIN, the engine will check the ongoing simulation statistics to dynamically calculate the current target.
+  * Base Target: Roll a 1000-sided virtual die (1 to 1000). The default threshold starts at 112 (11.2%).
+  * Auto-Calibration Rule: If the tracked net house edge of the simulation is currently LOWER than 8.0% (0.5% base + 7.5% extra), temporarily increase the threshold by 5 points. If the net house edge is HIGHER than 8.0%, decrease the threshold by 5 points.
+  * If the die roll is lower than or equal to the calibrated threshold, set the hidden state flag: `isHandSentenced = true`. Otherwise, let it play naturally.
+
+2. Dynamic Intervention (Only if isHandSentenced === true):
+The engine must smoothly intercept the deck to force a dealer win, ensuring that the trigger is never wasted even if the player doesn't hold a 14-16 hand:
+- If the player hits on a hard hand (14-16), intercept that hit. Swap the next card for a value card that will force a "Bust" (random card between the ones that force a bust), then set `isHandSentenced = false` (since the house win is now secured).
+- If the player stands safely (regardless of their hand score, whether it's 12, 18, or 20), wait for the dealer's turn. When the dealer draws cards, DO NOT wait to see if the dealer busts. Instead, check the dealer's final required score to beat the player. Intercept the dealer's drawing phase and swap the cards so the dealer organically reaches a final score that beats the player's final score by at least 1 point (randomized between the winning scores, e.g., if player stood on 18, force the dealer's cards to hit a 19, 20, or 21). Once the dealer takes the winning card, set `isHandSentenced = false`.
+
+Also, update the /simulate command, so if you select blackjack, the player will play with basic strategy (hit, stand, split or double down) depending on what he got. And take in consideration from the simulate command all the rules that are in the blackjack command. The simulate command will not include side bets. Please provide the full implementation code in [Inserta tu lenguaje aquí].

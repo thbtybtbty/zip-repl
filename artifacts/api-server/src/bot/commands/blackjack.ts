@@ -98,16 +98,19 @@ const RANKS = [
 ];
 
 const SUITS = ["♠", "♥", "♦", "♣"];
+const DECK_COUNT = 8;
 
 function buildDeck(): Card[] {
   const deck: Card[] = [];
 
-  for (const suit of SUITS) {
-    for (const rank of RANKS) {
-      deck.push({
-        rank,
-        suit,
-      });
+  for (let deckNumber = 0; deckNumber < DECK_COUNT; deckNumber++) {
+    for (const suit of SUITS) {
+      for (const rank of RANKS) {
+        deck.push({
+          rank,
+          suit,
+        });
+      }
     }
   }
 
