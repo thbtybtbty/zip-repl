@@ -129551,10 +129551,43 @@ async function handlePlayAgain3(interaction, userId, betStr) {
 var setup_exports = {};
 __export(setup_exports, {
   data: () => data9,
-  execute: () => execute9
+  execute: () => execute9,
+  handleCancelSetup: () => handleCancelSetup,
+  handleConfirm: () => handleConfirm
 });
 var import_discord10 = __toESM(require_src2(), 1);
 var pendingSetups = /* @__PURE__ */ new Map();
+function ch(id) {
+  return id ? `<#${id}>` : "[Not set]";
+}
+function ro(id) {
+  return id ? `<@&${id}>` : "[Not set]";
+}
+function lock(val) {
+  return val ? "\u2705 Locked" : "\u274C Not locked";
+}
+function minimumAmount(amount) {
+  return amount && amount > 0 ? `\[${amount.toLocaleString()} \u{1F48E}\[` : "[No minimum[";
+}
+function wagerRolesText(wagerRoles) {
+  return Array.isArray(wagerRoles) && wagerRoles.length ? wagerRoles.map((entry) => `${formatAmount(entry.amount)} \u2192 <@&${entry.roleId}>`).join("\n") : "[None[";
+}
+function parseWagerRoles(value, existingValue) {
+  if (value === null) return existingValue ?? [];
+  const input = value.trim();
+  if (!input) return [];
+  const entries = [];
+  for (const pair of input.split(",")) {
+    const separatorIndex = pair.indexOf("=");
+    if (separatorIndex < 0) return null;
+    const amount = parseAmount(pair.slice(0, separatorIndex).trim());
+    const roleToken = pair.slice(separatorIndex + 1).trim();
+    const roleMatch = roleToken.match(/^(?:<@&)?(\d{17,20})>?$/);
+    if (!amount || amount <= 0 || !roleMatch) return null;
+    entries.push({ amount, roleId: roleMatch[1] });
+  }
+  return entries.sort((a, b) => a.amount - b.amount);
+}
 function configEmbed(cfg, title, color) {
   const ch = (id) => id ? `<#${id}>` : "Not set";
   const ro = (id) => id ? `<@&${id}>` : "Not set";
