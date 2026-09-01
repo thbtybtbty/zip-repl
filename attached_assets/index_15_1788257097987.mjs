@@ -138890,7 +138890,13 @@ globalThis.__pvpBlackjackRenderer = { drawCards, drawResultOverlay };
       text(
         [
           `\u{1F3B2} **Dealer**  ${participantMention(dealer)}`,
-          `\u{1F3AF} **Player**  ${participantMention(player)}`,
+          `\u{1F3AF} **Player**  ${participantMention(player)}`
+        ].join(`
+`)
+      )
+    ).addSeparatorComponents(divider()).addTextDisplayComponents(
+      text(
+        [
           `\u{1F550} **Turn**  ${participantMention(player)}`,
           game.roundResult ? `\u{1F4E3} **Round result**  ${game.roundResult}` : ""
         ].filter(Boolean).join(`
@@ -139468,6 +139474,10 @@ delete globalThis.__pvpDeps;
       new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL("attachment://pvpcolordice.png"))
     );
     if (game.phase === "choosing") {
+      const currentPlayer = pvpCdGetParticipant(game, game.turnId);
+      container.addTextDisplayComponents(
+        pvpCdText(`${pvpCdMention(currentPlayer)}, please select your color.`)
+      );
       return container.addActionRowComponents(
         pvpCdColorSelect(game, game.creator),
         pvpCdColorSelect(game, game.opponent)
