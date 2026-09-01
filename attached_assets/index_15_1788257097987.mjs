@@ -129548,6 +129548,11 @@ async function handlePlayAgain3(interaction, userId, betStr) {
 }
 
 // src/bot/commands/setup.ts
+var setup_exports = {};
+__export(setup_exports, {
+  data: () => data9,
+  execute: () => execute9
+});
 var import_discord10 = __toESM(require_src2(), 1);
 var pendingSetups = /* @__PURE__ */ new Map();
 function configEmbed(cfg, title, color) {
