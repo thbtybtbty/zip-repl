@@ -129558,19 +129558,19 @@ __export(setup_exports, {
 var import_discord10 = __toESM(require_src2(), 1);
 var pendingSetups = /* @__PURE__ */ new Map();
 function ch(id) {
-  return id ? `<#${id}>` : "[Not set]";
+  return id ? `<#${id}>` : "`Not set`";
 }
 function ro(id) {
-  return id ? `<@&${id}>` : "[Not set]";
+  return id ? `<@&${id}>` : "`Not set`";
 }
 function lock(val) {
   return val ? "\u2705 Locked" : "\u274C Not locked";
 }
 function minimumAmount(amount) {
-  return amount && amount > 0 ? `\[${amount.toLocaleString()} \u{1F48E}\[` : "[No minimum[";
+  return amount && amount > 0 ? `\`${amount.toLocaleString()} \u{1F48E}\`` : "`No minimum`";
 }
 function wagerRolesText(wagerRoles) {
-  return Array.isArray(wagerRoles) && wagerRoles.length ? wagerRoles.map((entry) => `${formatAmount(entry.amount)} \u2192 <@&${entry.roleId}>`).join("\n") : "[None[";
+  return Array.isArray(wagerRoles) && wagerRoles.length ? wagerRoles.map((entry) => `${formatAmount(entry.amount)} \u2192 <@&${entry.roleId}>`).join("\n") : "`None`";
 }
 function parseWagerRoles(value, existingValue) {
   if (value === null) return existingValue ?? [];
