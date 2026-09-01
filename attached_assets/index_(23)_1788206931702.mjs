@@ -139236,7 +139236,7 @@ delete globalThis.__pvpDeps;
       ctx.textBaseline = "middle";
       ctx.font = "bold 24px Arial";
       ctx.fillStyle = "#dce7e1";
-      ctx.fillText("Round results", PVP_CD_WIDTH / 2, 470);
+      ctx.fillText("Round Result", PVP_CD_WIDTH / 2, 470);
       const roundResultY = 508;
       const leftRoundLabel = leftColor ? `${pvpCdColorName(leftColor)}: ${leftRoundResult ? `${leftRoundMatches} match${leftRoundMatches === 1 ? "" : "es"}` : "—"}` : "Color not chosen";
       const rightRoundLabel = rightColor ? `${pvpCdColorName(rightColor)}: ${rightRoundResult ? `${rightRoundMatches} match${rightRoundMatches === 1 ? "" : "es"}` : "—"}` : "Color not chosen";
@@ -139321,7 +139321,12 @@ delete globalThis.__pvpDeps;
   function pvpCdActiveContainer(game) {
     const creatorColor = pvpCdColorStatus(game, game.creator);
     const opponentColor = pvpCdColorStatus(game, game.opponent);
-    const statusText = game.lastTurn ? "📣 **Last round results are shown below.**" : "Rounds roll automatically every 3 seconds for both colors.";
+    const resultLabel = game.isRolling ? "📣 **Last Round Result**" : "📣 **Round Result**";
+    const resultText = game.roundResults && Object.keys(game.roundResults).length ? [game.creator, game.opponent].map((participant) => {
+      const result = game.roundResults[participant.id];
+      const color = result?.pick ? `${pvpCdColorEmoji(result.pick)} ${pvpCdColorName(result.pick)}` : "Color";
+      return `${color}: ${result?.matches ?? 0} match${result?.matches === 1 ? "" : "es"}`;
+    }).join(" — ") : "No completed round yet.";
     const container = new ContainerBuilder().setAccentColor(COLORS.primary).addTextDisplayComponents(
       pvpCdText(`## 🎲 PvP Color Dice — First to ${game.target}`)
     ).addTextDisplayComponents(
@@ -139334,26 +139339,31 @@ delete globalThis.__pvpDeps;
     ).addSeparatorComponents(pvpCdDivider()).addTextDisplayComponents(
       pvpCdText([
         `🎯 **Target**  ${game.target} matches`,
-        statusText
+        resultLabel,
+        resultText
       ].join("\n"))
     ).addMediaGalleryComponents(
       new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL("attachment://pvpcolordice.png"))
     );
-    return container.addActionRowComponents(
-      pvpCdColorSelect(game, game.creator),
-      pvpCdColorSelect(game, game.opponent)
-    ), container;
+    if (game.phase === "choosing") {
+      return container.addActionRowComponents(
+        pvpCdColorSelect(game, game.creator),
+        pvpCdColorSelect(game, game.opponent)
+      );
+    }
+    return container;
   }
   function pvpCdFinalContainer(game) {
     const winner = pvpCdGetParticipant(game, game.winnerId);
     const pot = game.amount * 2;
+    const isTie = !game.winnerId;
     return new ContainerBuilder().setAccentColor(COLORS.success).addTextDisplayComponents(
-      pvpCdText(`## 🎲 PvP Color Dice — ${pvpCdMention(winner)} WINS`)
+      pvpCdText(isTie ? "## 🎲 PvP Color Dice — MATCH TIED" : `## 🎲 PvP Color Dice — ${pvpCdMention(winner)} WINS`)
     ).addTextDisplayComponents(
       pvpCdText([
         `🏆 **Final score**  ${pvpCdMention(game.creator)} \`${game.scores[game.creator.id] ?? 0}\` — ${pvpCdMention(game.opponent)} \`${game.scores[game.opponent.id] ?? 0}\``,
         `💎 **Pot**  \`${formatAmount(pot)}\``,
-        `💰 **Winner payout**  \`${formatAmount(game.payout)}\``
+        isTie ? "💰 **Result**  Stakes refunded" : `💰 **Winner payout**  \`${formatAmount(game.payout)}\``
       ].join("\n"))
     ).addSeparatorComponents(pvpCdDivider()).addMediaGalleryComponents(
       new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL("attachment://pvpcolordice.png"))
@@ -139383,8 +139393,9 @@ delete globalThis.__pvpDeps;
     game.phase = "finished";
     game.winnerId = winnerId;
     const pot = game.amount * 2;
-    game.tax = Math.floor(pot * 0.05);
-    game.payout = pot - game.tax;
+    const isTie = !winnerId;
+    game.tax = isTie ? 0 : Math.floor(pot * 0.05);
+    game.payout = isTie ? 0 : pot - game.tax;
     if (game.rollTimer) {
       clearTimeout(game.rollTimer);
       game.rollTimer = null;
@@ -139393,7 +139404,7 @@ delete globalThis.__pvpDeps;
       const humans = [game.creator, game.opponent].filter((participant) => !participant.isBot);
       for (const participant of humans) {
         const stake = game.amount;
-        const payout = participant.id === winnerId ? game.payout : 0;
+        const payout = isTie ? stake : participant.id === winnerId ? game.payout : 0;
         if (payout > 0) await addBalance(participant.id, payout);
         await recordBet(participant.id, stake, payout - stake, "pvpcolordice");
       }
@@ -139432,7 +139443,9 @@ delete globalThis.__pvpDeps;
     const creatorReached = game.scores[game.creator.id] >= game.target;
     const opponentReached = game.scores[game.opponent.id] >= game.target;
     if (creatorReached || opponentReached) {
-      const winnerId = game.scores[game.creator.id] >= game.scores[game.opponent.id] ? game.creator.id : game.opponent.id;
+      const creatorScore = game.scores[game.creator.id];
+      const opponentScore = game.scores[game.opponent.id];
+      const winnerId = creatorScore === opponentScore ? null : creatorScore > opponentScore ? game.creator.id : game.opponent.id;
       await pvpCdSettle(game, winnerId);
       await pvpCdPublish(game);
       return;
