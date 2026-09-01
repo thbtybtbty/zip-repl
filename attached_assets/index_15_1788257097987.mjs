@@ -124762,6 +124762,7 @@ var usersTable = sqliteTable("users", {
   lockedBalance: integer("locked_balance").notNull().default(0),
   // bonus gems (rain/codes/tips/welcome) that must be wagered ≥1.8× before withdrawal
   starterLockedBalance: integer("starter_locked_balance").notNull().default(0),
+  lockedWagerRemaining: integer("locked_wager_remaining").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => /* @__PURE__ */ new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => /* @__PURE__ */ new Date())
 });
@@ -125010,6 +125011,7 @@ async function initDb() {
       rakeback INTEGER NOT NULL DEFAULT 0,
       locked_balance INTEGER NOT NULL DEFAULT 0,
       starter_locked_balance INTEGER NOT NULL DEFAULT 0,
+      locked_wager_remaining INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL DEFAULT (unixepoch()),
       updated_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
@@ -125069,7 +125071,7 @@ async function initDb() {
 
   // Create the same complete schema remotely. These are idempotent.
   const remoteSchema = [
-    `CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT NOT NULL, roblox_username TEXT, balance INTEGER NOT NULL DEFAULT 0, deposited INTEGER NOT NULL DEFAULT 0, withdrawn INTEGER NOT NULL DEFAULT 0, wagered INTEGER NOT NULL DEFAULT 0, profit INTEGER NOT NULL DEFAULT 0, affiliate_id TEXT, affiliate_earnings INTEGER NOT NULL DEFAULT 0, rakeback INTEGER NOT NULL DEFAULT 0, locked_balance INTEGER NOT NULL DEFAULT 0, starter_locked_balance INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (unixepoch()), updated_at INTEGER NOT NULL DEFAULT (unixepoch()))`,
+    `CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT NOT NULL, roblox_username TEXT, balance INTEGER NOT NULL DEFAULT 0, deposited INTEGER NOT NULL DEFAULT 0, withdrawn INTEGER NOT NULL DEFAULT 0, wagered INTEGER NOT NULL DEFAULT 0, profit INTEGER NOT NULL DEFAULT 0, affiliate_id TEXT, affiliate_earnings INTEGER NOT NULL DEFAULT 0, rakeback INTEGER NOT NULL DEFAULT 0, locked_balance INTEGER NOT NULL DEFAULT 0, starter_locked_balance INTEGER NOT NULL DEFAULT 0, locked_wager_remaining INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (unixepoch()), updated_at INTEGER NOT NULL DEFAULT (unixepoch()))`,
     `CREATE TABLE IF NOT EXISTS games (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), game_type TEXT NOT NULL, bet INTEGER NOT NULL, state TEXT NOT NULL DEFAULT '{}', status TEXT NOT NULL DEFAULT 'active', multiplier TEXT NOT NULL DEFAULT '1.00', created_at INTEGER NOT NULL DEFAULT (unixepoch()), updated_at INTEGER NOT NULL DEFAULT (unixepoch()))`,
     `CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS bet_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, command TEXT NOT NULL, bet INTEGER NOT NULL, net_delta INTEGER NOT NULL, admin_bet INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`,
@@ -125091,6 +125093,8 @@ async function initDb() {
     `ALTER TABLE users ADD COLUMN rakeback INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN locked_balance INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN starter_locked_balance INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN locked_wager_remaining INTEGER NOT NULL DEFAULT 0`,
+    `UPDATE users SET locked_wager_remaining = locked_balance * 2 WHERE locked_balance > 0 AND locked_wager_remaining = 0`,
     `ALTER TABLE bet_log ADD COLUMN admin_bet INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN roblox_username TEXT`,
     `ALTER TABLE invite_log ADD COLUMN rejoin INTEGER NOT NULL DEFAULT 0`,
@@ -125231,15 +125235,18 @@ async function addBalance(userId, delta) {
 }
 async function addLocked(userId, amount) {
   if (amount <= 0) return;
+  const required = Math.floor(amount * 2);
   await db.update(usersTable).set({
     lockedBalance: sql`${usersTable.lockedBalance} + ${amount}`,
+    lockedWagerRemaining: sql`${usersTable.lockedWagerRemaining} + ${required}`,
     updatedAt: /* @__PURE__ */ new Date()
   }).where(eq(usersTable.id, userId));
 }
 async function unlockWager(userId, amount) {
   if (amount <= 0) return;
   await db.update(usersTable).set({
-    lockedBalance: sql`MAX(0, ${usersTable.lockedBalance} - ${amount})`,
+    lockedWagerRemaining: sql`MAX(0, ${usersTable.lockedWagerRemaining} - ${amount})`,
+    lockedBalance: sql`CASE WHEN MAX(0, ${usersTable.lockedWagerRemaining} - ${amount}) <= 0 THEN 0 ELSE ${usersTable.lockedBalance} END`,
     updatedAt: /* @__PURE__ */ new Date()
   }).where(eq(usersTable.id, userId));
 }
@@ -125266,15 +125273,17 @@ async function applyWagerRoles(userId, totalWagered) {
   }
 }
 async function recordBet(userId, wagered, netDelta, command = "unknown", cashoutMultiplier) {
+  const qualifies = wagered > 0 && netDelta !== 0 && (cashoutMultiplier === void 0 || cashoutMultiplier >= 1.8);
+  const countedWager = qualifies ? wagered : 0;
   await db.update(usersTable).set({
-    wagered: sql`${usersTable.wagered} + ${wagered}`,
-    profit: sql`${usersTable.profit}  + ${netDelta}`,
+    wagered: sql`${usersTable.wagered} + ${countedWager}`,
+    profit: sql`${usersTable.profit} + ${netDelta}`,
     updatedAt: /* @__PURE__ */ new Date()
   }).where(eq(usersTable.id, userId));
   const adminBet = isAdmin(userId) ? 1 : 0;
-  if (!adminBet && wagered > 0) {
+  if (!adminBet && countedWager > 0) {
     const affiliate = sqlite.prepare("SELECT affiliate_id FROM users WHERE id = ?").get(userId);
-    const commission = Math.floor(wagered * 0.01);
+    const commission = Math.floor(countedWager * 0.01);
     if (affiliate?.affiliate_id && affiliate.affiliate_id !== userId && commission > 0) {
       sqlite.prepare("UPDATE users SET affiliate_earnings = COALESCE(affiliate_earnings, 0) + ?, updated_at = ? WHERE id = ?").run(commission, Math.floor(Date.now() / 1000), affiliate.affiliate_id);
     }
@@ -125289,9 +125298,8 @@ async function recordBet(userId, wagered, netDelta, command = "unknown", cashout
       sqlite.prepare("UPDATE users SET rakeback = COALESCE(rakeback, 0) + ?, updated_at = ? WHERE id = ?").run(rakeback, Math.floor(Date.now() / 1000), userId);
     }
   }
-  const shouldUnlock = cashoutMultiplier === void 0 || cashoutMultiplier >= 1.8;
-  if (shouldUnlock) await unlockWager(userId, wagered);
-  if (!adminBet && wagered > 0) {
+  if (qualifies) await unlockWager(userId, wagered);
+  if (!adminBet && countedWager > 0) {
     const updatedUser = await db.select({ wagered: usersTable.wagered }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
     if (updatedUser[0]) await applyWagerRoles(userId, updatedUser[0].wagered);
   }
@@ -125302,10 +125310,28 @@ async function logTip(senderId, receiverId, amount, lockReceived = false) {
   if (lockReceived) await addLocked(receiverId, amount);
 }
 async function addDeposited(userId, amount) {
-  await db.update(usersTable).set({
+  if (amount <= 0) return;
+  const cfg = getServerConfig2();
+  const current = sqlite.prepare("SELECT balance, deposited, locked_balance, starter_locked_balance FROM users WHERE id = ?").get(userId);
+  const starterAmount = Number(current?.starter_locked_balance ?? 0);
+  const lockStarter = cfg?.lockStarterBalance ?? true;
+  const qualifiesDeposit = lockStarter && starterAmount > 0 && amount >= starterAmount;
+  const nextDeposited = Number(current?.deposited ?? 0) + amount;
+  const starterDerivedBalance = qualifiesDeposit
+    ? Math.max(0, Number(current?.balance ?? 0) - nextDeposited - Number(current?.locked_balance ?? 0))
+    : 0;
+  const updates = {
     deposited: sql`${usersTable.deposited} + ${amount}`,
     updatedAt: /* @__PURE__ */ new Date()
-  }).where(eq(usersTable.id, userId));
+  };
+  if (!lockStarter && starterAmount > 0) {
+    updates.starterLockedBalance = 0;
+  } else if (qualifiesDeposit) {
+    updates.starterLockedBalance = 0;
+    updates.lockedBalance = sql`${usersTable.lockedBalance} + ${starterDerivedBalance}`;
+    updates.lockedWagerRemaining = sql`${usersTable.lockedWagerRemaining} + ${starterDerivedBalance * 2}`;
+  }
+  await db.update(usersTable).set(updates).where(eq(usersTable.id, userId));
 }
 async function addWithdrawn(userId, amount) {
   await db.update(usersTable).set({
@@ -125373,7 +125399,7 @@ router3.post("/deposit", async (req, res) => {
   const discordId = linked[0].id;
   try {
     const newBalance = await addBalance(discordId, amountNum);
-    await db.update(usersTable).set({ deposited: sql`${usersTable.deposited} + ${amountNum}`, starterLockedBalance: 0 }).where(eq(usersTable.id, discordId));
+    await addDeposited(discordId, amountNum);
     logger.info(
       { robloxUser: robloxName, discordId, amount: amountNum, newBalance },
       "Mailbox deposit processed"
@@ -125858,7 +125884,7 @@ async function handleReveal(interaction, cellIndex) {
     }
   } else {
     activeMinesGames.delete(interaction.user.id);
-    await recordBet(interaction.user.id, game.bet, -game.bet, `mines-${game.minesCount}`);
+    await recordBet(interaction.user.id, game.bet, -game.bet, `mines-${game.minesCount}`, game.multiplier);
     await interaction.editReply({
       embeds: [buildMinesPanelEmbed(game, "lost")],
       components: buildMinesGrid(game, "lost", cellIndex)
@@ -126345,7 +126371,8 @@ async function handleChoice(interaction, choice) {
       interaction.user.id,
       game.bet,
       -game.bet,
-      `towers-${game.difficulty}`
+      `towers-${game.difficulty}`,
+      game.multiplier
     );
     await interaction.editReply({
       flags: import_discord5.MessageFlags.IsComponentsV2,
@@ -127583,7 +127610,7 @@ async function execute7(interaction) {
     interaction.user.id,
     amount,
     netDelta,
-    "dice"
+    "dice", multiplier
   );
   const filename = "dice-roll.png";
   const attachment = new import_discord8.AttachmentBuilder(
@@ -128806,7 +128833,7 @@ async function resolveGame(game, interaction, status) {
     game.userId,
     totalStake + sideBetAmount,
     netDelta,
-    "blackjack"
+    "blackjack", status === "push" ? 0 : status === "blackjack" ? 2.5 : 2
   );
   finishedBlackjackGames.set(
     game.messageId,
@@ -130197,6 +130224,21 @@ var data11 = new import_discord12.SlashCommandBuilder().setName("withdraw").setD
 ).addStringOption(
   (opt) => opt.setName("send_to").setDescription("Your Roblox username \u2014 gems will be sent to this account").setRequired(true)
 );
+function getWithdrawLockState(dbUser, cfg) {
+  const wagerLockedBalance = Number(dbUser.lockedBalance ?? 0);
+  const starterAmount = Number(dbUser.starterLockedBalance ?? 0);
+  const starterPending = (cfg?.lockStarterBalance ?? true) && starterAmount > 0;
+  const starterLockedBalance = starterPending ? Number(dbUser.balance ?? 0) : 0;
+  const totalLockedBalance = Math.min(Number(dbUser.balance ?? 0), starterLockedBalance + wagerLockedBalance);
+  return {
+    starterPending,
+    starterAmount,
+    wagerLockedBalance,
+    wagerRequirement: Number(dbUser.lockedWagerRemaining ?? 0),
+    totalLockedBalance,
+    withdrawable: Math.max(0, Number(dbUser.balance ?? 0) - totalLockedBalance)
+  };
+}
 async function execute11(interaction) {
   await interaction.deferReply({ flags: import_discord12.MessageFlags.Ephemeral });
   const cfg = getServerConfig2();
@@ -130224,17 +130266,14 @@ async function execute11(interaction) {
       embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(dbUser.balance)} \u{1F48E} gems**.`)]
     });
   }
-  const lockedBalance = dbUser.lockedBalance ?? 0;
-  const starterLockedBalance = (cfg.lockStarterBalance ?? true) && (dbUser.deposited ?? 0) <= 0 ? dbUser.starterLockedBalance ?? 0 : 0;
-  const totalLockedBalance = lockedBalance + starterLockedBalance;
-  const withdrawable = Math.max(0, dbUser.balance - totalLockedBalance);
-  if (amount > withdrawable) {
+  const lockState = getWithdrawLockState(dbUser, cfg);
+  if (amount > lockState.withdrawable) {
     const lockReasons = [];
-    if (starterLockedBalance > 0) lockReasons.push(`**${formatAmount(starterLockedBalance)}** \u{1F48E}** of your starter balance is locked until you make a deposit.`);
-    if (lockedBalance > 0) lockReasons.push(`**${formatAmount(lockedBalance)}** \u{1F48E}** of your balance is locked and must be wagered at **1.8\xD7 or higher** before it can be withdrawn.`);
+    if (lockState.starterPending) lockReasons.push(`**${formatAmount(lockState.starterAmount)}** of your starter balance is locked until you make an approved deposit of at least **${formatAmount(lockState.starterAmount)}**.`);
+    if (lockState.wagerLockedBalance > 0) lockReasons.push(`**${formatAmount(lockState.wagerLockedBalance)}** is locked until you complete **${formatAmount(lockState.wagerRequirement)}** qualifying wagered gems at **1.8x or higher**. Ties and lower multipliers do not count.`);
     return interaction.editReply({
       embeds: [errorEmbed(
-        `You can only withdraw **${formatAmount(withdrawable)}** \u{1F48E}** right now.\n\n${lockReasons.join("\n\n") || "Some of your balance is currently locked."}`
+        `You can only withdraw **${formatAmount(lockState.withdrawable)}** gems right now.\n\n${lockReasons.join("\n\n") || "Some of your balance is currently locked."}`
       )]
     });
   }
@@ -130263,6 +130302,12 @@ async function handleConfirm2(interaction, reqId) {
   }
   if (interaction.user.id !== req.userId) {
     return interaction.reply({ content: "\u274C This is not your withdrawal request.", flags: import_discord12.MessageFlags.Ephemeral });
+  }
+  const latestUser = await getOrCreateUser(req.userId, req.username);
+  const latestLockState = getWithdrawLockState(latestUser, getServerConfig2());
+  if (latestUser.balance < req.amount || req.amount > latestLockState.withdrawable) {
+    pendingWithdraws.delete(reqId);
+    return interaction.update({ embeds: [errorEmbed(`This withdrawal is no longer available because your withdrawable balance is **${formatAmount(latestLockState.withdrawable)}** gems.`)], components: [] });
   }
   await addBalance(req.userId, -req.amount);
   const cfg = getServerConfig2();
@@ -130911,7 +130956,7 @@ async function runSpin(userId, username, bet, editFn) {
     userId,
     bet,
     winnings - bet,
-    "wheel"
+    "wheel", result.mult
   );
   for (let f = 0; f < OFFSETS.length; f++) {
     const centre = (poolIdx - OFFSETS[f] + POOL.length * 10) % POOL.length;
@@ -131253,7 +131298,7 @@ async function runSpin2(userId, bet, editFn) {
     userId,
     bet,
     winnings - bet,
-    "slots"
+    "slots", result.multiplier
   );
   const frames = [
     {
@@ -131945,7 +131990,8 @@ async function handleGuess(interaction, direction) {
       game.userId,
       game.bet,
       -game.bet,
-      "hilo"
+      "hilo",
+      isTie ? 0 : game.multiplier
     );
     await interaction.editReply({
       components: buildLossComponents(
@@ -132451,7 +132497,7 @@ async function execute17(interaction) {
     interaction.user.id,
     amount,
     won ? amount * payout : -amount,
-    "roulette"
+    "roulette", parseFloat(MULTIPLIER_DISPLAY[bet])
   );
   const winAmount = won ? amount * payout : 0;
   for (let f = 0; f < OFFSETS2.length; f++) {
@@ -132669,7 +132715,8 @@ function launchCrash(userId, bet, gameMessage) {
             userId,
             bet,
             -bet,
-            "crash"
+            "crash",
+            mult
           );
           try {
             await session.gameMessage.edit(
@@ -133099,7 +133146,7 @@ async function settleGame(game) {
   const win = checkWin(game.cells);
   const winnings = win.winner ? Math.floor(game.bet * win.symbol.mult) : 0;
   if (winnings > 0) await addBalance(game.userId, winnings);
-  await recordBet(game.userId, game.bet, winnings - game.bet, "scratchcard");
+  await recordBet(game.userId, game.bet, winnings - game.bet, "scratchcard", win.winner ? win.symbol?.mult ?? 0 : 0);
 }
 function buildPlayAgainRow3(userId, bet, disabled = false) {
   return new import_discord20.ActionRowBuilder().addComponents(
@@ -134337,7 +134384,8 @@ async function handleForward(interaction) {
       interaction.user.id,
       game.bet,
       -game.bet,
-      "chickencrossing"
+      "chickencrossing",
+      game.multiplier
     );
     await interaction.editReply({
       flags: import_discord21.MessageFlags.IsComponentsV2,
@@ -135016,7 +135064,7 @@ async function handleColorPick(interaction) {
     userId,
     pending.bet,
     payout - pending.bet,
-    "colordice"
+    "colordice", mult
   );
 
   await interaction.editReply({
@@ -135115,7 +135163,7 @@ async function execute22(interaction) {
   const won = rolled < chancePct;
   const payout = won ? Math.floor(amount * multiplier) : 0;
   if (won) await addBalance(interaction.user.id, payout);
-  await recordBet(interaction.user.id, amount, payout - amount, "upgrader");
+  await recordBet(interaction.user.id, amount, payout - amount, "upgrader", multiplier);
   await interaction.editReply({ embeds: [countdownEmbed(amount, multiplier, 3)] });
   await sleep6(1e3);
   await interaction.editReply({ embeds: [countdownEmbed(amount, multiplier, 2)] });
@@ -135421,7 +135469,7 @@ async function runDraw(interaction, state) {
     state.userId,
     state.bet,
     payout - state.bet,
-    "keno"
+    "keno", multiplier
   );
   activeSessions2.delete(
     sessionKey(state.userId)
