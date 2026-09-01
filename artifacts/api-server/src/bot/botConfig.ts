@@ -6,6 +6,10 @@ export interface ServerConfig {
   depositChannelId:  string;
   withdrawChannelId: string;
   requestChannelId:  string;
+  depositRequestChannelId?: string;
+  withdrawRequestChannelId?: string;
+  depositPingRoleId?: string;
+  withdrawPingRoleId?: string;
   flipChannelId:     string;
   codesChannelId?:   string;
   rainChannelId?:    string;

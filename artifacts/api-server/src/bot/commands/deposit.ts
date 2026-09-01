@@ -136,7 +136,9 @@ export async function handleSent(interaction: ButtonInteraction, reqId: string) 
   if (!cfg) return;
 
   // Send to request channel
-  const requestChannel = interaction.client.channels.cache.get(cfg.requestChannelId) as TextChannel | undefined;
+  const requestChannel = interaction.client.channels.cache.get(
+    cfg.depositRequestChannelId ?? cfg.requestChannelId,
+  ) as TextChannel | undefined;
   if (!requestChannel) return;
 
   const reqEmbed = new EmbedBuilder()
@@ -159,7 +161,11 @@ export async function handleSent(interaction: ButtonInteraction, reqId: string) 
       .setStyle(ButtonStyle.Danger),
   );
 
-  await requestChannel.send({ embeds: [reqEmbed], components: [row] });
+  await requestChannel.send({
+    content: cfg.depositPingRoleId ? `<@&${cfg.depositPingRoleId}>` : undefined,
+    embeds: [reqEmbed],
+    components: [row],
+  });
 
   // DM the player — deposit is being checked
   try {

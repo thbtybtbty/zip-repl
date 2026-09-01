@@ -191,7 +191,9 @@ export async function handleConfirm(interaction: ButtonInteraction, reqId: strin
   if (!cfg) return;
 
   // Send to request channel
-  const requestChannel = interaction.client.channels.cache.get(cfg.requestChannelId) as TextChannel | undefined;
+  const requestChannel = interaction.client.channels.cache.get(
+    cfg.withdrawRequestChannelId ?? cfg.requestChannelId,
+  ) as TextChannel | undefined;
   if (!requestChannel) return;
 
   const reqEmbed = new EmbedBuilder()
@@ -215,7 +217,11 @@ export async function handleConfirm(interaction: ButtonInteraction, reqId: strin
       .setStyle(ButtonStyle.Danger),
   );
 
-  await requestChannel.send({ embeds: [reqEmbed], components: [row] });
+  await requestChannel.send({
+    content: cfg.withdrawPingRoleId ? `<@&${cfg.withdrawPingRoleId}>` : undefined,
+    embeds: [reqEmbed],
+    components: [row],
+  });
 }
 
 // ─── Button: player clicked "Cancel" ──────────────────────────────────────────

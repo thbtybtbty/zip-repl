@@ -9,6 +9,8 @@ import {
   type ModalSubmitInteraction,
   type StringSelectMenuInteraction,
   type UserSelectMenuInteraction,
+  type ChannelSelectMenuInteraction,
+  type RoleSelectMenuInteraction,
   type Guild,
   type GuildMember,
   type PartialGuildMember,
@@ -335,8 +337,7 @@ async function handleInteraction(interaction: Interaction) {
       }
 
       // Setup confirmation
-      if (id.startsWith("setup_confirm_")) return await setup.handleConfirm(bi, id.slice("setup_confirm_".length));
-      if (id.startsWith("setup_cancel_"))  return await setup.handleCancelSetup(bi, id.slice("setup_cancel_".length));
+      if (id.startsWith("setup_wiz_")) return await setup.handleWizardButton(bi, id);
 
       // Add balance (admin)
       if (id.startsWith("addbalnc_enter_"))  return await addbalance.handleEnter(bi, id.slice("addbalnc_enter_".length));
@@ -504,6 +505,20 @@ async function handleInteraction(interaction: Interaction) {
     return;
   }
 
+  // ── Setup channel/role selectors ──
+  if (interaction.isChannelSelectMenu()) {
+    const si = interaction as ChannelSelectMenuInteraction;
+    if (si.customId.startsWith("setup_wiz_channel_")) {
+      return await setup.handleWizardChannel(si, si.customId.slice("setup_wiz_channel_".length));
+    }
+  }
+  if (interaction.isRoleSelectMenu()) {
+    const si = interaction as RoleSelectMenuInteraction;
+    if (si.customId.startsWith("setup_wiz_role_")) {
+      return await setup.handleWizardRole(si, si.customId.slice("setup_wiz_role_".length));
+    }
+  }
+
   // ── Modal submissions ──
   if (interaction.isModalSubmit()) {
     const mi = interaction as ModalSubmitInteraction;
@@ -524,6 +539,12 @@ async function handleInteraction(interaction: Interaction) {
 
       if (id.startsWith("rembalnc_modal_"))
         return await removebalance.handleModal(mi, id.slice("rembalnc_modal_".length));
+
+      if (id.startsWith("setup_wiz_roblox_modal_"))
+        return await setup.handleWizardModal(mi, `roblox_${id.slice("setup_wiz_roblox_modal_".length)}`);
+
+      if (id.startsWith("setup_wiz_optional_modal_"))
+        return await setup.handleWizardModal(mi, `optional_${id.slice("setup_wiz_optional_modal_".length)}`);
 
       if (id.startsWith("rs_modal_"))
         return await resetstats.handleModal(mi, id.slice("rs_modal_".length));

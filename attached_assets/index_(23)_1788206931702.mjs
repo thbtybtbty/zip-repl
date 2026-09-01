@@ -129552,266 +129552,336 @@ var setup_exports = {};
 __export(setup_exports, {
   data: () => data9,
   execute: () => execute9,
-  handleCancelSetup: () => handleCancelSetup,
-  handleConfirm: () => handleConfirm
+  handleWizardButton: () => handleWizardButton,
+  handleWizardChannel: () => handleWizardChannel,
+  handleWizardModal: () => handleWizardModal,
+  handleWizardRole: () => handleWizardRole
 });
 var import_discord10 = __toESM(require_src2(), 1);
+var ch = (id) => id ? `<#${id}>` : "`Not set`";
+var ro = (id) => id ? `<@&${id}>` : "`Not set`";
+var lock = (value) => value ? "\u2705 Locked" : "\u274C Not locked";
+var minimumAmount = (value) => value && value > 0 ? `\`${value.toLocaleString()} \u{1F48E}\`` : "`No minimum`";
+var STEPS = [
+  "deposit_request",
+  "withdraw_request",
+  "deposit_ping",
+  "withdraw_ping",
+  "flip",
+  "affiliate",
+  "verified",
+  "unverified",
+  "roblox",
+  "optional",
+  "review"
+];
 var pendingSetups = /* @__PURE__ */ new Map();
-function ch(id) {
-  return id ? `<#${id}>` : "`Not set`";
-}
-function ro(id) {
-  return id ? `<@&${id}>` : "`Not set`";
-}
-function lock(val) {
-  return val ? "\u2705 Locked" : "\u274C Not locked";
-}
-function minimumAmount(amount) {
-  return amount && amount > 0 ? `\`${amount.toLocaleString()} \u{1F48E}\`` : "`No minimum`";
-}
-function wagerRolesText(wagerRoles) {
-  return Array.isArray(wagerRoles) && wagerRoles.length ? wagerRoles.map((entry) => `${formatAmount(entry.amount)} \u2192 <@&${entry.roleId}>`).join("\n") : "`None`";
-}
-function parseWagerRoles(value, existingValue) {
-  if (value === null) return existingValue ?? [];
-  const input = value.trim();
-  if (!input) return [];
-  const entries = [];
-  for (const pair of input.split(",")) {
-    const separatorIndex = pair.indexOf("=");
-    if (separatorIndex < 0) return null;
-    const amount = parseAmount(pair.slice(0, separatorIndex).trim());
-    const roleToken = pair.slice(separatorIndex + 1).trim();
-    const roleMatch = roleToken.match(/^(?:<@&)?(\d{17,20})>?$/);
-    if (!amount || amount <= 0 || !roleMatch) return null;
-    entries.push({ amount, roleId: roleMatch[1] });
-  }
-  return entries.sort((a, b) => a.amount - b.amount);
+function initialDraft(existing) {
+  if (!existing) return {};
+  return {
+    ...existing,
+    depositRequestChannelId: existing.depositRequestChannelId ?? existing.requestChannelId ?? existing.depositChannelId,
+    withdrawRequestChannelId: existing.withdrawRequestChannelId ?? existing.requestChannelId ?? existing.withdrawChannelId
+  };
 }
 function configEmbed(cfg, title, color) {
-  return new import_discord10.EmbedBuilder().setColor(color).setTitle(title).addFields(
-    { name: "\u{1F4E5} Deposit Channel", value: ch(cfg.depositChannelId), inline: true },
-    { name: "\u{1F4E4} Withdraw Channel", value: ch(cfg.withdrawChannelId), inline: true },
-    { name: "\u{1F4CB} Request Channel", value: ch(cfg.requestChannelId), inline: true },
+  return new import_discord10.EmbedBuilder().setColor(color).setTitle(title).setDescription("The bot is ready with the configuration below.").addFields(
+    { name: "\u{1F4E5} Deposit Request Channel", value: ch(cfg.depositRequestChannelId ?? cfg.depositChannelId), inline: true },
+    { name: "\u{1F4E4} Withdraw Request Channel", value: ch(cfg.withdrawRequestChannelId ?? cfg.withdrawChannelId), inline: true },
+    { name: "\u{1F514} Deposit Ping Role", value: ro(cfg.depositPingRoleId), inline: true },
+    { name: "\u{1F514} Withdraw Ping Role", value: ro(cfg.withdrawPingRoleId), inline: true },
+    { name: "\u{1F4E5} Deposit Announcement", value: ch(cfg.depositChannelId), inline: true },
+    { name: "\u{1F4E4} Withdraw Announcement", value: ch(cfg.withdrawChannelId), inline: true },
     { name: "\u{1FA99} Flip Channel", value: ch(cfg.flipChannelId), inline: true },
-    { name: "\u{1F327}\uFE0F Rain Channel", value: ch(cfg.rainChannelId), inline: true },
-    { name: "\u{1F3B0} Codes Channel", value: ch(cfg.codesChannelId), inline: true },
-    { name: "\u{1F514} Rain Ping Role", value: ro(cfg.rainPingRoleId), inline: true },
-    { name: "\u{1F514} Code Ping Role", value: ro(cfg.codePingRoleId), inline: true },
+    { name: "\u{1F3AE} Roblox User", value: `\`${cfg.robloxUser ?? "Not set"}\``, inline: true },
+    { name: "\u{1F381} Affiliate Channel", value: ch(cfg.affiliateChannelId), inline: true },
     { name: "\u2705 Verified Role", value: ro(cfg.verifiedRoleId), inline: true },
     { name: "\u23F3 Unverified Role", value: ro(cfg.unverifiedRoleId), inline: true },
-    { name: "\u{1F3AE} Roblox User", value: `\`${cfg.robloxUser}\``, inline: true },
     { name: "\u{1F4E5} Minimum Deposit", value: minimumAmount(cfg.minDeposit), inline: true },
     { name: "\u{1F4E4} Minimum Withdraw", value: minimumAmount(cfg.minWithdraw), inline: true },
     { name: "\u{1F381} Starter Balance", value: minimumAmount(cfg.starterBalance), inline: true },
-    { name: "\u{1F4DD} Tip Log Channel", value: ch(cfg.tipLogChannelId), inline: true },
-    { name: "🎁 Affiliate Channel", value: ch(cfg.affiliateChannelId), inline: true },
-    { name: "\u{1F3C5} Wager Roles", value: wagerRolesText(cfg.wagerRoles), inline: false },
-    { name: "\u{1F4B8} Rakeback Excluded", value: cfg.rakebackExcludedGames?.length ? `\`${cfg.rakebackExcludedGames.join(", ")}\`` : "`None`", inline: false },
-    {
-      name: "\u{1F512} Lock Settings",
-      value: [
-        `\u{1F4B8} Tips received:    ${lock(cfg.lockTips ?? true)}`,
-        `\u{1F327}\uFE0F Rain winnings:    ${lock(cfg.lockRain ?? true)}`,
-        `\u{1F3B0} Promo codes:      ${lock(cfg.lockCodes ?? true)}`,
-        `\u{1F381} Starter balance:  ${lock(cfg.lockStarterBalance ?? true)}`,
-        `\u2795 /addbalance:      ${lock(cfg.lockAddBalance ?? false)}`
-      ].join("\n"),
-      inline: false
-    }
+    { name: "\u{1F512} Lock Settings", value: [
+      `\u{1F4B8} Tips: ${lock(cfg.lockTips ?? true)}`,
+      `\u{1F327}\uFE0F Rain: ${lock(cfg.lockRain ?? true)}`,
+      `\u{1F3B0} Codes: ${lock(cfg.lockCodes ?? true)}`,
+      `\u{1F381} Starter: ${lock(cfg.lockStarterBalance ?? true)}`,
+      `\u2795 /addbalance: ${lock(cfg.lockAddBalance ?? false)}`
+    ].join("\n"), inline: false }
   ).setTimestamp();
 }
-function cfgSummary(cfg) {
-  return [
-    `\u{1F4E5} Deposit: ${ch(cfg.depositChannelId)}`,
-    `\u{1F4E4} Withdraw: ${ch(cfg.withdrawChannelId)}`,
-    `\u{1F4CB} Requests: ${ch(cfg.requestChannelId)}`,
-    `\u{1FA99} Flip: ${ch(cfg.flipChannelId)}`,
-    `\u{1F327}\uFE0F Rain: ${ch(cfg.rainChannelId)}`,
-    `\u{1F3B0} Codes: ${ch(cfg.codesChannelId)}`,
-    `\u{1F514} Rain Ping: ${ro(cfg.rainPingRoleId)}`,
-    `\u{1F514} Code Ping: ${ro(cfg.codePingRoleId)}`,
-    `\u2705 Verified Role: ${ro(cfg.verifiedRoleId)}`,
-    `\u23F3 Unverified Role: ${ro(cfg.unverifiedRoleId)}`,
-    `\u{1F3AE} Roblox: \`${cfg.robloxUser}\``,
-    `\u{1F4E5} Min Deposit: ${minimumAmount(cfg.minDeposit)}`,
-    `\u{1F4E4} Min Withdraw: ${minimumAmount(cfg.minWithdraw)}`,
-    `\u{1F381} Starter: ${minimumAmount(cfg.starterBalance)}`,
-    `\u{1F4DD} Tip Log: ${ch(cfg.tipLogChannelId)}`,
-    `🎁 Affiliate: ${ch(cfg.affiliateChannelId)}`,
-    `\u{1F3C5} Wager Roles: ${wagerRolesText(cfg.wagerRoles)}`,
-    `\u{1F4B8} Rakeback Excluded: ${cfg.rakebackExcludedGames?.length ? `\`${cfg.rakebackExcludedGames.join(", ")}\`` : "`None`"}`,
-    `\u{1F512} Locks: Tips ${lock(cfg.lockTips ?? true)} \xB7 Rain ${lock(cfg.lockRain ?? true)} \xB7 Codes ${lock(cfg.lockCodes ?? true)} \xB7 Starter ${lock(cfg.lockStarterBalance ?? true)} \xB7 AddBal ${lock(cfg.lockAddBalance ?? false)}`
-  ].join("\n");
+function stepName(step) {
+  return {
+    deposit_request: "Deposit request channel",
+    withdraw_request: "Withdraw request channel",
+    deposit_ping: "Deposit ping role",
+    withdraw_ping: "Withdraw ping role",
+    flip: "Flip channel",
+    affiliate: "Affiliate channel",
+    verified: "Verified role",
+    unverified: "Unverified role",
+    roblox: "Roblox username",
+    optional: "Optional settings",
+    review: "Review"
+  }[step];
 }
-function confirmRow(interactionId) {
+function selectedValue(pending, step) {
+  const cfg = pending.draft;
+  if (step === "deposit_request") return ch(cfg.depositRequestChannelId);
+  if (step === "withdraw_request") return ch(cfg.withdrawRequestChannelId);
+  if (step === "deposit_ping") return ro(cfg.depositPingRoleId);
+  if (step === "withdraw_ping") return ro(cfg.withdrawPingRoleId);
+  if (step === "flip") return ch(cfg.flipChannelId);
+  if (step === "affiliate") return ch(cfg.affiliateChannelId);
+  if (step === "verified") return ro(cfg.verifiedRoleId);
+  if (step === "unverified") return ro(cfg.unverifiedRoleId);
+  if (step === "roblox") return cfg.robloxUser ? `\`${cfg.robloxUser}\`` : "`Not set`";
+  return "";
+}
+function wizardEmbed(pending) {
+  const index = STEPS.indexOf(pending.step) + 1;
+  const isOptional = pending.step === "deposit_ping" || pending.step === "withdraw_ping" || pending.step === "optional";
+  const description = pending.step === "review" ? "Everything is selected. Save this setup when the summary looks right." : `Step **${index} of ${STEPS.length}** \u2014 **${stepName(pending.step)}**
+${isOptional ? "This step is optional. You can skip it." : "Choose an option below; the panel will advance automatically."}`;
+  const embed = new import_discord10.EmbedBuilder().setColor(pending.step === "review" ? COLORS.success : COLORS.primary).setTitle("\u2699\uFE0F Bot Setup Wizard").setDescription(description).setTimestamp();
+  if (pending.step !== "review") {
+    const value = selectedValue(pending, pending.step);
+    if (value) embed.addFields({ name: "Current value", value, inline: false });
+  }
+  return embed;
+}
+function channelRow(id, placeholder) {
+  const menu = new import_discord10.ChannelSelectMenuBuilder().setCustomId(`setup_wiz_channel_${id}`).setPlaceholder(placeholder).setChannelTypes(import_discord10.ChannelType.GuildText).setMinValues(1).setMaxValues(1);
+  return new import_discord10.ActionRowBuilder().addComponents(menu);
+}
+function roleRow(id, placeholder) {
+  const menu = new import_discord10.RoleSelectMenuBuilder().setCustomId(`setup_wiz_role_${id}`).setPlaceholder(placeholder).setMinValues(1).setMaxValues(1);
+  return new import_discord10.ActionRowBuilder().addComponents(menu);
+}
+function skipRow(id, label = "Skip") {
   return new import_discord10.ActionRowBuilder().addComponents(
-    new import_discord10.ButtonBuilder().setCustomId(`setup_confirm_${interactionId}`).setLabel("Re-setup").setEmoji("\u{1F504}").setStyle(import_discord10.ButtonStyle.Danger),
-    new import_discord10.ButtonBuilder().setCustomId(`setup_cancel_${interactionId}`).setLabel("Cancel").setEmoji("\u2716\uFE0F").setStyle(import_discord10.ButtonStyle.Secondary)
+    new import_discord10.ButtonBuilder().setCustomId(`setup_wiz_skip_${id}`).setLabel(label).setEmoji("\u23ED\uFE0F").setStyle(import_discord10.ButtonStyle.Secondary)
   );
 }
-var data9 = new import_discord10.SlashCommandBuilder().setName("setup").setDescription("(Admin) Configure the bot \u2014 deposit/withdraw, invites, and roles").addChannelOption(
-  (opt) => opt.setName("deposit_channel").setDescription("Channel where deposit requests appear").addChannelTypes(import_discord10.ChannelType.GuildText).setRequired(true)
-).addChannelOption(
-  (opt) => opt.setName("withdraw_channel").setDescription("Channel where withdraw requests appear").addChannelTypes(import_discord10.ChannelType.GuildText).setRequired(true)
-).addChannelOption(
-  (opt) => opt.setName("request_channel").setDescription("Channel where Accept/Deny buttons appear").addChannelTypes(import_discord10.ChannelType.GuildText).setRequired(true)
-).addChannelOption(
-  (opt) => opt.setName("flip_channel").setDescription("Channel where /flip challenges are posted").addChannelTypes(import_discord10.ChannelType.GuildText).setRequired(true)
-).addStringOption(
-  (opt) => opt.setName("roblox_user").setDescription("Roblox username players send gems to when depositing").setRequired(true)
-).addChannelOption(
-  (opt) => opt.setName("affiliate_channel").setDescription("Channel where new affiliations are announced").addChannelTypes(import_discord10.ChannelType.GuildText).setRequired(true)
-).addRoleOption(
-  (opt) => opt.setName("verified_role").setDescription("Role that marks an invited member as verified").setRequired(true)
-).addRoleOption(
-  (opt) => opt.setName("unverified_role").setDescription("Role that marks an invited member as unverified").setRequired(true)
-).addStringOption(
-  (opt) => opt.setName("minimum_deposit").setDescription("Optional minimum deposit, e.g. 1m (use 0 to disable)").setRequired(false)
-).addStringOption(
-  (opt) => opt.setName("minimum_withdraw").setDescription("Optional minimum withdrawal, e.g. 1m (use 0 to disable)").setRequired(false)
-).addStringOption(
-  (opt) => opt.setName("starter_balance").setDescription("Optional new-member balance, e.g. 10m (use 0 to disable)").setRequired(false)
-).addChannelOption(
-  (opt) => opt.setName("tip_log_channel").setDescription("Optional channel for detailed tip logs").addChannelTypes(import_discord10.ChannelType.GuildText).setRequired(false)
-).addStringOption(
-  (opt) => opt.setName("rakeback_excluded_games").setDescription("Optional comma-separated games excluded from rakeback, e.g. blackjack,slots").setRequired(false)
-).addStringOption(
-  (opt) => opt.setName("wager_roles").setDescription("Optional comma list: wager amount=role ID, e.g. 1m=123...,10m=987...").setRequired(false)
-).addChannelOption(
-  (opt) => opt.setName("codes_channel").setDescription("Channel where new promocodes are announced").addChannelTypes(import_discord10.ChannelType.GuildText).setRequired(false)
-).addChannelOption(
-  (opt) => opt.setName("rain_channel").setDescription("Channel where /rain panels are posted").addChannelTypes(import_discord10.ChannelType.GuildText).setRequired(false)
-).addRoleOption(
-  (opt) => opt.setName("rain_ping_role").setDescription("Role mentioned at the top of every rain panel").setRequired(false)
-).addRoleOption(
-  (opt) => opt.setName("code_ping_role").setDescription("Role mentioned at the top of every new code announcement").setRequired(false)
-).addBooleanOption(
-  (opt) => opt.setName("lock_tips").setDescription("Lock tips received \u2014 must wager \u22651.8\xD7 before withdrawal (default: on)").setRequired(false)
-).addBooleanOption(
-  (opt) => opt.setName("lock_rain").setDescription("Lock rain winnings \u2014 must wager \u22651.8\xD7 before withdrawal (default: on)").setRequired(false)
-).addBooleanOption(
-  (opt) => opt.setName("lock_codes").setDescription("Lock promo code earnings \u2014 must wager \u22651.8\xD7 before withdrawal (default: on)").setRequired(false)
-).addBooleanOption(
-  (opt) => opt.setName("lock_starter_balance").setDescription("Lock the starter balance until the user makes a deposit (default: on)").setRequired(false)
-).addBooleanOption(
-  (opt) => opt.setName("lock_add_balance").setDescription("Lock gems added via /addbalance \u2014 must wager \u22651.8\xD7 before withdrawal (default: off)").setRequired(false)
-);
+function wizardComponents(pendingId, pending) {
+  switch (pending.step) {
+    case "deposit_request":
+      return [channelRow(`${pendingId}_deposit_request`, "Select the deposit request channel")];
+    case "withdraw_request":
+      return [channelRow(`${pendingId}_withdraw_request`, "Select the withdraw request channel")];
+    case "deposit_ping":
+      return [
+        roleRow(`${pendingId}_deposit_ping`, "Select the role to ping for deposits"),
+        skipRow(`${pendingId}_deposit_ping`, "Skip deposit ping role")
+      ];
+    case "withdraw_ping":
+      return [
+        roleRow(`${pendingId}_withdraw_ping`, "Select the role to ping for withdrawals"),
+        skipRow(`${pendingId}_withdraw_ping`, "Skip withdraw ping role")
+      ];
+    case "flip":
+      return [channelRow(`${pendingId}_flip`, "Select the /flip channel")];
+    case "affiliate":
+      return [channelRow(`${pendingId}_affiliate`, "Select the affiliate channel")];
+    case "verified":
+      return [roleRow(`${pendingId}_verified`, "Select the verified member role")];
+    case "unverified":
+      return [roleRow(`${pendingId}_unverified`, "Select the unverified member role")];
+    case "roblox":
+      return [new import_discord10.ActionRowBuilder().addComponents(
+        new import_discord10.ButtonBuilder().setCustomId(`setup_wiz_roblox_${pendingId}`).setLabel("Enter Roblox username").setEmoji("\u{1F3AE}").setStyle(import_discord10.ButtonStyle.Primary)
+      )];
+    case "optional":
+      return [
+        new import_discord10.ActionRowBuilder().addComponents(
+          new import_discord10.ButtonBuilder().setCustomId(`setup_wiz_optional_${pendingId}`).setLabel("Set optional amounts").setEmoji("\u{1F6E0}\uFE0F").setStyle(import_discord10.ButtonStyle.Primary)
+        ),
+        skipRow(`${pendingId}_optional`, "Skip optional settings")
+      ];
+    case "review":
+      return [new import_discord10.ActionRowBuilder().addComponents(
+        new import_discord10.ButtonBuilder().setCustomId(`setup_wiz_save_${pendingId}`).setLabel(pending.existing ? "Save Updated Setup" : "Save Setup").setEmoji("\u2705").setStyle(import_discord10.ButtonStyle.Success),
+        new import_discord10.ButtonBuilder().setCustomId(`setup_wiz_cancel_${pendingId}`).setLabel("Cancel").setEmoji("\u2716\uFE0F").setStyle(import_discord10.ButtonStyle.Secondary)
+      )];
+  }
+}
+async function showWizard(interaction, pendingId, pending) {
+  return interaction.editReply({
+    embeds: [pending.step === "review" ? configEmbed(pending.draft, pending.existing ? "\u2705 Review Updated Setup" : "\u2705 Review Setup", COLORS.success) : wizardEmbed(pending)],
+    components: wizardComponents(pendingId, pending)
+  });
+}
+function next(pending, step) {
+  pending.step = step;
+  return step;
+}
+function getPending(interaction, pendingId) {
+  const pending = pendingSetups.get(pendingId);
+  if (!pending || pending.ownerId !== interaction.user.id) return null;
+  return pending;
+}
+function requiredConfig(pending) {
+  const cfg = pending.draft;
+  if (!cfg.depositRequestChannelId || !cfg.withdrawRequestChannelId || !cfg.flipChannelId || !cfg.robloxUser || !cfg.affiliateChannelId || !cfg.verifiedRoleId || !cfg.unverifiedRoleId) {
+    return null;
+  }
+  return {
+    ...cfg,
+    depositChannelId: cfg.depositChannelId ?? cfg.depositRequestChannelId,
+    withdrawChannelId: cfg.withdrawChannelId ?? cfg.withdrawRequestChannelId,
+    requestChannelId: cfg.requestChannelId ?? cfg.depositRequestChannelId,
+    depositRequestChannelId: cfg.depositRequestChannelId,
+    withdrawRequestChannelId: cfg.withdrawRequestChannelId
+  };
+}
+var data9 = new import_discord10.SlashCommandBuilder().setName("setup").setDescription("(Admin) Configure the bot with a guided setup panel");
 async function execute9(interaction) {
   await interaction.deferReply({ ephemeral: true });
   if (!isAdmin(interaction.user.id)) {
-    return interaction.editReply({
-      embeds: [errorEmbed("You don't have permission to use this command.")]
-    });
+    return interaction.editReply({ embeds: [errorEmbed("You don't have permission to use this command.")] });
   }
+  const pendingId = interaction.id;
   const existing = getServerConfig2();
-  const depositCh = interaction.options.getChannel("deposit_channel", true);
-  const withdrawCh = interaction.options.getChannel("withdraw_channel", true);
-  const requestCh = interaction.options.getChannel("request_channel", true);
-  const flipCh = interaction.options.getChannel("flip_channel", true);
-  const codesCh = interaction.options.getChannel("codes_channel", false);
-  const rainCh = interaction.options.getChannel("rain_channel", false);
-  const rainPingRole = interaction.options.getRole("rain_ping_role", false);
-  const codePingRole = interaction.options.getRole("code_ping_role", false);
-  const robloxUser = interaction.options.getString("roblox_user", true);
-  const minDepositStr = interaction.options.getString("minimum_deposit", false);
-  const minWithdrawStr = interaction.options.getString("minimum_withdraw", false);
-  const starterBalanceStr = interaction.options.getString("starter_balance", false);
-  const tipLogCh = interaction.options.getChannel("tip_log_channel", false);
-  const affiliateCh = interaction.options.getChannel("affiliate_channel", true);
-  const verifiedRole = interaction.options.getRole("verified_role", true);
-  const unverifiedRole = interaction.options.getRole("unverified_role", true);
-  const excludedGamesStr = interaction.options.getString("rakeback_excluded_games", false);
-  const wagerRolesStr = interaction.options.getString("wager_roles", false);
-  const parseMinimum = (value, existingValue) => {
-    if (value === null) return existingValue;
-    if (value.trim() === "0") return void 0;
-    const parsed = parseAmount(value);
-    if (!parsed || parsed <= 0) return NaN;
-    return parsed;
-  };
-  const minDeposit = parseMinimum(minDepositStr, existing?.minDeposit);
-  const minWithdraw = parseMinimum(minWithdrawStr, existing?.minWithdraw);
-  const starterBalance = starterBalanceStr === null ? existing?.starterBalance ?? 1e7 : starterBalanceStr.trim() === "0" ? 0 : parseAmount(starterBalanceStr);
-  const rakebackExcludedGames = excludedGamesStr === null ? existing?.rakebackExcludedGames ?? [] : [...new Set(excludedGamesStr.split(",").map((game) => game.trim().toLowerCase()).filter(Boolean))];
-  const wagerRoles = parseWagerRoles(wagerRolesStr, existing?.wagerRoles);
-  if (Number.isNaN(minDeposit) || Number.isNaN(minWithdraw) || starterBalance === null || Number.isNaN(starterBalance) || wagerRoles === null) {
-    return interaction.editReply({
-      embeds: [errorEmbed("Invalid setup amount or wager role list. Use amounts like `1m`, `2.5b`, or `0`; wager roles must use `amount=role ID` pairs separated by commas.")]
-    });
-  }
-  const lockTips = interaction.options.getBoolean("lock_tips") ?? existing?.lockTips ?? true;
-  const lockRain = interaction.options.getBoolean("lock_rain") ?? existing?.lockRain ?? true;
-  const lockCodes = interaction.options.getBoolean("lock_codes") ?? existing?.lockCodes ?? true;
-  const lockStarterBalance = interaction.options.getBoolean("lock_starter_balance") ?? existing?.lockStarterBalance ?? true;
-  const lockAddBalance = interaction.options.getBoolean("lock_add_balance") ?? existing?.lockAddBalance ?? false;
-  const newCfg = {
-    depositChannelId: depositCh.id,
-    withdrawChannelId: withdrawCh.id,
-    requestChannelId: requestCh.id,
-    flipChannelId: flipCh.id,
-    codesChannelId: codesCh?.id,
-    rainChannelId: rainCh?.id,
-    rainPingRoleId: rainPingRole?.id,
-    codePingRoleId: codePingRole?.id,
-    robloxUser,
-    minDeposit,
-    minWithdraw,
-    starterBalance,
-    tipLogChannelId: tipLogCh?.id,
-    affiliateChannelId: affiliateCh.id,
-    verifiedRoleId: verifiedRole.id,
-    unverifiedRoleId: unverifiedRole.id,
-    rakebackExcludedGames,
-    wagerRoles,
-    lockTips,
-    lockRain,
-    lockCodes,
-    lockStarterBalance,
-    lockAddBalance
-  };
-  if (!existing) {
-    saveServerConfig(newCfg);
-    return interaction.editReply({
-      embeds: [configEmbed(newCfg, "\u2705  Setup Saved", COLORS.success)]
-    });
-  }
-  pendingSetups.set(interaction.id, newCfg);
-  setTimeout(() => pendingSetups.delete(interaction.id), 5 * 60 * 1e3);
-  const embed = new import_discord10.EmbedBuilder().setColor(COLORS.warning).setTitle("\u26A0\uFE0F  Setup Already Configured").setDescription("The bot is already set up. Do you want to overwrite the existing configuration?").addFields(
-    { name: "Current configuration", value: cfgSummary(existing), inline: true },
-    { name: "New configuration", value: cfgSummary(newCfg), inline: true }
-  ).setTimestamp();
-  return interaction.editReply({
-    embeds: [embed],
-    components: [confirmRow(interaction.id)]
-  });
+  const pending = { ownerId: interaction.user.id, step: "deposit_request", draft: initialDraft(existing), existing };
+  pendingSetups.set(pendingId, pending);
+  setTimeout(() => pendingSetups.delete(pendingId), 10 * 60 * 1e3);
+  return showWizard(interaction, pendingId, pending);
 }
-async function handleConfirm(interaction, interactionId) {
+async function handleWizardChannel(interaction, encoded) {
+  const separator8 = encoded.lastIndexOf("_");
+  const pendingId = encoded.slice(0, separator8);
+  const step = encoded.slice(separator8 + 1);
+  const pending = getPending(interaction, pendingId);
+  if (!pending) return interaction.reply({ content: "\u274C This setup wizard is no longer active.", ephemeral: true });
+  if (pending.step !== step) return interaction.reply({ content: "\u274C This setup step has already been completed.", ephemeral: true });
   await interaction.deferUpdate();
-  const cfg = pendingSetups.get(interactionId);
-  if (!cfg) {
-    return interaction.editReply({
-      embeds: [errorEmbed("This confirmation has expired. Please run `/setup` again.")],
-      components: []
-    });
+  const channelId = interaction.values[0];
+  if (step === "deposit_request") {
+    pending.draft.depositRequestChannelId = channelId;
+    pending.draft.depositChannelId ??= channelId;
+    pending.draft.requestChannelId ??= channelId;
+    next(pending, "withdraw_request");
+  } else if (step === "withdraw_request") {
+    pending.draft.withdrawRequestChannelId = channelId;
+    pending.draft.withdrawChannelId ??= channelId;
+    next(pending, "deposit_ping");
+  } else if (step === "flip") {
+    pending.draft.flipChannelId = channelId;
+    next(pending, "affiliate");
+  } else if (step === "affiliate") {
+    pending.draft.affiliateChannelId = channelId;
+    next(pending, "verified");
   }
-  pendingSetups.delete(interactionId);
-  saveServerConfig(cfg);
-  return interaction.editReply({
-    embeds: [configEmbed(cfg, "\u2705  Setup Updated", COLORS.success)],
-    components: []
-  });
+  return showWizard(interaction, pendingId, pending);
 }
-async function handleCancelSetup(interaction, interactionId) {
+async function handleWizardRole(interaction, encoded) {
+  const separator8 = encoded.lastIndexOf("_");
+  const pendingId = encoded.slice(0, separator8);
+  const step = encoded.slice(separator8 + 1);
+  const pending = getPending(interaction, pendingId);
+  if (!pending) return interaction.reply({ content: "\u274C This setup wizard is no longer active.", ephemeral: true });
+  if (pending.step !== step) return interaction.reply({ content: "\u274C This setup step has already been completed.", ephemeral: true });
   await interaction.deferUpdate();
-  pendingSetups.delete(interactionId);
-  return interaction.editReply({
-    embeds: [
-      new import_discord10.EmbedBuilder().setColor(COLORS.dark).setDescription("\u2716\uFE0F  Setup cancelled. The existing configuration was kept.").setTimestamp()
-    ],
-    components: []
-  });
+  const roleId = interaction.values[0];
+  if (step === "deposit_ping") {
+    pending.draft.depositPingRoleId = roleId;
+    next(pending, "withdraw_ping");
+  } else if (step === "withdraw_ping") {
+    pending.draft.withdrawPingRoleId = roleId;
+    next(pending, "flip");
+  } else if (step === "verified") {
+    pending.draft.verifiedRoleId = roleId;
+    next(pending, "unverified");
+  } else if (step === "unverified") {
+    pending.draft.unverifiedRoleId = roleId;
+    next(pending, "roblox");
+  }
+  return showWizard(interaction, pendingId, pending);
+}
+function robloxModal(pendingId) {
+  const input = new import_discord10.TextInputBuilder().setCustomId("roblox_user").setLabel("Roblox username").setStyle(import_discord10.TextInputStyle.Short).setRequired(true).setMaxLength(32).setValue("");
+  return new import_discord10.ModalBuilder().setCustomId(`setup_wiz_roblox_modal_${pendingId}`).setTitle("Set Roblox Deposit Account").addComponents(new import_discord10.ActionRowBuilder().addComponents(input));
+}
+function optionalModal(pendingId) {
+  const field = (id, label, placeholder) => new import_discord10.TextInputBuilder().setCustomId(id).setLabel(label).setStyle(import_discord10.TextInputStyle.Short).setRequired(false).setPlaceholder(placeholder);
+  return new import_discord10.ModalBuilder().setCustomId(`setup_wiz_optional_modal_${pendingId}`).setTitle("Optional Setup Settings").addComponents(
+    new import_discord10.ActionRowBuilder().addComponents(field("minimum_deposit", "Minimum deposit", "1m, or 0 to disable")),
+    new import_discord10.ActionRowBuilder().addComponents(field("minimum_withdraw", "Minimum withdrawal", "1m, or 0 to disable")),
+    new import_discord10.ActionRowBuilder().addComponents(field("starter_balance", "Starter balance", "10m, or 0 to disable"))
+  );
+}
+async function handleWizardButton(interaction, id) {
+  const patterns = [
+    [/^setup_wiz_roblox_(\d+)$/, (pending, pendingId) => interaction.showModal(robloxModal(pendingId))],
+    [/^setup_wiz_optional_(\d+)$/, (pending, pendingId) => interaction.showModal(optionalModal(pendingId))]
+  ];
+  for (const [pattern, action] of patterns) {
+    const match = id.match(pattern);
+    if (match) {
+      const pending = getPending(interaction, match[1]);
+      if (!pending || pending.step !== (id.startsWith("setup_wiz_roblox_") ? "roblox" : "optional")) {
+        return interaction.reply({ content: "\u274C This setup wizard is no longer active.", ephemeral: true });
+      }
+      return action(pending, match[1]);
+    }
+  }
+  const skipMatch = id.match(/^setup_wiz_skip_(\d+)_(deposit_ping|withdraw_ping|optional)$/);
+  if (skipMatch) {
+    const pendingId = skipMatch[1];
+    const pending = getPending(interaction, pendingId);
+    if (!pending) return interaction.reply({ content: "\u274C This setup wizard is no longer active.", ephemeral: true });
+    await interaction.deferUpdate();
+    if (skipMatch[2] === "deposit_ping") next(pending, "withdraw_ping");
+    else if (skipMatch[2] === "withdraw_ping") next(pending, "flip");
+    else next(pending, "review");
+    return showWizard(interaction, pendingId, pending);
+  }
+  const actionMatch = id.match(/^setup_wiz_(save|cancel)_(\d+)$/);
+  if (actionMatch) {
+    const pendingId = actionMatch[2];
+    const pending = getPending(interaction, pendingId);
+    if (!pending) return interaction.reply({ content: "\u274C This setup wizard is no longer active.", ephemeral: true });
+    await interaction.deferUpdate();
+    pendingSetups.delete(pendingId);
+    if (actionMatch[1] === "cancel") {
+      return interaction.editReply({ embeds: [new import_discord10.EmbedBuilder().setColor(COLORS.dark).setDescription("\u2716\uFE0F Setup cancelled. Existing settings were kept.").setTimestamp()], components: [] });
+    }
+    const cfg = requiredConfig(pending);
+    if (!cfg) {
+      return interaction.editReply({ embeds: [errorEmbed("The setup is incomplete. Please run `/setup` again.")], components: [] });
+    }
+    saveServerConfig(cfg);
+    return interaction.editReply({ embeds: [configEmbed(cfg, pending.existing ? "\u2705 Setup Updated" : "\u2705 Setup Saved", COLORS.success)], components: [] });
+  }
+  return interaction.reply({ content: "\u274C Unknown setup action.", ephemeral: true });
+}
+function parseOptional(value, previous) {
+  if (!value.trim()) return previous;
+  if (value.trim() === "0") return void 0;
+  const parsed = parseAmount(value);
+  if (!parsed || parsed <= 0) throw new Error("invalid amount");
+  return parsed;
+}
+async function handleWizardModal(interaction, encoded) {
+  const match = encoded.match(/^(roblox|optional)_(\d+)$/);
+  if (!match) return;
+  const pendingId = match[2];
+  const pending = getPending(interaction, pendingId);
+  if (!pending) return interaction.reply({ content: "\u274C This setup wizard is no longer active.", ephemeral: true });
+  await interaction.deferUpdate();
+  if (match[1] === "roblox") {
+    pending.draft.robloxUser = interaction.fields.getTextInputValue("roblox_user").trim();
+    next(pending, "optional");
+  } else {
+    try {
+      pending.draft.minDeposit = parseOptional(interaction.fields.getTextInputValue("minimum_deposit"), pending.draft.minDeposit);
+      pending.draft.minWithdraw = parseOptional(interaction.fields.getTextInputValue("minimum_withdraw"), pending.draft.minWithdraw);
+      pending.draft.starterBalance = parseOptional(interaction.fields.getTextInputValue("starter_balance"), pending.draft.starterBalance ?? 1e7);
+    } catch {
+      return interaction.editReply({ embeds: [errorEmbed("Invalid optional amount. Use values like `1m`, `2.5b`, or `0` to disable.")], components: [] });
+    }
+    next(pending, "review");
+  }
+  return showWizard(interaction, pendingId, pending);
 }
 
 // src/bot/commands/deposit.ts
@@ -129897,7 +129967,7 @@ Thank you!`
     components: []
   });
   if (!cfg) return;
-  const requestChannel = interaction.client.channels.cache.get(cfg.requestChannelId);
+  const requestChannel = interaction.client.channels.cache.get(cfg.depositRequestChannelId ?? cfg.requestChannelId);
   if (!requestChannel) return;
   const reqEmbed = new import_discord11.EmbedBuilder().setColor(COLORS.primary).setTitle("\u{1F4E5} Deposit Request").addFields(
     { name: "\u{1F464} User", value: `<@${req.userId}>`, inline: true },
@@ -129907,7 +129977,7 @@ Thank you!`
     new import_discord11.ButtonBuilder().setCustomId(`dep_approve_${reqId}`).setLabel("Approve").setStyle(import_discord11.ButtonStyle.Success),
     new import_discord11.ButtonBuilder().setCustomId(`dep_notapprove_${reqId}`).setLabel("Not Approve").setStyle(import_discord11.ButtonStyle.Danger)
   );
-  await requestChannel.send({ embeds: [reqEmbed], components: [row] });
+  await requestChannel.send({ content: cfg.depositPingRoleId ? `<@&${cfg.depositPingRoleId}>` : void 0, embeds: [reqEmbed], components: [row] });
   try {
     const dmUser = await interaction.client.users.fetch(req.userId);
     await dmUser.send({
@@ -130171,7 +130241,7 @@ You will receive another DM when your withdrawal has been processed.`
   } catch {
   }
   if (!cfg) return;
-  const requestChannel = interaction.client.channels.cache.get(cfg.requestChannelId);
+  const requestChannel = interaction.client.channels.cache.get(cfg.withdrawRequestChannelId ?? cfg.requestChannelId);
   if (!requestChannel) return;
   const reqEmbed = new import_discord12.EmbedBuilder().setColor(COLORS.warning).setTitle("\u{1F4E4} Withdraw Request").addFields(
     { name: "\u{1F464} From", value: `<@${req.userId}>`, inline: true },
@@ -130182,7 +130252,7 @@ You will receive another DM when your withdrawal has been processed.`
     new import_discord12.ButtonBuilder().setCustomId(`with_approve_${reqId}`).setLabel("Approve").setStyle(import_discord12.ButtonStyle.Success),
     new import_discord12.ButtonBuilder().setCustomId(`with_disapprove_${reqId}`).setLabel("Disapprove").setStyle(import_discord12.ButtonStyle.Danger)
   );
-  await requestChannel.send({ embeds: [reqEmbed], components: [row] });
+  await requestChannel.send({ content: cfg.withdrawPingRoleId ? `<@&${cfg.withdrawPingRoleId}>` : void 0, embeds: [reqEmbed], components: [row] });
 }
 async function handleCancel2(interaction, reqId) {
   const req = pendingWithdraws.get(reqId);
@@ -139915,8 +139985,7 @@ async function handleInteraction(interaction) {
         const bet = rest.slice(lastUs + 1);
         return await handlePlayAgain8(bi, userId, bet);
       }
-      if (id.startsWith("setup_confirm_")) return await handleConfirm(bi, id.slice("setup_confirm_".length));
-      if (id.startsWith("setup_cancel_")) return await handleCancelSetup(bi, id.slice("setup_cancel_".length));
+      if (id.startsWith("setup_wiz_")) return await handleWizardButton(bi, id);
       if (id === "rakeback_claim") return await handleRakebackClaim(bi);
       if (id.startsWith("addbalnc_enter_")) return await handleEnter(bi, id.slice("addbalnc_enter_".length));
       if (id.startsWith("addbalnc_cancel_")) return await handleCancelBtn(bi, id.slice("addbalnc_cancel_".length));
@@ -140048,10 +140117,26 @@ async function handleInteraction(interaction) {
     }
     return;
   }
+  if (interaction.isChannelSelectMenu()) {
+    const si = interaction;
+    if (si.customId.startsWith("setup_wiz_channel_")) {
+      return await setup_exports.handleWizardChannel(si, si.customId.slice("setup_wiz_channel_".length));
+    }
+  }
+  if (interaction.isRoleSelectMenu()) {
+    const si = interaction;
+    if (si.customId.startsWith("setup_wiz_role_")) {
+      return await setup_exports.handleWizardRole(si, si.customId.slice("setup_wiz_role_".length));
+    }
+  }
   if (interaction.isModalSubmit()) {
     const mi = interaction;
     const id = mi.customId;
     try {
+      if (id.startsWith("setup_wiz_roblox_modal_"))
+        return await setup_exports.handleWizardModal(mi, `roblox_${id.slice("setup_wiz_roblox_modal_".length)}`);
+      if (id.startsWith("setup_wiz_optional_modal_"))
+        return await setup_exports.handleWizardModal(mi, `optional_${id.slice("setup_wiz_optional_modal_".length)}`);
       if (id.startsWith("dep_notapprove_modal_"))
         return await handleNotApproveModal(mi, id.slice("dep_notapprove_modal_".length));
       if (id.startsWith("with_approve_modal_"))
