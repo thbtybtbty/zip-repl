@@ -14,7 +14,7 @@ import {
   type MessageActionRowComponentBuilder,
   type TextChannel,
 } from "discord.js";
-import { COLORS, parseAmount, formatAmount, addBalance, addDeposited, errorEmbed } from "../utils.js";
+import { COLORS, parseAmount, formatAmount, addBalance, addDeposited, errorEmbed, getOrCreateUser } from "../utils.js";
 import { getServerConfig } from "../botConfig.js";
 
 // ─── Pending requests ─────────────────────────────────────────────────────────
@@ -53,6 +53,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (!cfg) {
     return interaction.editReply({
       embeds: [errorEmbed("The bot hasn't been configured yet. Ask an admin to run `/setup`.")],
+    });
+  }
+
+  const linkedUser = await getOrCreateUser(interaction.user.id, interaction.user.username);
+  if (!linkedUser.robloxUsername) {
+    return interaction.editReply({
+      embeds: [errorEmbed("You must link your Roblox account first with `/link`, then try again.")],
     });
   }
 

@@ -117,6 +117,9 @@ export async function execute(
     `📤 **Withdrawn** \`${formatAmount(withdrawn)}\``,
     `💸 **Wagered**   \`${formatAmount(wagered)}\``,
     `${profitEmoji} **Profit**    \`${profitStr}\``,
+    "",
+    "**Account**",
+    `🔗 **Linked account:** \`${user.robloxUsername ?? "None"}\``,
   ].join("\n");
 
   const avatar =

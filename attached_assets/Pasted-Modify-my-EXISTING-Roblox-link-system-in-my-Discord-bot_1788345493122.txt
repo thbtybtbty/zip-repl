@@ -1,0 +1,58 @@
+Modify my EXISTING Roblox /link system in my Discord bot. Do not create a completely separate verification system, and do not break any existing gambling commands or features.
+/link
+command
+Make the existing /link command fully functional, replace it with this:
+When a user runs /link, show them a Discord panel/embed explaining how to link their Roblox account.
+The panel should include:
+* A field/button where the user can enter their Roblox username.
+* A generated unique verification phrase/code.
+* Clear instructions telling them to copy the phrase and paste it into their Roblox profile bio/description.
+* The phrase should be easy to copy.
+* Keep the phrase button I already added and make it functional. When the user clicks it, it should give/show them their generated verification phrase so they can easily copy it.
+* Add a button such as “Verify Roblox” / “Check Verification” that checks whether the phrase is actually present in their Roblox bio.
+Verification flow
+Example:
+User runs /link
+Bot shows in a panel:
+🔗 Roblox Account Linking
+Roblox Username: ExampleUser
+Verification Phrase: VERIFY-8F3K29
+📋 Copy the phrase and paste it into your Roblox profile bio.
+Then click Verify Roblox once you’ve added it.
+The existing phrase button should allow the user to easily retrieve/copy the phrase.
+Roblox checking
+When the user clicks Verify Roblox:
+1. Find the Roblox account from the username they provided using Roblox’s public API.
+2. Get the Roblox User ID.
+3. Fetch the user’s public Roblox profile description/bio.
+4. Check whether the exact generated verification phrase exists in the bio.
+5. If it exists:
+* Mark the Discord user as verified.
+* Save the Discord User ID ↔ Roblox User ID relationship.
+* Save the Roblox username.
+* Remove/complete the pending verification.
+* Tell the user that their Roblox account was successfully linked.
+6. If it doesn’t exist:
+* Tell them the phrase wasn’t found.
+* Tell them to make sure they pasted the exact phrase into their Roblox bio.
+* Let them try again.
+Important
+* Use the Roblox User ID as the permanent identifier, not just the username.
+* Don’t ask for Roblox passwords, cookies, or login information.
+* The Roblox account does NOT need to be online.
+* Verification should work using the public Roblox profile.
+* Generate a unique phrase for each pending link attempt.
+* Make verification phrases expire after around 15 minutes.
+* Prevent the same Roblox account from being linked to multiple Discord accounts.
+* Handle invalid usernames and Roblox API errors gracefully.
+* Use the database/storage system that the existing bot already uses.
+UI
+Make the /link panel look polished and fit the existing bot’s design.
+Make so the command has a Link account button, which will view if it’s in the phrase or not.
+
+Before making changes, inspect my existing code and understand how /link, the phrase button, Discord interactions, and the database currently work.
+After implementing it, test the complete flow:
+/link → enter Roblox username → receive phrase → copy phrase → put phrase in Roblox bio → click Verify Roblox → bot checks Roblox bio → account gets linked
+Make so u can’t use /link command again if it’s already linked. Add /change link command (admin only) with obligatory parameter, it will change the linked username of a person. 
+Also, Add to /balance, in the panel a section (like a section in advanced stats) just below profit with tittle account and saying Linked account: (the username) with the same design as the other ones)l if haven’t sued the link command then put none, cause it’s not obligatory, but for deposits and withdraws it will be obligatory, remove username parameter in /deposit and /withdraw commands, cause it will use the linked username,e which will be saved in the database . If haven’t linked username  eit will tell to use  /link command and then try again
+My current index.mjs file is this one:, edit it from this one.

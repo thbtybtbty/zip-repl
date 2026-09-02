@@ -6,6 +6,10 @@ export const usersTable = sqliteTable("users", {
   id:            text("id").primaryKey(),                         // Discord user ID
   username:      text("username").notNull(),
   robloxUsername: text("roblox_username"),                        // linked Roblox username (nullable)
+  robloxUserId:  text("roblox_user_id"),                          // permanent Roblox account identifier
+  robloxPendingUsername: text("roblox_pending_username"),         // username awaiting public-profile verification
+  robloxVerificationPhrase: text("roblox_verification_phrase"),   // pending phrase shown to the Discord user
+  robloxVerificationExpiresAt: integer("roblox_verification_expires_at"), // epoch milliseconds
   balance:       integer("balance").notNull().default(0),         // current balance
   deposited:     integer("deposited").notNull().default(0),       // lifetime approved deposits
   withdrawn:     integer("withdrawn").notNull().default(0),       // lifetime approved withdrawals

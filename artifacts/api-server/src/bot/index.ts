@@ -64,6 +64,7 @@ import * as economy         from "./commands/economy.js";
 import * as addadminperms   from "./commands/addadminperms.js";
 import * as rain            from "./commands/rain.js";
 import * as link            from "./commands/link.js";
+import * as change          from "./commands/change.js";
 import * as invites         from "./commands/invites.js";
 import * as cleardata       from "./commands/cleardata.js";
 import { isFrozen, isGameDisabled } from "./botState.js";
@@ -84,7 +85,7 @@ function isExpiredInteractionError(error: unknown): boolean {
   );
 }
 
-const commands    = [balance, tip, rakeback, affiliate, afflist, mines, towers, rps, coinflip, dice, blackjack, pvpblackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, createcode, redeem, viewcodes, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms, rain, link, invites, cleardata];
+const commands    = [balance, tip, rakeback, affiliate, afflist, mines, towers, rps, coinflip, dice, blackjack, pvpblackjack, setup, deposit, withdraw, addbalance, removebalance, wheel, slots, hilo, roulette, crash, scratchcard, chickencrossing, colordice, upgrader, keno, flip, createcode, redeem, viewcodes, leaderboard, history, resetstats, simulate, freeze, gamedisable, stats, economy, addadminperms, rain, link, change, invites, cleardata];
 const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -181,6 +182,7 @@ async function handleInteraction(interaction: Interaction) {
       if (name === "addadminperms")    return await addadminperms.execute(interaction);
       if (name === "rain")             return await rain.execute(interaction);
       if (name === "link")             return await link.execute(interaction);
+      if (name === "change")           return await change.execute(interaction);
       if (name === "invites")          return await invites.execute(interaction);
       if (name === "clear")            return await cleardata.execute(interaction);
     } catch (err) {
@@ -254,6 +256,10 @@ async function handleInteraction(interaction: Interaction) {
 
       // Withdraw (channel announcement)
       if (id.startsWith("with_viewdetails_")) return await withdraw.handleViewDetails(bi, id.slice("with_viewdetails_".length));
+
+      // Roblox account linking
+      if (id.startsWith("roblox_phrase_")) return await link.handlePhrase(bi, id.slice("roblox_phrase_".length));
+      if (id.startsWith("roblox_verify_")) return await link.handleVerify(bi, id.slice("roblox_verify_".length));
 
       // Crash
       if (id.startsWith("crash_cashout_")) return await crash.handleCashout(bi, id.slice("crash_cashout_".length));

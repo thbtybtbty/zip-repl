@@ -55,9 +55,6 @@ export const data = new SlashCommandBuilder()
   .setDescription("Request to withdraw gems from your balance")
   .addStringOption((opt) =>
     opt.setName("amount").setDescription("Amount of gems to withdraw (e.g. 1m, 2.5b)").setRequired(true),
-  )
-  .addStringOption((opt) =>
-    opt.setName("send_to").setDescription("Your Roblox username — gems will be sent to this account").setRequired(true),
   );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -71,7 +68,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
 
   const amountStr = interaction.options.getString("amount", true);
-  const robloxUser = interaction.options.getString("send_to", true);
   const amount = parseAmount(amountStr);
 
   if (!amount || amount <= 0) {
@@ -87,6 +83,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
 
   const dbUser = await getOrCreateUser(interaction.user.id, interaction.user.username);
+  if (!dbUser.robloxUsername) {
+    return interaction.editReply({
+      embeds: [errorEmbed("You must link your Roblox account first with `/link`, then try again.")],
+    });
+  }
+  const robloxUser = dbUser.robloxUsername;
+
   if (dbUser.balance < amount) {
     return interaction.editReply({
       embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(dbUser.balance)} 💎 gems**.`)],
