@@ -138340,6 +138340,18 @@ async function execute42(interaction) {
       ]
     });
   }
+  let robloxUser;
+  try {
+    robloxUser = await findRobloxUser(robloxUsername);
+  } catch (error) {
+    const message = error instanceof RobloxApiError ? error.message : "Roblox could not be checked right now. Please try again shortly.";
+    return interaction.editReply({ embeds: [errorEmbed(message)] });
+  }
+  if (!robloxUser) {
+    return interaction.editReply({
+      embeds: [errorEmbed(`Roblox could not find **${robloxUsername}**. Check the spelling and try again.`)]
+    });
+  }
   const phrase = createVerificationPhrase();
   const expiresAt = Date.now() + LINK_EXPIRY_MS;
   await db.update(usersTable).set({
@@ -138384,11 +138396,7 @@ async function handlePhrase(interaction, userId) {
     return;
   }
   await interaction.reply({
-    content: `Your Roblox verification phrase is:
-\`\`\`
-${pending.robloxVerificationPhrase}
-\`\`\`
-Paste this exact phrase into your Roblox profile bio.`,
+    content: pending.robloxVerificationPhrase,
     flags: import_discord43.MessageFlags.Ephemeral
   });
 }
@@ -138651,6 +138659,657 @@ async function handleCancel7(interaction) {
   });
 }
 
+// Restored unfinished-game locator registry from the production bundle.
+globalThis.__pvpGameLocators = [{
+  label: "PvP Blackjack",
+  list: (userId) => [...gamesByMessage.values()].filter((game) =>
+    (game.phase === "lobby" || game.phase === "playing") &&
+    (game.creator.id === userId || game.opponent?.id === userId)
+  )
+}];
+
+// src/bot/commands/invited.ts
+var invited_exports = {};
+__export(invited_exports, {
+  data: () => dataInvited,
+  execute: () => executeInvited
+});
+var import_discord43 = __toESM(require_src2(), 1);
+var dataInvited = new import_discord43.SlashCommandBuilder().setName("invited").setDescription("List the people invited by a user").addUserOption(
+  (opt) => opt.setName("user").setDescription("(Admin only) View another member's invite list").setRequired(false)
+);
+async function executeInvited(interaction) {
+  await interaction.deferReply();
+  const targetUser = interaction.options.getUser("user");
+  if (targetUser && targetUser.id !== interaction.user.id && !isAdmin(interaction.user.id)) {
+    return interaction.editReply({
+      embeds: [errorEmbed("Only admins can view another member's invite list.")]
+    });
+  }
+  const userId = targetUser?.id ?? interaction.user.id;
+  const displayName = targetUser?.displayName ?? interaction.user.displayName;
+  const rows = sqlite.prepare(
+    `SELECT invited_id, joined_at, account_created_at, verified, rejoin, left_server
+       FROM invite_log
+       WHERE inviter_id = ? AND left_server = 0 AND rejoin = 0
+         AND invite_log.id = (
+           SELECT latest.id FROM invite_log latest
+           WHERE latest.invited_id = invite_log.invited_id
+           ORDER BY latest.joined_at DESC, latest.id DESC LIMIT 1
+         )
+       ORDER BY joined_at DESC`
+  ).all(userId);
+  const shown = rows.slice(0, 25);
+  const description = shown.length ? shown.map((row, index) => {
+    const status = row.rejoin ? "Rejoin" : row.verified ? "Verified" : row.left_server ? "Left" : "Unverified";
+    return `${index + 1}. <@${row.invited_id}> — **${status}**\n   Joined: <t:${row.joined_at}:F> (<t:${row.joined_at}:R>)\n   Account created: <t:${row.account_created_at}:F>`;
+  }).join("\n\n") : "`None`";
+  const extra = rows.length - shown.length;
+  const embed = new import_discord43.EmbedBuilder().setColor(COLORS.primary).setTitle(`📋  Invited by ${displayName}`).setDescription(description).setFooter({ text: `Total tracked invite entries: ${rows.length}${extra > 0 ? ` • Showing first 25` : ""}` }).setTimestamp();
+  await interaction.editReply({ embeds: [embed] });
+}
+
+// src/bot/commands/inviter.ts
+var inviter_exports = {};
+__export(inviter_exports, {
+  data: () => dataInviter,
+  execute: () => executeInviter
+});
+var import_discord43 = __toESM(require_src2(), 1);
+var dataInviter = new import_discord43.SlashCommandBuilder().setName("inviter").setDescription("Find who invited a member").addUserOption(
+  (opt) => opt.setName("user").setDescription("Member whose inviter to find").setRequired(true)
+);
+async function executeInviter(interaction) {
+  await interaction.deferReply();
+  const targetUser = interaction.options.getUser("user", true);
+  const row = sqlite.prepare(
+    `SELECT inviter_id, joined_at, verified, rejoin, left_server
+       FROM invite_log
+       WHERE invited_id = ?
+       ORDER BY joined_at DESC, id DESC LIMIT 1`
+  ).get(targetUser.id);
+  if (!row) {
+    return interaction.editReply({
+      embeds: [errorEmbed(`I couldn't find an invite record for <@${targetUser.id}>.`)]
+    });
+  }
+  const status = row.rejoin ? "Rejoin" : row.left_server ? "Left" : row.verified ? "Verified" : "Unverified";
+  const embed = new import_discord43.EmbedBuilder().setColor(COLORS.primary).setTitle(`🧭  Inviter for ${targetUser.displayName}`).setDescription(`<@${targetUser.id}> was invited by <@${row.inviter_id}>.`).addFields(
+    { name: "Status", value: status, inline: true },
+    { name: "Joined", value: `<t:${Number(row.joined_at)}:F> (<t:${Number(row.joined_at)}:R>)`, inline: true }
+  ).setTimestamp();
+  await interaction.editReply({ embeds: [embed] });
+}
+
+
+// src/bot/commands/pvpcolordice.ts
+(() => {
+  const {
+    ActionRowBuilder,
+    AttachmentBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    ContainerBuilder,
+    MediaGalleryBuilder,
+    MediaGalleryItemBuilder,
+    MessageFlags,
+    SeparatorBuilder,
+    SlashCommandBuilder,
+    StringSelectMenuBuilder,
+    StringSelectMenuOptionBuilder,
+    TextDisplayBuilder
+  } = import_discord43;
+  const pvpCdGamesByMessage = /* @__PURE__ */ new Map();
+  const pvpCdGameByUser = /* @__PURE__ */ new Map();
+  const PVP_CD_WIDTH = 1200;
+  const PVP_CD_HEIGHT = 650;
+  const PVP_CD_TARGETS = [1, 2, 3, 5, 10];
+  const PVP_CD_COLOR_HEX = {
+    red: "#ef4444",
+    blue: "#3b82f6",
+    green: "#22c55e",
+    orange: "#f97316",
+    yellow: "#eab308",
+    purple: "#a855f7",
+    white: "#f8fafc",
+    brown: "#92400e"
+  };
+  const pvpCdSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const pvpCdText = (content) => new TextDisplayBuilder().setContent(content);
+  const pvpCdDivider = () => new SeparatorBuilder();
+  function pvpCdParticipantName(participant) {
+    return participant?.displayName ?? "Unknown player";
+  }
+  function pvpCdMention(participant) {
+    return participant ? `<@${participant.id}>` : "Unknown player";
+  }
+  function pvpCdGetParticipant(game, userId) {
+    return game.creator.id === userId ? game.creator : game.opponent;
+  }
+  function pvpCdGetDisplayName(interaction) {
+    return interaction.member && "displayName" in interaction.member ? interaction.member.displayName : interaction.user.globalName ?? interaction.user.username;
+  }
+  function pvpCdReplyEphemeral(interaction, message) {
+    return interaction.reply({ embeds: [errorEmbed(message)], flags: MessageFlags.Ephemeral });
+  }
+  function pvpCdColorName(color) {
+    return color.charAt(0).toUpperCase() + color.slice(1);
+  }
+  function pvpCdColorEmoji(color) {
+    return COLOR_EMOJI[color] ?? "🎲";
+  }
+  function pvpCdDrawRoundedRect(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, width, height, radius);
+    ctx.fill();
+  }
+  function pvpCdDrawDice(ctx, dice, y) {
+    const size = 94;
+    const gap = 18;
+    const total = dice.length * size + (dice.length - 1) * gap;
+    const startX = (PVP_CD_WIDTH - total) / 2;
+    dice.forEach((color, index) => {
+      const x = startX + index * (size + gap);
+      ctx.fillStyle = "rgba(0, 0, 0, 0.32)";
+      pvpCdDrawRoundedRect(ctx, x + 5, y + 7, size, size, 18);
+      ctx.fillStyle = PVP_CD_COLOR_HEX[color] ?? "#64748b";
+      pvpCdDrawRoundedRect(ctx, x, y, size, size, 18);
+      ctx.strokeStyle = "rgba(255,255,255,0.72)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(x, y, size, size, 18);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
+      ctx.beginPath();
+      ctx.arc(x + size / 2, y + size / 2, 17, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(x + size / 2, y + size / 2, 13, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+  function pvpCdImage(game, overlay = "") {
+    const canvas = createCanvas3(PVP_CD_WIDTH, PVP_CD_HEIGHT);
+    const ctx = canvas.getContext("2d");
+    const gradient = ctx.createLinearGradient(0, 0, 0, PVP_CD_HEIGHT);
+    gradient.addColorStop(0, "#0f5138");
+    gradient.addColorStop(0.55, "#071a12");
+    gradient.addColorStop(1, "#020807");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, PVP_CD_WIDTH, PVP_CD_HEIGHT);
+    ctx.fillStyle = "#0b3d2e";
+    ctx.beginPath();
+    ctx.roundRect(25, 25, PVP_CD_WIDTH - 50, PVP_CD_HEIGHT - 50, 30);
+    ctx.fill();
+    ctx.strokeStyle = "#c9a227";
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.font = "bold 34px Arial";
+    ctx.fillText("COLOR DICE", PVP_CD_WIDTH / 2, 43);
+    const betText = `Bet: ${formatAmount(game.amount)} each`;
+    const targetText = `First to ${game.target}`;
+    ctx.font = "bold 21px Arial";
+    const betWidth = ctx.measureText(betText).width + 36;
+    const targetWidth = ctx.measureText(targetText).width + 36;
+    const totalWidth = betWidth + targetWidth + 14;
+    const boxX = (PVP_CD_WIDTH - totalWidth) / 2;
+    ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
+    pvpCdDrawRoundedRect(ctx, boxX, 78, betWidth, 37, 10);
+    pvpCdDrawRoundedRect(ctx, boxX + betWidth + 14, 78, targetWidth, 37, 10);
+    ctx.fillStyle = "#ffffff";
+    ctx.textBaseline = "middle";
+    ctx.fillText(betText, boxX + betWidth / 2, 96.5);
+    ctx.fillText(targetText, boxX + betWidth + 14 + targetWidth / 2, 96.5);
+    const players = [game.creator, game.opponent].filter(Boolean);
+    const left = players[0];
+    const right = players[1];
+    const leftScore = game.scores[left?.id] ?? 0;
+    const rightScore = right ? game.scores[right.id] ?? 0 : 0;
+    const leftColor = left ? game.colors?.[left.id] : null;
+    const rightColor = right ? game.colors?.[right.id] : null;
+    const leftRoundResult = left ? game.roundResults?.[left.id] : null;
+    const rightRoundResult = right ? game.roundResults?.[right.id] : null;
+    const leftRoundMatches = leftRoundResult?.matches ?? 0;
+    const rightRoundMatches = rightRoundResult?.matches ?? 0;
+    const leftScoreColor = PVP_CD_COLOR_HEX[leftColor] ?? "#7dd3fc";
+    const rightScoreColor = PVP_CD_COLOR_HEX[rightColor] ?? "#fbbf24";
+    const leftRoundColor = PVP_CD_COLOR_HEX[leftColor] ?? "#dce7e1";
+    const rightRoundColor = PVP_CD_COLOR_HEX[rightColor] ?? "#dce7e1";
+    ctx.textBaseline = "top";
+    ctx.font = "bold 24px Arial";
+    ctx.fillStyle = "#dce7e1";
+    ctx.fillText(left ? pvpCdParticipantName(left) : "Waiting for opponent", 300, 145);
+    ctx.fillText(right ? pvpCdParticipantName(right) : "Open lobby", 900, 145);
+    ctx.font = "900 70px Arial";
+    ctx.fillStyle = leftScoreColor;
+    ctx.fillText(String(leftScore), 300, 172);
+    ctx.fillStyle = rightScoreColor;
+    ctx.fillText(String(rightScore), 900, 172);
+    ctx.font = "bold 22px Arial";
+    if (leftColor) {
+      ctx.fillStyle = leftScoreColor;
+      ctx.fillText(`${pvpCdColorName(leftColor)}: ${leftScore} match${leftScore === 1 ? "" : "es"}`, 300, 246);
+    }
+    if (rightColor) {
+      ctx.fillStyle = rightScoreColor;
+      ctx.fillText(`${pvpCdColorName(rightColor)}: ${rightScore} match${rightScore === 1 ? "" : "es"}`, 900, 246);
+    }
+    ctx.fillStyle = "#4b635a";
+    ctx.fillRect(598, 140, 4, 138);
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(70, 286);
+    ctx.lineTo(PVP_CD_WIDTH - 70, 286);
+    ctx.stroke();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 24px Arial";
+    ctx.textAlign = "left";
+    ctx.fillText(game.isRolling ? "ROLLING..." : `ROLL ${Math.max(1, game.rollNumber ?? 1)}`, 70, 307);
+    const displayDice = game.isRolling ? game.rollingDice : game.lastTurn?.dice;
+    if (displayDice?.length) {
+      pvpCdDrawDice(ctx, displayDice, 340);
+    } else {
+      ctx.textAlign = "center";
+      ctx.font = "bold 28px Arial";
+      ctx.fillStyle = "#cbd5e1";
+      ctx.fillText("Choose a color to roll six dice", PVP_CD_WIDTH / 2, 392);
+    }
+    if (!game.isRolling && game.lastTurn) {
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "bold 24px Arial";
+      ctx.fillStyle = "#dce7e1";
+      ctx.fillText("Round Result", PVP_CD_WIDTH / 2, 470);
+      const roundResultY = 508;
+      const leftRoundLabel = leftColor ? `${pvpCdColorName(leftColor)}: ${leftRoundResult ? `${leftRoundMatches} match${leftRoundMatches === 1 ? "" : "es"}` : "—"}` : "Color not chosen";
+      const rightRoundLabel = rightColor ? `${pvpCdColorName(rightColor)}: ${rightRoundResult ? `${rightRoundMatches} match${rightRoundMatches === 1 ? "" : "es"}` : "—"}` : "Color not chosen";
+      const leftHighlight = Boolean(leftRoundResult && leftRoundMatches > 0);
+      const rightHighlight = Boolean(rightRoundResult && rightRoundMatches > 0);
+      ctx.font = leftHighlight ? "900 24px Arial" : "bold 24px Arial";
+      if (leftHighlight) {
+        const highlightWidth = ctx.measureText(leftRoundLabel).width + 30;
+        ctx.fillStyle = "rgba(250, 204, 21, 0.24)";
+        pvpCdDrawRoundedRect(ctx, 300 - highlightWidth / 2, roundResultY - 17, highlightWidth, 34, 10);
+      }
+      ctx.fillStyle = leftRoundColor;
+      ctx.fillText(leftRoundLabel, 300, roundResultY);
+      ctx.font = rightHighlight ? "900 24px Arial" : "bold 24px Arial";
+      if (rightHighlight) {
+        const highlightWidth = ctx.measureText(rightRoundLabel).width + 30;
+        ctx.fillStyle = "rgba(250, 204, 21, 0.24)";
+        pvpCdDrawRoundedRect(ctx, 900 - highlightWidth / 2, roundResultY - 17, highlightWidth, 34, 10);
+      }
+      ctx.fillStyle = rightRoundColor;
+      ctx.fillText(rightRoundLabel, 900, roundResultY);
+    }
+    if (overlay) {
+      ctx.fillStyle = "rgba(0,0,0,0.74)";
+      pvpCdDrawRoundedRect(ctx, 190, 245, PVP_CD_WIDTH - 380, 120, 18);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 32px Arial";
+      ctx.fillText(overlay, PVP_CD_WIDTH / 2, 290);
+    }
+    return canvas.toBuffer("image/png");
+  }
+  function pvpCdImageFile(game, overlay = "") {
+    return new AttachmentBuilder(pvpCdImage(game, overlay), { name: "pvpcolordice.png" });
+  }
+  async function pvpCdAnimateRoll(game, interaction) {
+    game.isRolling = true;
+    game.rollingDice = rollDice();
+    if (interaction) await pvpCdPublish(game, interaction).catch(() => {});
+    else await pvpCdPublish(game).catch(() => {});
+    for (let frame = 0; frame < 6; frame++) {
+      await pvpCdSleep(160);
+      if (game.phase !== "playing") break;
+      game.rollingDice = rollDice();
+      await pvpCdPublish(game).catch(() => {});
+    }
+  }
+  function pvpCdColorStatus(game, participant) {
+    const color = participant ? game.colors?.[participant.id] : null;
+    return color ? `${pvpCdColorEmoji(color)} ${pvpCdColorName(color)}` : "Not chosen";
+  }
+  function pvpCdColorSelect(game, participant) {
+    const chosenColors = new Set(Object.values(game.colors ?? {}));
+    const chosenColor = game.colors?.[participant.id];
+    const isTurn = game.phase === "choosing" && game.turnId === participant.id;
+    const options = COLORS_LIST.filter((color) => color === chosenColor || !chosenColors.has(color));
+    const menu = new StringSelectMenuBuilder().setCustomId(`pvpcd_pick_${participant.id}`).setPlaceholder(
+      chosenColor ? `${pvpCdColorName(chosenColor)} locked` : isTurn ? "Choose your color…" : "Waiting for the other player…"
+    ).setDisabled(Boolean(chosenColor) || game.phase !== "choosing" || !isTurn).addOptions(
+      options.map((color) => new StringSelectMenuOptionBuilder().setLabel(pvpCdColorName(color)).setValue(color).setEmoji(pvpCdColorEmoji(color)))
+    );
+    return new ActionRowBuilder().addComponents(menu);
+  }
+  function pvpCdLobbyContainer(game) {
+    return new ContainerBuilder().setAccentColor(COLORS.primary).addTextDisplayComponents(pvpCdText("## 🎲 PvP Color Dice")).addTextDisplayComponents(
+      pvpCdText([
+        `👤 **Host**  ${pvpCdMention(game.creator)}`,
+        `💎 **Bet per player**  \`${formatAmount(game.amount)}\``,
+        `🎯 **First to**  \`${game.target} matches\``,
+        "🏦 **Tax**  `5% of the final pot`",
+        "",
+        "Each round rolls six dice for both locked colors. Each color's matches are added to its player's score; the first player to reach the target wins.",
+        "Choose **Join Game** to play against the host, or **Call Bot** to play against the bot."
+      ].join("\n"))
+    ).addSeparatorComponents(pvpCdDivider()).addActionRowComponents(
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId("pvpcd_join").setLabel("👥  Join Game").setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId("pvpcd_bot").setLabel("🤖  Call Bot").setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId("pvpcd_cancel").setLabel("Cancel").setStyle(ButtonStyle.Secondary)
+      )
+    );
+  }
+  function pvpCdActiveContainer(game) {
+    const creatorColor = pvpCdColorStatus(game, game.creator);
+    const opponentColor = pvpCdColorStatus(game, game.opponent);
+    const resultLabel = game.isRolling ? "📣 **Last Round Result**" : "📣 **Round Result**";
+    const resultText = game.roundResults && Object.keys(game.roundResults).length ? [game.creator, game.opponent].map((participant) => {
+      const result = game.roundResults[participant.id];
+      const color = result?.pick ? `${pvpCdColorEmoji(result.pick)} ${pvpCdColorName(result.pick)}` : "Color";
+      return `${color}: ${result?.matches ?? 0} match${result?.matches === 1 ? "" : "es"}`;
+    }).join(" — ") : "No completed round yet.";
+    const container = new ContainerBuilder().setAccentColor(COLORS.primary).addTextDisplayComponents(
+      pvpCdText(`## 🎲 PvP Color Dice — First to ${game.target}`)
+    ).addTextDisplayComponents(
+      pvpCdText([
+        `💎 **Stake each**  \`${formatAmount(game.amount)}\``,
+        "🏦 **Tax**  `5% of the final pot`",
+        `🏆 **Score**  ${pvpCdMention(game.creator)} \`${game.scores[game.creator.id] ?? 0}\` — ${pvpCdMention(game.opponent)} \`${game.scores[game.opponent.id] ?? 0}\``,
+        `🎨 **Colors**  ${pvpCdMention(game.creator)} ${creatorColor} — ${pvpCdMention(game.opponent)} ${opponentColor}`
+      ].join("\n"))
+    ).addSeparatorComponents(pvpCdDivider()).addTextDisplayComponents(
+      pvpCdText([
+        `🎯 **Target**  ${game.target} matches`,
+        resultLabel,
+        resultText
+      ].join("\n"))
+    ).addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL("attachment://pvpcolordice.png"))
+    );
+    if (game.phase === "choosing") {
+      const currentPlayer = pvpCdGetParticipant(game, game.turnId);
+      container.addTextDisplayComponents(
+        pvpCdText(`${pvpCdMention(currentPlayer)}, please select your color.`)
+      );
+      return container.addActionRowComponents(
+        pvpCdColorSelect(game, game.creator),
+        pvpCdColorSelect(game, game.opponent)
+      );
+    }
+    return container;
+  }
+  function pvpCdFinalContainer(game) {
+    const winner = pvpCdGetParticipant(game, game.winnerId);
+    const pot = game.amount * 2;
+    const isTie = !game.winnerId;
+    return new ContainerBuilder().setAccentColor(COLORS.success).addTextDisplayComponents(
+      pvpCdText(isTie ? "## 🎲 PvP Color Dice — MATCH TIED" : `## 🎲 PvP Color Dice — ${pvpCdMention(winner)} WINS`)
+    ).addTextDisplayComponents(
+      pvpCdText([
+        `🏆 **Final score**  ${pvpCdMention(game.creator)} \`${game.scores[game.creator.id] ?? 0}\` — ${pvpCdMention(game.opponent)} \`${game.scores[game.opponent.id] ?? 0}\``,
+        `💎 **Pot**  \`${formatAmount(pot)}\``,
+        isTie ? "💰 **Result**  Stakes refunded" : `💰 **Winner payout**  \`${formatAmount(game.payout)}\``
+      ].join("\n"))
+    ).addSeparatorComponents(pvpCdDivider()).addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL("attachment://pvpcolordice.png"))
+    );
+  }
+  function pvpCdCancelledContainer(game) {
+    return new ContainerBuilder().setAccentColor(COLORS.danger).addTextDisplayComponents(pvpCdText("## 🎲 PvP Color Dice — Cancelled")).addTextDisplayComponents(
+      pvpCdText(`The lobby was cancelled. \`${formatAmount(game.amount)}\` gems were returned to ${pvpCdMention(game.creator)}.`)
+    );
+  }
+  function pvpCdPayload(game, mode) {
+    const component = mode === "lobby" ? pvpCdLobbyContainer(game) : mode === "final" ? pvpCdFinalContainer(game) : mode === "cancelled" ? pvpCdCancelledContainer(game) : pvpCdActiveContainer(game);
+    if (mode === "lobby" || mode === "cancelled") return { flags: MessageFlags.IsComponentsV2, components: [component] };
+    const overlay = mode === "final" && game.winnerId ? `${pvpCdParticipantName(pvpCdGetParticipant(game, game.winnerId))} wins the match` : "";
+    return { flags: MessageFlags.IsComponentsV2, files: [pvpCdImageFile(game, overlay)], components: [component] };
+  }
+  async function pvpCdPublish(game, interaction) {
+    const mode = game.phase === "finished" ? "final" : game.phase === "cancelled" ? "cancelled" : game.phase === "lobby" ? "lobby" : "active";
+    if (interaction) {
+      if (interaction.deferred || interaction.replied) await interaction.editReply(pvpCdPayload(game, mode));
+      else await interaction.update(pvpCdPayload(game, mode));
+      return;
+    }
+    if (game.message) await game.message.edit(pvpCdPayload(game, mode));
+  }
+  async function pvpCdSettle(game, winnerId) {
+    game.phase = "finished";
+    game.winnerId = winnerId;
+    const pot = game.amount * 2;
+    const isTie = !winnerId;
+    game.tax = isTie ? 0 : Math.floor(pot * 0.05);
+    game.payout = isTie ? 0 : pot - game.tax;
+    if (game.rollTimer) {
+      clearTimeout(game.rollTimer);
+      game.rollTimer = null;
+    }
+    try {
+      const humans = [game.creator, game.opponent].filter((participant) => !participant.isBot);
+      for (const participant of humans) {
+        const stake = game.amount;
+        const payout = isTie ? stake : participant.id === winnerId ? game.payout : 0;
+        if (payout > 0) await addBalance(participant.id, payout);
+        await recordBet(participant.id, stake, payout - stake, "pvpcolordice");
+      }
+    } finally {
+      pvpCdGamesByMessage.delete(game.messageId);
+      pvpCdGameByUser.delete(game.creator.id);
+      if (game.opponent && !game.opponent.isBot) pvpCdGameByUser.delete(game.opponent.id);
+    }
+  }
+  function pvpCdScheduleRound(game) {
+    if (game.phase !== "playing" || game.isRolling || game.rollTimer) return;
+    game.rollTimer = setTimeout(() => {
+      game.rollTimer = null;
+      pvpCdResolveRound(game).catch(() => {});
+    }, 3000);
+  }
+  async function pvpCdResolveRound(game) {
+    if (game.phase !== "playing" || game.isRolling) return;
+    await pvpCdAnimateRoll(game);
+    if (game.phase !== "playing") return;
+    const dice = rollDice();
+    const results = {};
+    for (const participant of [game.creator, game.opponent]) {
+      const pick = game.colors?.[participant.id];
+      const matches = pick ? countMatches(dice, pick) : 0;
+      results[participant.id] = { pick, matches };
+    }
+    game.isRolling = false;
+    game.rollingDice = null;
+    game.rollNumber = (game.rollNumber ?? 0) + 1;
+    game.roundResults = results;
+    game.lastTurn = { dice };
+    for (const participant of [game.creator, game.opponent]) {
+      game.scores[participant.id] = (game.scores[participant.id] ?? 0) + results[participant.id].matches;
+    }
+    const creatorReached = game.scores[game.creator.id] >= game.target;
+    const opponentReached = game.scores[game.opponent.id] >= game.target;
+    if (creatorReached || opponentReached) {
+      const creatorScore = game.scores[game.creator.id];
+      const opponentScore = game.scores[game.opponent.id];
+      const winnerId = creatorScore === opponentScore ? null : creatorScore > opponentScore ? game.creator.id : game.opponent.id;
+      await pvpCdSettle(game, winnerId);
+      await pvpCdPublish(game);
+      return;
+    }
+    await pvpCdPublish(game);
+    pvpCdScheduleRound(game);
+  }
+  async function pvpCdResolveColorChoice(game, playerId, pick, interaction) {
+    if (game.phase !== "choosing" || game.turnId !== playerId || game.colors?.[playerId]) return;
+    game.colors[playerId] = pick;
+    const otherId = playerId === game.creator.id ? game.opponent.id : game.creator.id;
+    const chosenCount = Object.keys(game.colors).length;
+    if (chosenCount >= 2) {
+      game.phase = "playing";
+      game.turnId = "";
+    } else {
+      game.turnId = otherId;
+    }
+    await pvpCdPublish(game, interaction);
+    if (game.phase === "playing") pvpCdScheduleRound(game);
+    else pvpCdRunBotTurn(game);
+  }
+  function pvpCdRunBotTurn(game) {
+    const botId = game.opponent?.id;
+    if (!game.opponent?.isBot || !botId || game.phase !== "choosing") return;
+    pvpCdSleep(1200).then(async () => {
+      if (game.phase !== "choosing" || game.turnId !== botId || game.colors?.[botId]) return;
+      const usedColors = new Set(Object.values(game.colors ?? {}));
+      const availableColors = COLORS_LIST.filter((color) => !usedColors.has(color));
+      const pick = availableColors[Math.floor(Math.random() * availableColors.length)];
+      if (pick) await pvpCdResolveColorChoice(game, botId, pick);
+    }).catch(() => {});
+  }
+  function pvpCdGetGame(interaction) {
+    return pvpCdGamesByMessage.get(interaction.message.id);
+  }
+  function pvpCdStart(game) {
+    game.phase = "choosing";
+    game.colors = {};
+    game.firstColorPickerId = Math.random() < 0.5 ? game.creator.id : game.opponent.id;
+    game.turnId = game.firstColorPickerId;
+  }
+  const pvpCdData = new SlashCommandBuilder().setName("pvpcolordice").setDescription("Play Color Dice against another player").addStringOption(
+    (option) => option.setName("amount").setDescription("Equal stake for each player (e.g. 1m, 2.5b)").setRequired(true)
+  ).addIntegerOption(
+    (option) => option.setName("firsttoreach").setDescription("Matches needed to win").addChoices(
+      ...PVP_CD_TARGETS.map((value) => ({ name: String(value), value }))
+    ).setRequired(true)
+  );
+  async function pvpCdExecute(interaction) {
+    const amount = parseAmount(interaction.options.getString("amount", true));
+    const target = interaction.options.getInteger("firsttoreach", true);
+    if (!amount || amount < 1e6) return interaction.reply({ embeds: [errorEmbed("Minimum PvP Color Dice stake is **1m gems**.")], flags: MessageFlags.Ephemeral });
+    if (!PVP_CD_TARGETS.includes(target)) return interaction.reply({ embeds: [errorEmbed("First to must be 1, 2, 3, 5, or 10 matches.")], flags: MessageFlags.Ephemeral });
+    await interaction.deferReply();
+    const existingGameId = pvpCdGameByUser.get(interaction.user.id);
+    if (existingGameId) {
+      const existingGame = pvpCdGamesByMessage.get(existingGameId);
+      if (!existingGame || existingGame.phase === "finished" || existingGame.phase === "cancelled") {
+        pvpCdGameByUser.delete(interaction.user.id);
+        existingGame && pvpCdGamesByMessage.delete(existingGameId);
+      } else {
+        return interaction.editReply({ embeds: [errorEmbed("You already have an active PvP Color Dice game.")] });
+      }
+    }
+    const user = await getOrCreateUser(interaction.user.id, interaction.user.username);
+    if (user.balance < amount) return interaction.editReply({ embeds: [errorEmbed(`Insufficient balance. You have **${formatAmount(user.balance)} gems**.`)] });
+    await addBalance(interaction.user.id, -amount);
+    const game = {
+      creator: { id: interaction.user.id, displayName: pvpCdGetDisplayName(interaction), isBot: false },
+      amount,
+      target,
+      messageId: "",
+      phase: "lobby",
+      scores: {},
+      colors: {},
+      firstColorPickerId: "",
+      roundResults: {},
+      turnId: "",
+      lastTurn: null,
+      rollNumber: 0,
+      isRolling: false,
+      rollingDice: null,
+      rollTimer: null,
+      tax: 0,
+      payout: 0
+    };
+    const message = await interaction.editReply(pvpCdPayload(game, "lobby"));
+    game.messageId = message.id;
+    game.message = message;
+    pvpCdGamesByMessage.set(message.id, game);
+    pvpCdGameByUser.set(game.creator.id, message.id);
+  }
+  async function pvpCdHandleJoin(interaction) {
+    const game = pvpCdGetGame(interaction);
+    if (!game || game.phase !== "lobby") return pvpCdReplyEphemeral(interaction, "This PvP Color Dice lobby is no longer open.");
+    if (interaction.user.id === game.creator.id) return pvpCdReplyEphemeral(interaction, "You cannot join your own game.");
+    if (pvpCdGameByUser.has(interaction.user.id)) return pvpCdReplyEphemeral(interaction, "You already have an active PvP Color Dice game.");
+    if ((await getOrCreateUser(interaction.user.id, interaction.user.username)).balance < game.amount) return pvpCdReplyEphemeral(interaction, `Insufficient balance. You need **${formatAmount(game.amount)} gems** to join.`);
+    await interaction.deferUpdate();
+    await addBalance(interaction.user.id, -game.amount);
+    game.opponent = { id: interaction.user.id, displayName: pvpCdGetDisplayName(interaction), isBot: false };
+    pvpCdGameByUser.set(game.opponent.id, game.messageId);
+    pvpCdStart(game);
+    await pvpCdPublish(game, interaction);
+    pvpCdRunBotTurn(game);
+  }
+  async function pvpCdHandleCallBot(interaction) {
+    const game = pvpCdGetGame(interaction);
+    if (!game || game.phase !== "lobby") return pvpCdReplyEphemeral(interaction, "This PvP Color Dice lobby is no longer open.");
+    if (interaction.user.id !== game.creator.id) return pvpCdReplyEphemeral(interaction, "Only the game host can call the bot.");
+    await interaction.deferUpdate();
+    game.opponent = { id: interaction.client.user.id, displayName: interaction.client.user.username, isBot: true };
+    pvpCdStart(game);
+    await pvpCdPublish(game, interaction);
+    pvpCdRunBotTurn(game);
+  }
+  async function pvpCdHandleCancel(interaction) {
+    const game = pvpCdGetGame(interaction);
+    if (!game || game.phase !== "lobby") return pvpCdReplyEphemeral(interaction, "This PvP Color Dice lobby is no longer open.");
+    if (interaction.user.id !== game.creator.id) return pvpCdReplyEphemeral(interaction, "Only the game host can cancel this lobby.");
+    await interaction.deferUpdate();
+    await addBalance(game.creator.id, game.amount);
+    game.phase = "cancelled";
+    pvpCdGamesByMessage.delete(game.messageId);
+    pvpCdGameByUser.delete(game.creator.id);
+    await pvpCdPublish(game, interaction);
+  }
+  async function pvpCdHandlePick(interaction) {
+    const game = pvpCdGetGame(interaction);
+    if (!game) return pvpCdReplyEphemeral(interaction, "This PvP Color Dice game is no longer active.");
+    const playerId = interaction.customId.slice("pvpcd_pick_".length);
+    if (playerId !== interaction.user.id) return pvpCdReplyEphemeral(interaction, "Use your own color selector.");
+    if (game.phase !== "choosing") return pvpCdReplyEphemeral(interaction, "Colors are locked. Rounds roll automatically for both players.");
+    if (interaction.user.id !== game.turnId) return pvpCdReplyEphemeral(interaction, `It is ${pvpCdMention(pvpCdGetParticipant(game, game.turnId))}'s turn to choose a color.`);
+    if (game.colors?.[playerId]) return pvpCdReplyEphemeral(interaction, "Your color is already locked for this match.");
+    const pick = interaction.values[0];
+    if (!COLORS_LIST.includes(pick)) return pvpCdReplyEphemeral(interaction, "Invalid color.");
+    if (Object.values(game.colors ?? {}).includes(pick)) return pvpCdReplyEphemeral(interaction, "That color is already taken. Choose another color.");
+    await interaction.deferUpdate();
+    await pvpCdResolveColorChoice(game, playerId, pick, interaction);
+  }
+  globalThis.__pvpGameLocators?.push({ label: "PvP Color Dice", list: (userId) => [...pvpCdGamesByMessage.values()].filter((game) => (game.phase === "lobby" || game.phase === "choosing" || game.phase === "playing") && (game.creator.id === userId || game.opponent?.id === userId)) });
+  globalThis.__pvpcolordice = { data: pvpCdData, execute: pvpCdExecute, handleJoin: pvpCdHandleJoin, handleCallBot: pvpCdHandleCallBot, handleCancel: pvpCdHandleCancel, handlePick: pvpCdHandlePick };
+})();
+var pvpcolordice_exports = globalThis.__pvpcolordice;
+
+
+// Restored /locategame command from the production bundle.
+var locateGame_exports = {};
+var dataLocateGame = new import_discord43.SlashCommandBuilder().setName("locategame").setDescription("Find all your unfinished games");
+locateGame_exports.data = dataLocateGame;
+async function executeLocateGame(interaction) {
+  const locators = globalThis.__pvpGameLocators ?? [];
+  const games = locators.flatMap((locator) => locator.list(interaction.user.id).map((game) => ({ game, label: locator.label })));
+  if (!games.length) {
+    return interaction.reply({ embeds: [errorEmbed("You do not have any unfinished games.")], flags: import_discord43.MessageFlags.Ephemeral });
+  }
+  const buttons = games.slice(0, 25).map(({ game, label }, index) => {
+    const jumpUrl = game.message?.url ?? "https://discord.com/channels/" + (game.message?.guildId ?? interaction.guildId) + "/" + game.message?.channelId + "/" + game.messageId;
+    return new import_discord43.ButtonBuilder().setLabel("Open " + label + " " + (index + 1) + " · " + formatAmount(game.amount) + " gems").setStyle(import_discord43.ButtonStyle.Link).setURL(jumpUrl);
+  });
+  const rows = [];
+  for (let index = 0; index < buttons.length; index += 5) rows.push(new import_discord43.ActionRowBuilder().addComponents(buttons.slice(index, index + 5)));
+  const description = games.slice(0, 25).map(({ game, label }, index) => (index + 1) + ". **" + label + "** · " + (game.phase === "lobby" ? "Waiting for opponent" : "In progress") + " · `" + formatAmount(game.amount) + " gems`").join("\n");
+  return interaction.reply({
+    embeds: [new import_discord43.EmbedBuilder().setColor(COLORS.primary).setTitle("🔎 Your Unfinished Games").setDescription(description + "\n\nClick a button below to jump to a game.")],
+    components: rows,
+    flags: import_discord43.MessageFlags.Ephemeral
+  });
+}
+
 // src/bot/index.ts
 var GAMBLING_COMMANDS = /* @__PURE__ */ new Set([
   "mines",
@@ -138670,12 +139329,13 @@ var GAMBLING_COMMANDS = /* @__PURE__ */ new Set([
   "keno",
   "flip",
   "hilo",
-  "pvpblackjack"
+  "pvpblackjack",
+  "pvpcolordice"
 ]);
 function isExpiredInteractionError(error40) {
   return typeof error40 === "object" && error40 !== null && "code" in error40 && error40.code === 10062;
 }
-var commands = [balance_exports, tip_exports, rakeback_exports, affiliate_exports, afflist_exports, mines_exports, towers_exports, rps_exports, coinflip_exports, dice_exports, blackjack_exports, pvpblackjack_exports, setup_exports, deposit_exports, withdraw_exports, addbalance_exports, removebalance_exports, wheel_exports, slots_exports, hilo_exports, roulette_exports, crash_exports, scratchcard_exports, chickencrossing_exports, colordice_exports, upgrader_exports, keno_exports, flip_exports, createcode_exports, redeem_exports, viewcodes_exports, leaderboard_exports, history_exports, resetstats_exports, simulate_exports, freeze_exports, gamedisable_exports, stats_exports, economy_exports, addadminperms_exports, rain_exports, link_exports, change_exports, invites_exports, cleardata_exports];
+var commands = [balance_exports, tip_exports, rakeback_exports, affiliate_exports, afflist_exports, mines_exports, towers_exports, rps_exports, coinflip_exports, dice_exports, blackjack_exports, pvpblackjack_exports, pvpcolordice_exports, locateGame_exports, invited_exports, inviter_exports, setup_exports, deposit_exports, withdraw_exports, addbalance_exports, removebalance_exports, wheel_exports, slots_exports, hilo_exports, roulette_exports, crash_exports, scratchcard_exports, chickencrossing_exports, colordice_exports, upgrader_exports, keno_exports, flip_exports, createcode_exports, redeem_exports, viewcodes_exports, leaderboard_exports, history_exports, resetstats_exports, simulate_exports, freeze_exports, gamedisable_exports, stats_exports, economy_exports, addadminperms_exports, rain_exports, link_exports, change_exports, invites_exports, cleardata_exports];
 var commandData = commands.map((cmd) => cmd.data.toJSON());
 var client = new import_discord47.Client({
   intents: [
@@ -138723,6 +139383,8 @@ async function handleInteraction(interaction) {
       if (name === "dice") return await execute10(interaction);
       if (name === "blackjack") return await execute11(interaction);
       if (name === "pvpblackjack") return await execute12(interaction);
+      if (name === "pvpcolordice") return await pvpcolordice_exports.execute(interaction);
+      if (name === "locategame") return await executeLocateGame(interaction);
       if (name === "setup") return await execute13(interaction);
       if (name === "deposit") return await execute14(interaction);
       if (name === "withdraw") {
@@ -138763,6 +139425,8 @@ async function handleInteraction(interaction) {
       if (name === "link") return await execute42(interaction);
       if (name === "change") return await execute43(interaction);
       if (name === "invites") return await execute44(interaction);
+      if (name === "invited") return await executeInvited(interaction);
+      if (name === "inviter") return await executeInviter(interaction);
       if (name === "clear") return await execute45(interaction);
     } catch (err) {
       if (isExpiredInteractionError(err)) {
@@ -138803,6 +139467,9 @@ async function handleInteraction(interaction) {
       if (id === "pvpbj_cancel") return await handleCancel(bi);
       if (id === "pvpbj_hit") return await handleHit2(bi);
       if (id === "pvpbj_stand") return await handleStand2(bi);
+      if (id === "pvpcd_join") return await pvpcolordice_exports.handleJoin(bi);
+      if (id === "pvpcd_bot") return await pvpcolordice_exports.handleCallBot(bi);
+      if (id === "pvpcd_cancel") return await pvpcolordice_exports.handleCancel(bi);
       if (id.startsWith("dep_sent_")) return await handleSent(bi, id.slice("dep_sent_".length));
       if (id.startsWith("dep_cancel_")) return await handleCancel2(bi, id.slice("dep_cancel_".length));
       if (id.startsWith("dep_approve_")) return await handleApprove(bi, id.slice("dep_approve_".length));
@@ -139002,6 +139669,7 @@ async function handleInteraction(interaction) {
     const id = si.customId;
     try {
       if (id.startsWith("cd_pick_")) return await handleColorPick(si);
+      if (id.startsWith("pvpcd_pick_")) return await pvpcolordice_exports.handlePick(si);
       if (id.startsWith("rs_pick_")) return await handlePick(si, id.slice("rs_pick_".length));
       if (id === "freeze_unfreeze_select") return await handleUnfreezeSelect(si);
       if (id === "game_enable_select") return await handleEnableSelect(si);

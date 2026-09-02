@@ -96,6 +96,21 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     });
   }
 
+  let robloxUser;
+  try {
+    robloxUser = await findRobloxUser(robloxUsername);
+  } catch (error) {
+    const message = error instanceof RobloxApiError
+      ? error.message
+      : "Roblox could not be checked right now. Please try again shortly.";
+    return interaction.editReply({ embeds: [errorEmbed(message)] });
+  }
+  if (!robloxUser) {
+    return interaction.editReply({
+      embeds: [errorEmbed(`Roblox could not find **${robloxUsername}**. Check the spelling and try again.`)],
+    });
+  }
+
   const phrase = createVerificationPhrase();
   const expiresAt = Date.now() + LINK_EXPIRY_MS;
 
@@ -164,7 +179,7 @@ export async function handlePhrase(
   }
 
   await interaction.reply({
-    content: `Your Roblox verification phrase is:\n\`\`\`\n${pending.robloxVerificationPhrase}\n\`\`\`\nPaste this exact phrase into your Roblox profile bio.`,
+    content: pending.robloxVerificationPhrase,
     flags: MessageFlags.Ephemeral,
   });
 }
