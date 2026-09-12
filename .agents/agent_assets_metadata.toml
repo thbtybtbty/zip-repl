@@ -1205,3 +1205,17 @@ mtime_ms = 1789228333407
 storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:33480828-5d11-4880-acb4-4830c154f970/908ac7a4-e4ed-4c68-9994-b6b48149224a/152f22d7-1e7e-4431-9c7b-de37b86c8498"
 storage_version_token = "1789228337559518"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "pabe4Sj6H7Xr3BJA7_Ea0"
+uri = "file://wispbyte-index-34-updated.zip"
+type = "unspecified"
+title = "Updated WispByte index.mjs"
+description = "Updated only the regular blackjack double-down and split-multiplier logic. The ZIP contains index.mjs at its root."
+logical_id = "bfc87660-7395-4150-bf95-0f44774989b8"
+content_hash = "sha256:f918e85619b4504f74452648af14773a48d06c049e89f15803ccb532e43006d8"
+size = 1096895
+mtime_ms = 1789229205527
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:33480828-5d11-4880-acb4-4830c154f970/bfc87660-7395-4150-bf95-0f44774989b8/1b376c7a-b282-4de6-8a0c-cc93d1f5a90d"
+storage_version_token = "1789229212259034"
+content_type = "application/octet-stream"
