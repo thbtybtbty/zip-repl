@@ -1219,3 +1219,17 @@ mtime_ms = 1789229205527
 storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:33480828-5d11-4880-acb4-4830c154f970/bfc87660-7395-4150-bf95-0f44774989b8/1b376c7a-b282-4de6-8a0c-cc93d1f5a90d"
 storage_version_token = "1789229212259034"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "PAFQdtsS2_EBG59TU7Avb"
+uri = "file://exports/index-35-blackjack-balance-updated.zip"
+type = "unspecified"
+title = "Updated Blackjack balance index.mjs"
+description = "WispByte index.mjs with corrected Blackjack instant-result balance settlement, including side-bet payouts and bet-stat recording."
+logical_id = "0471aa5a-a1c7-4e68-955e-f47c9f84cd4a"
+content_hash = "sha256:ec9484452b0027fe63afbd64dba741d86a1748a68b855086a860127caecd4ce8"
+size = 1105940
+mtime_ms = 1789231045435
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:8cb901bb-9244-428a-91c1-728bd6edfc35/0471aa5a-a1c7-4e68-955e-f47c9f84cd4a/d178544e-d70d-45ea-83d6-0de5d3f8652b"
+storage_version_token = "1789231049246883"
+content_type = "application/octet-stream"
