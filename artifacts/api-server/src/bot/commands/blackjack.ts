@@ -189,10 +189,29 @@ function currentPlayerHand(game: BlackjackGame): Card[] {
 
 function syncCurrentHand(game: BlackjackGame): void {
   game.playerHand = currentPlayerHand(game);
-  game.doubled = Boolean(
-    isSplitGame(game) &&
+  if (isSplitGame(game)) {
+    game.doubled = Boolean(
       game.handDoubled?.[game.activeHandIndex ?? 0],
-  );
+    );
+  }
+}
+
+function totalStake(game: BlackjackGame): number {
+  if (isSplitGame(game)) {
+    return game.playerHands!.reduce(
+      (sum, _hand, index) =>
+        sum +
+        game.bet +
+        (game.handDoubled?.[index] ? game.bet : 0),
+      0,
+    );
+  }
+
+  return game.bet * (game.doubled ? 2 : 1);
+}
+
+function hasDoubledStake(game: BlackjackGame): boolean {
+  return game.doubled || Boolean(game.handDoubled?.some(Boolean));
 }
 
 function canSplitHand(game: BlackjackGame): boolean {
@@ -948,13 +967,11 @@ function blackjackImage(
 
   // ── Bet ──────────────────────────────────────────────────────────────────
 
-  const displayedBet =
-    game.bet *
-    (game.doubled ? 2 : 1);
+  const displayedBet = totalStake(game);
 
   const betText =
     `Bet: ${formatAmount(displayedBet)}${
-      game.doubled
+      hasDoubledStake(game)
         ? " (doubled)"
         : ""
     }`;
@@ -1246,9 +1263,7 @@ function buildBlackjackContainer(
   playAgainDisabled = false,
 ): ContainerBuilder {
   const splitGame = isSplitGame(game);
-  const bet =
-    game.bet *
-    (game.doubled ? 2 : 1);
+  const bet = totalStake(game);
 
   const payout =
     status === "split"
@@ -1354,7 +1369,7 @@ function buildBlackjackContainer(
       createText(
         `💎 **Bet:** \`${formatAmount(
           bet,
-        )}\`${game.doubled ? "  *(doubled)*" : ""}${sideBetText ? `\n${sideBetText}` : ""}\n` +
+        )}\`${hasDoubledStake(game) ? "  *(doubled)*" : ""}${sideBetText ? `\n${sideBetText}` : ""}\n` +
         `✨ **Multiplier:** \`${multiplier.toFixed(
           2,
         )}x (${formatAmount(
@@ -1367,7 +1382,7 @@ function buildBlackjackContainer(
       createText(
         `💎 **Bet:** \`${formatAmount(
           bet,
-        )}\`${game.doubled ? "  *(doubled)*" : ""}${sideBetText ? `\n${sideBetText}` : ""}`,
+        )}\`${hasDoubledStake(game) ? "  *(doubled)*" : ""}${sideBetText ? `\n${sideBetText}` : ""}`,
       ),
     );
   }
@@ -1406,9 +1421,7 @@ function buildContainerAnimating(
   game: BlackjackGame,
   shownDealerCards: Card[],
 ): ContainerBuilder {
-  const bet =
-    game.bet *
-    (game.doubled ? 2 : 1);
+  const bet = totalStake(game);
 
   const tempGame: BlackjackGame = {
     ...game,
@@ -1432,7 +1445,7 @@ function buildContainerAnimating(
     createText(
       `💎 **Bet:** \`${formatAmount(
         bet,
-      )}\`${game.doubled ? "  *(doubled)*" : ""}`,
+      )}\`${hasDoubledStake(game) ? "  *(doubled)*" : ""}`,
     ),
   );
 
@@ -1558,16 +1571,7 @@ async function resolveGame(
     game.userId,
   );
 
-  const multiplier = game.doubled ? 2 : 1;
-  const totalStake = isSplitGame(game)
-    ? game.playerHands!.reduce(
-        (sum, _hand, index) =>
-          sum +
-          game.bet +
-          (game.handDoubled?.[index] ? game.bet : 0),
-        0,
-      )
-    : game.bet * multiplier;
+  const wageredStake = totalStake(game);
 
   let payout = 0;
   let netDelta = 0;
@@ -1604,22 +1608,22 @@ async function resolveGame(
     status === "dealer_bust"
   ) {
     payout =
-      totalStake * 2;
+      wageredStake * 2;
 
     netDelta =
-      totalStake;
+      wageredStake;
   } else if (
     status === "push"
   ) {
     payout =
-      totalStake;
+      wageredStake;
 
     netDelta = 0;
   } else {
     payout = 0;
 
     netDelta =
-      -totalStake;
+      -wageredStake;
   }
 
   const sideBetAmount = game.sideBetAmount || 0;
@@ -1634,7 +1638,7 @@ async function resolveGame(
 
   await recordBet(
     game.userId,
-    totalStake + sideBetAmount,
+    wageredStake + sideBetAmount,
     netDelta,
     "blackjack",
     undefined,
