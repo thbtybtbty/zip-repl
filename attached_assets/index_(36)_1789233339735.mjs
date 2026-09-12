@@ -139810,11 +139810,11 @@ function raceMentions(rows) { if (!rows.length) return "`None`"; const shown = r
 function raceText(text) { return new inviteRaceDiscord.TextDisplayBuilder().setContent(text); }
 function raceSep() { return new inviteRaceDiscord.SeparatorBuilder(); }
 function racePanel(race) {
-  const stats = raceStats(race), top = raceTop(race), ended = race.status !== "active";
+  const top = raceTop(race), ended = race.status !== "active";
   const ranking = top.length ? top.map((r, i) => `${i + 1}. <@${r.inviter_id}> — **${r.count} valid**`).join("\n") : "`No valid invites yet`";
   const status = ended ? race.winner_id ? `🏆 Winner: <@${race.winner_id}> — **${formatAmount(race.prize)} gems** added.` : "🏁 Race ended with no valid winner." : `Ends <t:${race.ends_at}:F> (<t:${race.ends_at}:R>)`;
   const button = new inviteRaceDiscord.ButtonBuilder().setCustomId(`invite_race_check_${race.id}`).setLabel("Check my invites").setEmoji("🔎").setStyle(inviteRaceDiscord.ButtonStyle.Primary).setDisabled(ended);
-  return new inviteRaceDiscord.ContainerBuilder().setAccentColor(ended ? 8421504 : 5793266).addTextDisplayComponents(raceText(`# 🏁 Invite Race\n**Top 1 reward:** ${formatAmount(race.prize)} gems\n${status}`)).addSeparatorComponents(raceSep()).addTextDisplayComponents(raceText(`## Top 5 inviters\n${ranking}`)).addSeparatorComponents(raceSep()).addTextDisplayComponents(raceText(`**Valid:** ${stats.valid.length} • **Pending verification:** ${stats.pending.length} • **Rejoins:** ${stats.rejoins.length} • **Left:** ${stats.left.length}\nInvited members must verify before they appear as valid.`)).addActionRowComponents(new inviteRaceDiscord.ActionRowBuilder().addComponents(button));
+  return new inviteRaceDiscord.ContainerBuilder().setAccentColor(ended ? 8421504 : 5793266).addTextDisplayComponents(raceText(`# 🏁 Invite Race\n**Top 1 reward:** ${formatAmount(race.prize)} gems 💎\n${status}`)).addSeparatorComponents(raceSep()).addTextDisplayComponents(raceText(`## Top 5 inviters\n${ranking}`)) .addActionRowComponents(new inviteRaceDiscord.ActionRowBuilder().addComponents(button));
 }
 function raceCheckPanel(race, userId) {
   const stats = raceStats(race), mine = (rows) => rows.filter((r) => r.inviter_id === userId), valid = mine(stats.valid), pending = mine(stats.pending), rejoins = mine(stats.rejoins), left = mine(stats.left);
@@ -139844,7 +139844,23 @@ async function executeInviteRace(interaction) {
   if (!channel.isTextBased() || !channel.send) return interaction.reply({ content: "❌ Choose a text channel.", flags: inviteRaceDiscord.MessageFlags.Ephemeral });
   if (!prize || prize <= 0) return interaction.reply({ content: "❌ Enter a valid prize, such as `100m` or `1b`.", flags: inviteRaceDiscord.MessageFlags.Ephemeral });
   if (!duration) return interaction.reply({ content: "❌ Duration must be between 1 minute and 30 days.", flags: inviteRaceDiscord.MessageFlags.Ephemeral });
-  if (sqlite.prepare("SELECT id FROM invite_races WHERE guild_id = ? AND status = 'active' LIMIT 1").get(interaction.guildId)) return interaction.reply({ content: "❌ This server already has an active invite race.", flags: inviteRaceDiscord.MessageFlags.Ephemeral });
+  const activeRaces = sqlite.prepare("SELECT * FROM invite_races WHERE guild_id = ? AND status = 'active'").all(interaction.guildId);
+  for (const activeRow of activeRaces) {
+    const previous = raceRow(activeRow);
+    const timer = inviteRaceTimers.get(previous.id);
+    if (timer) clearTimeout(timer);
+    inviteRaceTimers.delete(previous.id);
+    try {
+      const previousChannel = await client.channels.fetch(previous.channel_id);
+      if (previousChannel?.isTextBased() && previousChannel.messages) {
+        const previousMessage = await previousChannel.messages.fetch(previous.message_id);
+        await previousMessage.delete();
+      }
+    } catch (err) {
+      logger.warn({ err, raceId: previous.id }, "Could not delete the previous invite race panel");
+    }
+    sqlite.prepare("DELETE FROM invite_races WHERE id = ?").run(previous.id);
+  }
   const start = Math.floor(Date.now() / 1000), race = { id: `invite-race-${interaction.guildId}-${Date.now()}`, guild_id: interaction.guildId, channel_id: channel.id, message_id: "", prize, starts_at: start, ends_at: start + duration, status: "active", winner_id: null, paid: 0 };
   const message = await channel.send({ flags: inviteRaceDiscord.MessageFlags.IsComponentsV2, components: [racePanel(race)] }); race.message_id = message.id;
   sqlite.prepare("INSERT INTO invite_races (id, guild_id, channel_id, message_id, prize, starts_at, ends_at, status, paid) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 0)").run(race.id, race.guild_id, race.channel_id, race.message_id, race.prize, race.starts_at, race.ends_at); scheduleInviteRace(race);
