@@ -1233,3 +1233,17 @@ mtime_ms = 1789231045435
 storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:8cb901bb-9244-428a-91c1-728bd6edfc35/0471aa5a-a1c7-4e68-955e-f47c9f84cd4a/d178544e-d70d-45ea-83d6-0de5d3f8652b"
 storage_version_token = "1789231049246883"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "dbR5j-cDoG7WHuMjv124c"
+uri = "file://attached_assets/wispbyte-invite-race-updated.zip"
+type = "unspecified"
+title = "Updated WispByte index.mjs"
+description = "ZIP containing the updated index.mjs with the invite race command, Components v2 panel, invite checking, rejoin tracking, live updates, and automatic winner payout."
+logical_id = "ba7da6b2-812c-4ce1-8fcb-45d5f321915e"
+content_hash = "sha256:f5e6e5f3663b4fa59e9d9cfa0a0c6345f43b21d1c48421b1d5fddf520c895c79"
+size = 1109145
+mtime_ms = 1789233701369
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:131eeba2-a352-4ca2-8253-1989b6001771/ba7da6b2-812c-4ce1-8fcb-45d5f321915e/b838088a-0444-492e-9103-02de6ada7492"
+storage_version_token = "1789233713333052"
+content_type = "application/octet-stream"
