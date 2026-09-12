@@ -139795,7 +139795,7 @@ function parseInviteRaceDuration(value) {
 function raceRow(row) { return row && { id: row.id, guild_id: row.guild_id, channel_id: row.channel_id, message_id: row.message_id, prize: Number(row.prize), starts_at: Number(row.starts_at), ends_at: Number(row.ends_at), status: row.status, winner_id: row.winner_id ?? null, paid: Number(row.paid ?? 0) }; }
 function raceRows(race) {
   const end = Math.min(Math.floor(Date.now() / 1000), race.ends_at);
-  return sqlite.prepare(`SELECT id, invited_id, inviter_id, verified, left_server, rejoin, joined_at FROM invite_log WHERE guild_id = ? AND joined_at >= ? AND joined_at <= ? AND id = (SELECT latest.id FROM invite_log latest WHERE latest.guild_id = invite_log.guild_id AND latest.invited_id = invite_log.invited_id ORDER BY latest.joined_at DESC, latest.id DESC LIMIT 1) ORDER BY joined_at ASC, id ASC`).all(race.guild_id, race.starts_at, end, race.guild_id);
+  return sqlite.prepare(`SELECT id, invited_id, inviter_id, verified, left_server, rejoin, joined_at FROM invite_log WHERE guild_id = ? AND joined_at >= ? AND joined_at <= ? AND id = (SELECT latest.id FROM invite_log latest WHERE latest.guild_id = invite_log.guild_id AND latest.invited_id = invite_log.invited_id ORDER BY latest.joined_at DESC, latest.id DESC LIMIT 1) ORDER BY joined_at ASC, id ASC`).all(race.guild_id, race.starts_at, end);
 }
 function raceStats(race) {
   const rows = raceRows(race);
