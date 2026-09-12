@@ -1191,3 +1191,17 @@ mtime_ms = 1788346878219
 storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:efb105c9-1011-4fdd-935d-cc80c586ac6d/d4eeaad5-efe9-4724-874e-314e0d68c2d8/9e5506d7-6bc1-4397-b5f2-c901863a7053"
 storage_version_token = "1788346895938636"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "Od5Dkl3x_WgtcBnNNYu2V"
+uri = "file://wispbyte-index-updated.zip"
+type = "unspecified"
+title = "Updated WispByte index.mjs"
+description = "ZIP containing the updated index.mjs with the expanded /setup wizard, configurable channels and roles, optional ping roles, verified/unverified roles, and selectable locking settings."
+logical_id = "908ac7a4-e4ed-4c68-9994-b6b48149224a"
+content_hash = "sha256:e328e3c6d379972e4aebab01eaeb9bf67c4b3a23dac16551d1e00450345a6e41"
+size = 1105778
+mtime_ms = 1789228333407
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:33480828-5d11-4880-acb4-4830c154f970/908ac7a4-e4ed-4c68-9994-b6b48149224a/152f22d7-1e7e-4431-9c7b-de37b86c8498"
+storage_version_token = "1789228337559518"
+content_type = "application/octet-stream"
