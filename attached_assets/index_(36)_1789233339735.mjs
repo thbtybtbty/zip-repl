@@ -139932,7 +139932,7 @@ var commandData = commands.map((cmd) => cmd.data.toJSON());
 var client = new import_discord47.Client({
   rest: {
     retries: 0,
-    timeout: 2300
+    timeout: 2800
   },
   intents: [
     import_discord47.GatewayIntentBits.Guilds,
@@ -140031,8 +140031,11 @@ async function handleInteraction(interaction) {
         logger.warn({ command: name }, "Interaction expired before Discord acknowledged it");
         return;
       }
-      if (isTransientDiscordError(err)) logger.warn({ code: err?.code, command: name }, "Discord was temporarily unavailable while executing command");
-      else logger.error({ err, command: name }, "Error executing command");
+      if (isTransientDiscordError(err)) {
+        logger.warn({ code: err?.code, command: name }, "Discord was temporarily unavailable while executing command");
+        return;
+      }
+      logger.error({ err, command: name }, "Error executing command");
       const payload2 = { content: "\u274C Something went wrong. Please try again.", flags: import_discord47.MessageFlags.Ephemeral };
       try {
         if (interaction.replied || interaction.deferred) await interaction.followUp(payload2);
@@ -140229,8 +140232,11 @@ async function handleInteraction(interaction) {
         logger.warn({ buttonId: id }, "Button interaction expired before Discord acknowledged it");
         return;
       }
-      if (isTransientDiscordError(err)) logger.warn({ code: err?.code, buttonId: id }, "Discord was temporarily unavailable while handling button");
-      else logger.error({ err, buttonId: id }, "Error handling button");
+      if (isTransientDiscordError(err)) {
+        logger.warn({ code: err?.code, buttonId: id }, "Discord was temporarily unavailable while handling button");
+        return;
+      }
+      logger.error({ err, buttonId: id }, "Error handling button");
       if (!bi.replied && !bi.deferred) {
         try {
           await bi.reply({ content: "\u274C Something went wrong.", flags: import_discord47.MessageFlags.Ephemeral });
@@ -140292,8 +140298,11 @@ async function handleInteraction(interaction) {
         logger.warn({ selectId: id }, "Select interaction expired before Discord acknowledged it");
         return;
       }
-      if (isTransientDiscordError(err)) logger.warn({ code: err?.code, selectId: id }, "Discord was temporarily unavailable while handling select menu");
-      else logger.error({ err, selectId: id }, "Error handling select menu");
+      if (isTransientDiscordError(err)) {
+        logger.warn({ code: err?.code, selectId: id }, "Discord was temporarily unavailable while handling select menu");
+        return;
+      }
+      logger.error({ err, selectId: id }, "Error handling select menu");
       if (!si.replied && !si.deferred) {
         try {
           await si.reply({ content: "\u274C Something went wrong.", flags: import_discord47.MessageFlags.Ephemeral });
@@ -140349,8 +140358,11 @@ async function handleInteraction(interaction) {
         logger.warn({ modalId: id }, "Modal interaction expired before Discord acknowledged it");
         return;
       }
-      if (isTransientDiscordError(err)) logger.warn({ code: err?.code, modalId: id }, "Discord was temporarily unavailable while handling modal");
-      else logger.error({ err, modalId: id }, "Error handling modal");
+      if (isTransientDiscordError(err)) {
+        logger.warn({ code: err?.code, modalId: id }, "Discord was temporarily unavailable while handling modal");
+        return;
+      }
+      logger.error({ err, modalId: id }, "Error handling modal");
       if (!mi.replied && !mi.deferred) {
         try {
           await mi.reply({ content: "\u274C Something went wrong.", flags: import_discord47.MessageFlags.Ephemeral });
