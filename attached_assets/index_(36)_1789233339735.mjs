@@ -139902,7 +139902,7 @@ function isTransientDiscordError(error40) {
   return code === "EAI_AGAIN" || code === "ENOTFOUND" || code === "ECONNRESET" || code === "ETIMEDOUT" || code === "UND_ERR_CONNECT_TIMEOUT";
 }
 async function retryDiscordInteractionRequest(operation) {
-  const maxAttempts = 3;
+  const maxAttempts = 2;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await operation();
@@ -139926,6 +139926,10 @@ function installInteractionRequestRetries(interaction) {
 var commands = [balance_exports, tip_exports, rakeback_exports, affiliate_exports, afflist_exports, mines_exports, towers_exports, rps_exports, coinflip_exports, dice_exports, blackjack_exports, pvpblackjack_exports, pvpcolordice_exports, locateGame_exports, invited_exports, inviter_exports, setup_exports, deposit_exports, withdraw_exports, addbalance_exports, removebalance_exports, wheel_exports, slots_exports, hilo_exports, roulette_exports, crash_exports, scratchcard_exports, chickencrossing_exports, colordice_exports, upgrader_exports, keno_exports, flip_exports, createcode_exports, redeem_exports, viewcodes_exports, leaderboard_exports, history_exports, resetstats_exports, simulate_exports, freeze_exports, gamedisable_exports, stats_exports, economy_exports, addadminperms_exports, rain_exports, link_exports, change_exports, invites_exports, inviterace_exports, cleardata_exports];
 var commandData = commands.map((cmd) => cmd.data.toJSON());
 var client = new import_discord47.Client({
+  rest: {
+    retries: 0,
+    timeout: 1500
+  },
   intents: [
     import_discord47.GatewayIntentBits.Guilds,
     import_discord47.GatewayIntentBits.GuildMembers,
