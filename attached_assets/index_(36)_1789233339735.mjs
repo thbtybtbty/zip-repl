@@ -139899,7 +139899,11 @@ function isExpiredInteractionError(error40) {
 }
 function isTransientDiscordError(error40) {
   const code = error40?.code ?? error40?.cause?.code;
-  return code === "EAI_AGAIN" || code === "ENOTFOUND" || code === "ECONNRESET" || code === "ETIMEDOUT" || code === "UND_ERR_CONNECT_TIMEOUT";
+  return code === "EAI_AGAIN" || code === "ENOTFOUND" || code === "ECONNRESET" || code === "ETIMEDOUT" || code === "UND_ERR_CONNECT_TIMEOUT" || error40?.name === "AbortError";
+}
+function isImmediateRetryableDiscordError(error40) {
+  const code = error40?.code ?? error40?.cause?.code;
+  return code === "EAI_AGAIN" || code === "ENOTFOUND" || code === "ECONNRESET";
 }
 async function retryDiscordInteractionRequest(operation) {
   const maxAttempts = 2;
@@ -139907,8 +139911,8 @@ async function retryDiscordInteractionRequest(operation) {
     try {
       return await operation();
     } catch (error40) {
-      if (!isTransientDiscordError(error40) || attempt === maxAttempts) throw error40;
-      await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
+      if (!isImmediateRetryableDiscordError(error40) || attempt === maxAttempts) throw error40;
+      await new Promise((resolve) => setTimeout(resolve, 50 * attempt));
     }
   }
 }
@@ -139928,7 +139932,7 @@ var commandData = commands.map((cmd) => cmd.data.toJSON());
 var client = new import_discord47.Client({
   rest: {
     retries: 0,
-    timeout: 1500
+    timeout: 2300
   },
   intents: [
     import_discord47.GatewayIntentBits.Guilds,
