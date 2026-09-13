@@ -139897,6 +139897,32 @@ var GAMBLING_COMMANDS = /* @__PURE__ */ new Set([
 function isExpiredInteractionError(error40) {
   return typeof error40 === "object" && error40 !== null && "code" in error40 && error40.code === 10062;
 }
+function isTransientDiscordError(error40) {
+  const code = error40?.code ?? error40?.cause?.code;
+  return code === "EAI_AGAIN" || code === "ENOTFOUND" || code === "ECONNRESET" || code === "ETIMEDOUT" || code === "UND_ERR_CONNECT_TIMEOUT";
+}
+async function retryDiscordInteractionRequest(operation) {
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error40) {
+      if (!isTransientDiscordError(error40) || attempt === maxAttempts) throw error40;
+      await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
+    }
+  }
+}
+function installInteractionRequestRetries(interaction) {
+  if (interaction.__wispbyteRetryWrappersInstalled) return;
+  interaction.__wispbyteRetryWrappersInstalled = true;
+  for (const method of ["reply", "deferReply", "update", "deferUpdate", "showModal", "editReply", "followUp"]) {
+    const original = interaction[method];
+    if (typeof original !== "function") continue;
+    interaction[method] = function(...args) {
+      return retryDiscordInteractionRequest(() => original.apply(this, args));
+    };
+  }
+}
 var commands = [balance_exports, tip_exports, rakeback_exports, affiliate_exports, afflist_exports, mines_exports, towers_exports, rps_exports, coinflip_exports, dice_exports, blackjack_exports, pvpblackjack_exports, pvpcolordice_exports, locateGame_exports, invited_exports, inviter_exports, setup_exports, deposit_exports, withdraw_exports, addbalance_exports, removebalance_exports, wheel_exports, slots_exports, hilo_exports, roulette_exports, crash_exports, scratchcard_exports, chickencrossing_exports, colordice_exports, upgrader_exports, keno_exports, flip_exports, createcode_exports, redeem_exports, viewcodes_exports, leaderboard_exports, history_exports, resetstats_exports, simulate_exports, freeze_exports, gamedisable_exports, stats_exports, economy_exports, addadminperms_exports, rain_exports, link_exports, change_exports, invites_exports, inviterace_exports, cleardata_exports];
 var commandData = commands.map((cmd) => cmd.data.toJSON());
 var client = new import_discord47.Client({
@@ -139916,6 +139942,7 @@ client.on(import_discord47.Events.ShardError, (err, shardId) => {
   logger.error({ err, shardId }, "Discord gateway shard error");
 });
 async function handleInteraction(interaction) {
+  installInteractionRequestRetries(interaction);
   if (interaction.isChatInputCommand()) {
     const name = interaction.commandName;
     try {
@@ -139928,13 +139955,13 @@ async function handleInteraction(interaction) {
         if (isFrozen(interaction.user.id)) {
           return interaction.reply({
             embeds: [{ color: 15548997, description: "\u274C  You are **frozen** and cannot gamble or withdraw. Contact an admin." }],
-            ephemeral: true
+            flags: import_discord47.MessageFlags.Ephemeral
           });
         }
         if (isGameDisabled(name)) {
           return interaction.reply({
             embeds: [{ color: 15548997, description: `\u274C  **${name.charAt(0).toUpperCase() + name.slice(1)}** is currently disabled. Try again later.` }],
-            ephemeral: true
+            flags: import_discord47.MessageFlags.Ephemeral
           });
         }
       }
@@ -139953,7 +139980,7 @@ async function handleInteraction(interaction) {
         if (isFrozen(interaction.user.id)) {
           return interaction.reply({
             embeds: [{ color: 15548997, description: "\u274C  You are **frozen** and cannot withdraw. Contact an admin." }],
-            ephemeral: true
+            flags: import_discord47.MessageFlags.Ephemeral
           });
         }
         return await execute15(interaction);
@@ -139996,8 +140023,9 @@ async function handleInteraction(interaction) {
         logger.warn({ command: name }, "Interaction expired before Discord acknowledged it");
         return;
       }
-      logger.error({ err, command: name }, "Error executing command");
-      const payload2 = { content: "\u274C Something went wrong. Please try again.", ephemeral: true };
+      if (isTransientDiscordError(err)) logger.warn({ code: err?.code, command: name }, "Discord was temporarily unavailable while executing command");
+      else logger.error({ err, command: name }, "Error executing command");
+      const payload2 = { content: "\u274C Something went wrong. Please try again.", flags: import_discord47.MessageFlags.Ephemeral };
       try {
         if (interaction.replied || interaction.deferred) await interaction.followUp(payload2);
         else await interaction.reply(payload2);
@@ -140006,7 +140034,11 @@ async function handleInteraction(interaction) {
           logger.warn({ command: name }, "Interaction expired before the error response could be sent");
           return;
         }
-        throw replyError;
+        if (isTransientDiscordError(replyError)) {
+          logger.warn({ command: name, code: replyError?.code }, "Could not send command error response because Discord was unavailable");
+          return;
+        }
+        logger.error({ err: replyError, command: name }, "Could not send command error response");
       }
     }
     return;
@@ -140189,16 +140221,21 @@ async function handleInteraction(interaction) {
         logger.warn({ buttonId: id }, "Button interaction expired before Discord acknowledged it");
         return;
       }
-      logger.error({ err, buttonId: id }, "Error handling button");
+      if (isTransientDiscordError(err)) logger.warn({ code: err?.code, buttonId: id }, "Discord was temporarily unavailable while handling button");
+      else logger.error({ err, buttonId: id }, "Error handling button");
       if (!bi.replied && !bi.deferred) {
         try {
-          await bi.reply({ content: "\u274C Something went wrong.", ephemeral: true });
+          await bi.reply({ content: "\u274C Something went wrong.", flags: import_discord47.MessageFlags.Ephemeral });
         } catch (replyError) {
           if (isExpiredInteractionError(replyError)) {
             logger.warn({ buttonId: id }, "Button interaction expired before the error response could be sent");
             return;
           }
-          throw replyError;
+          if (isTransientDiscordError(replyError)) {
+            logger.warn({ code: replyError?.code }, "Could not send interaction error response because Discord was unavailable");
+            return;
+          }
+          logger.error({ err: replyError }, "Could not send interaction error response");
         }
       }
     }
@@ -140216,13 +140253,17 @@ async function handleInteraction(interaction) {
       logger.error({ err, selectId: si.customId }, "Error handling user select menu");
       if (!si.replied && !si.deferred) {
         try {
-          await si.reply({ content: "\u274C Something went wrong.", ephemeral: true });
+          await si.reply({ content: "\u274C Something went wrong.", flags: import_discord47.MessageFlags.Ephemeral });
         } catch (replyError) {
           if (isExpiredInteractionError(replyError)) {
             logger.warn({ selectId: si.customId }, "Select interaction expired before the error response could be sent");
             return;
           }
-          throw replyError;
+          if (isTransientDiscordError(replyError)) {
+            logger.warn({ code: replyError?.code }, "Could not send interaction error response because Discord was unavailable");
+            return;
+          }
+          logger.error({ err: replyError }, "Could not send interaction error response");
         }
       }
     }
@@ -140243,16 +140284,21 @@ async function handleInteraction(interaction) {
         logger.warn({ selectId: id }, "Select interaction expired before Discord acknowledged it");
         return;
       }
-      logger.error({ err, selectId: id }, "Error handling select menu");
+      if (isTransientDiscordError(err)) logger.warn({ code: err?.code, selectId: id }, "Discord was temporarily unavailable while handling select menu");
+      else logger.error({ err, selectId: id }, "Error handling select menu");
       if (!si.replied && !si.deferred) {
         try {
-          await si.reply({ content: "\u274C Something went wrong.", ephemeral: true });
+          await si.reply({ content: "\u274C Something went wrong.", flags: import_discord47.MessageFlags.Ephemeral });
         } catch (replyError) {
           if (isExpiredInteractionError(replyError)) {
             logger.warn({ selectId: id }, "Select interaction expired before the error response could be sent");
             return;
           }
-          throw replyError;
+          if (isTransientDiscordError(replyError)) {
+            logger.warn({ code: replyError?.code }, "Could not send interaction error response because Discord was unavailable");
+            return;
+          }
+          logger.error({ err: replyError }, "Could not send interaction error response");
         }
       }
     }
@@ -140295,16 +140341,21 @@ async function handleInteraction(interaction) {
         logger.warn({ modalId: id }, "Modal interaction expired before Discord acknowledged it");
         return;
       }
-      logger.error({ err, modalId: id }, "Error handling modal");
+      if (isTransientDiscordError(err)) logger.warn({ code: err?.code, modalId: id }, "Discord was temporarily unavailable while handling modal");
+      else logger.error({ err, modalId: id }, "Error handling modal");
       if (!mi.replied && !mi.deferred) {
         try {
-          await mi.reply({ content: "\u274C Something went wrong.", ephemeral: true });
+          await mi.reply({ content: "\u274C Something went wrong.", flags: import_discord47.MessageFlags.Ephemeral });
         } catch (replyError) {
           if (isExpiredInteractionError(replyError)) {
             logger.warn({ modalId: id }, "Modal interaction expired before the error response could be sent");
             return;
           }
-          throw replyError;
+          if (isTransientDiscordError(replyError)) {
+            logger.warn({ code: replyError?.code }, "Could not send interaction error response because Discord was unavailable");
+            return;
+          }
+          logger.error({ err: replyError }, "Could not send interaction error response");
         }
       }
     }
