@@ -124830,11 +124830,13 @@ var DB_PATH = process.env.DATABASE_PATH ?? path.join(process.cwd(), "bot.db");
 var require2 = createRequire(import.meta.url);
 var engine = null;
 var sqlJs = null;
+var persistTimer = null;
+var persistenceDirty = false;
 function requireEngine() {
   if (!engine) throw new Error("Database has not been initialized");
   return engine;
 }
-function persist() {
+function writeDatabaseSnapshot() {
   const current = requireEngine();
   const parent = path.dirname(DB_PATH);
   fs.mkdirSync(parent, { recursive: true });
@@ -124854,6 +124856,27 @@ function persist() {
     }
     throw error40;
   }
+}
+function flushPersist() {
+  if (persistTimer !== null) {
+    clearTimeout(persistTimer);
+    persistTimer = null;
+  }
+  if (!persistenceDirty || !engine) return;
+  persistenceDirty = false;
+  writeDatabaseSnapshot();
+}
+function persist() {
+  persistenceDirty = true;
+  if (persistTimer !== null) return;
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    try {
+      flushPersist();
+    } catch (error40) {
+      logger?.error?.({ err: error40 }, "Deferred database save failed");
+    }
+  }, 40);
 }
 function valuesFor(params) {
   return params.map((value) => {
@@ -124904,11 +124927,11 @@ var SqliteFacade = class {
   // Kept for the existing shutdown contract. sql.js has no WAL checkpoint
   // because it operates in memory and writes an atomic exported database.
   checkpoint() {
-    persist();
+    flushPersist();
   }
   close() {
     if (engine) {
-      persist();
+      flushPersist();
       engine.close();
       engine = null;
     }
@@ -125062,7 +125085,7 @@ async function initDb() {
     } catch {
     }
   }
-  persist();
+  flushPersist();
 }
 
 // src/bot/botConfig.ts
